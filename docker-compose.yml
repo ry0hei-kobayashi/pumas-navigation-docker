@@ -1,0 +1,25 @@
+version: '3'
+services:
+  pumas-navigation:
+    image: pumas_navigation-docker:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+     - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      DISPLAY: $DISPLAY
+      XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR
+      ROS_MASTER_URI: http://192.168.103.26:11311
+      ROS_IP: 192.168.103.222
+    working_dir: /catkin_ws
+    network_mode: host
+      #deploy:
+      #  resources:
+      #    reservations:
+      #      devices:
+      #        - driver: nvidia
+      #          count: 1
+      #          capabilities: [gpu]
+
+    command: roslaunch navigation_start navigation_cartographer.launch
