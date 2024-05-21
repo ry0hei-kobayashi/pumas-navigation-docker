@@ -10,8 +10,8 @@ services:
     environment:
       DISPLAY: $DISPLAY
       XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR
-      ROS_MASTER_URI: http://192.168.103.26:11311
-      ROS_IP: 192.168.103.222
+      ROS_MASTER_URI: http://192.168.0.2:11311
+      ROS_IP: 192.168.0.10
     working_dir: /catkin_ws
     network_mode: host
       #deploy:
