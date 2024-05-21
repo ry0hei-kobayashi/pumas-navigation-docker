@@ -46,15 +46,17 @@
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
-    <param name="occupied_threshold" value="70"/>
+    <param name="occupied_threshold" value="10"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen">
-    <param name="diagonal_paths" value="False"/>
+    <!--param name="diagonal_paths" value="True"/-->
+    <param name="diagonal_paths" value="True"/>
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
-    <param name="max_linear_speed" value="0.8"/>
+    <!--param name="max_linear_speed" value="0.8"/-->
+    <param name="max_linear_speed" value="0.9"/>
     <param name="max_angular_speed" value="1.25"/>
     <param name="control_alpha" value="0.2"/>
     <param name="control_beta" value="0.8"/>
@@ -79,9 +81,9 @@
     <param name="cloud_points_threshold" value="$(arg cloud_points_threshold)"/>
     <param name="lidar_points_threshold" value="$(arg lidar_points_threshold)"/>
     
-    <param name="obs_detector_debug" value="False"/>
+    <param name="obs_detector_debug" value="True"/>
     
-    <param name="pot_fields_k_rej" value="0.25"/>
+    <param name="pot_fields_k_rej" value="0.4"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -108,7 +110,7 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.22"/>
+    <param name="inflation_radius" value="0.15"/>
     <param name="cost_radius" value="0.1"/>
     
     <param name="max_x" value="$(arg max_x)"/>
