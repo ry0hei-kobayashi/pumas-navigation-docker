@@ -48,11 +48,13 @@
   </group>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen">
-    <param name="diagonal_paths" value="False"/>
+    <!--param name="diagonal_paths" value="False"/-->
+    <param name="diagonal_paths" value="True"/>
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
-    <param name="max_linear_speed" value="0.8"/>
+    <!--param name="max_linear_speed" value="0.8"/-->
+    <param name="max_linear_speed" value="0.9"/>
     <param name="max_angular_speed" value="1.25"/>
     <param name="control_alpha" value="0.2"/>
     <param name="control_beta" value="0.8"/>
@@ -77,7 +79,7 @@
     <param name="cloud_points_threshold" value="$(arg cloud_points_threshold)"/>
     <param name="lidar_points_threshold" value="$(arg lidar_points_threshold)"/>
     
-    <param name="obs_detector_debug" value="False"/>
+    <param name="obs_detector_debug" value="True"/>
     
     <param name="pot_fields_k_rej" value="0.4"/>
     
