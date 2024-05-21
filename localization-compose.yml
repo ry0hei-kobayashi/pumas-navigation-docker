@@ -7,10 +7,10 @@ services:
       dockerfile: ./Dockerfile
     volumes:
      - /tmp/.X11-unix:/tmp/.X11-unix
-     - navigation:/catkin_ws/src/navigation
-     - follow_human:/catkin_ws/src/follow_human
-     - hardware:/catkin_ws/src/hardware
-     - hsr_tools:/catkin_ws/src/hsr_tools
+     - ./navigation:/catkin_ws/src/navigation
+     - ./follow_human:/catkin_ws/src/follow_human
+     - ./hardware:/catkin_ws/src/hardware
+     - ./hsr_tools:/catkin_ws/src/hsr_tools
     environment:
       DISPLAY: $DISPLAY
       XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR
@@ -26,4 +26,4 @@ services:
       #          count: 1
       #          capabilities: [gpu]
 
-    command: roslaunch navigation_start navigation_cartographer.launch
+    command: roslaunch navigation_start navigation.launch
