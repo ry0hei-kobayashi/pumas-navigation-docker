@@ -36,3 +36,4 @@ init_pose = {"arm_lift_joint" : 0.33,
 lme.run(goal = pose, pose = init_pose, first_rotate=False, nav_type="pumas", nav_mode = "abs", nav_timeout = 0)
 
 
+

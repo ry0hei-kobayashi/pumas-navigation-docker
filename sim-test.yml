@@ -1,0 +1,29 @@
+version: '3'
+services:
+  pumas-navigation:
+    image: pumas_navigation-docker:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+     - /tmp/.X11-unix:/tmp/.X11-unix
+     - ./navigation:/catkin_ws/src/navigation
+     - ./follow_human:/catkin_ws/src/follow_human
+     - ./hardware:/catkin_ws/src/hardware
+     - ./hsr_tools:/catkin_ws/src/hsr_tools
+    environment:
+      DISPLAY: $DISPLAY
+      XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR
+      ROS_MASTER_URI: http://172.30.21.49:11311
+      ROS_IP: 172.30.21.49
+    working_dir: /catkin_ws
+    network_mode: host
+      #deploy:
+      #  resources:
+      #    reservations:
+      #      devices:
+      #        - driver: nvidia
+      #          count: 1
+      #          capabilities: [gpu]
+
+    command: roslaunch navigation_start navigation.launch
