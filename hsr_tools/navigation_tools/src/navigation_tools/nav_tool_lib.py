@@ -151,6 +151,7 @@ class nav_module():
         rospy.sleep(x)
 
     def go_abs(self, x, y, theta, timeout=0.0, type_nav=None, goal_distance=None):
+        print("Call ABS mode in pumas nav")
         if type_nav == "pumas":
             self.getClose(x, y, theta, timeout, goal_distance)
         elif type_nav == "hsr":
@@ -238,6 +239,7 @@ class nav_module():
         rospy.sleep(x)
 
     def go_rel(self, x=0.0, y=0.0, yaw=0.0, timeout=0.0, type_nav=None):
+        print("Call REL mode in pumas nav")
         if type_nav == "pumas":
             self.moveRel(x, y, yaw, timeout)
         elif type_nav == "hsr":

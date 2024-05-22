@@ -29,8 +29,10 @@
   <arg name="use_bumper" default="False"/>
   <arg name="use_pot_fields" default="True"/>
   
-  <arg name="cloud_downsampling" default="5"/>
-  <arg name="lidar_downsampling" default="1"/>
+  <!--arg name="cloud_downsampling" default="5"/-->
+  <arg name="cloud_downsampling" default="30"/>
+  <!--arg name="lidar_downsampling" default="1"/-->
+  <arg name="lidar_downsampling" default="12"/>
   <arg name="cloud_points_threshold" default="100"/>
   <arg name="lidar_points_threshold" default="20"/>
   
@@ -48,13 +50,11 @@
   </group>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen">
-    <!--param name="diagonal_paths" value="False"/-->
-    <param name="diagonal_paths" value="True"/>
+    <param name="diagonal_paths" value="False"/>
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
-    <!--param name="max_linear_speed" value="0.8"/-->
-    <param name="max_linear_speed" value="0.9"/>
+    <param name="max_linear_speed" value="1.0"/>
     <param name="max_angular_speed" value="1.25"/>
     <param name="control_alpha" value="0.2"/>
     <param name="control_beta" value="0.8"/>
@@ -106,7 +106,7 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.22"/>
+    <param name="inflation_radius" value="0.18"/>
     <param name="cost_radius" value="0.1"/>
     
     <param name="max_x" value="$(arg max_x)"/>
