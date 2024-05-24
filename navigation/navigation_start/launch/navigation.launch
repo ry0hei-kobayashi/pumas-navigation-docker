@@ -20,6 +20,8 @@
   <!--for wrs simulator-->
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/>
+
+  <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
   
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
   <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
@@ -34,17 +36,26 @@
   <arg name="use_bumper" default="False"/>
   <arg name="use_pot_fields" default="True"/>
   
-  <arg name="cloud_downsampling" default="5"/>
-  <arg name="lidar_downsampling" default="1"/>
+  <!--arg name="cloud_downsampling" default="5"/>
+  <arg name="lidar_downsampling" default="1"/-->
+  <arg name="cloud_downsampling" default="9"/>
+  <arg name="lidar_downsampling" default="2"/>
   <arg name="cloud_points_threshold" default="100"/>
   <arg name="lidar_points_threshold" default="20"/>
   
-  <arg name="min_x" default="0.27"/>
+  <!--arg name="min_x" default="0.27"/>
   <arg name="max_x" default="0.70"/>
   <arg name="min_y" default="-0.25"/>
   <arg name="max_y" default="0.25"/>
   <arg name="min_z" default="0.05"/>
-  <arg name="max_z" default="1.00"/>
+  <arg name="max_z" default="1.00"/-->
+
+  <arg name="min_x" default="0.3"/>
+  <arg name="max_x" default="0.7"/>
+  <arg name="min_y" default="-0.3"/>
+  <arg name="max_y" default="0.3"/>
+  <arg name="min_z" default="0.05"/>
+  <arg name="max_z" default="1.5"/>
 
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
@@ -57,10 +68,15 @@
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
-    <param name="max_linear_speed" value="1.0"/>
+    <!--param name="max_linear_speed" value="1.0"/>
     <param name="max_angular_speed" value="1.25"/>
     <param name="control_alpha" value="0.2"/>
-    <param name="control_beta" value="0.8"/>
+    <param name="control_beta" value="0.8"/-->
+
+    <param name="max_linear_speed" value="0.8"/>
+    <param name="max_angular_speed" value="1.5"/>
+    <param name="control_alpha" value="0.4"/>
+    <param name="control_beta" value="0.15"/>
     <param name="use_pot_fields" value="$(arg use_pot_fields)"/>
     <param name="cmd_vel_name" value="$(arg cmd_vel_name)"/>
   </node>
@@ -82,7 +98,7 @@
     <param name="cloud_points_threshold" value="$(arg cloud_points_threshold)"/>
     <param name="lidar_points_threshold" value="$(arg lidar_points_threshold)"/>
     
-    <param name="obs_detector_debug" value="True"/>
+    <param name="obs_detector_debug" value="False"/>
     
     <param name="pot_fields_k_rej" value="0.4"/>
     
@@ -109,8 +125,11 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.18"/>
-    <param name="cost_radius" value="0.1"/>
+    <!--param name="inflation_radius" value="0.18"/>
+    <param name="cost_radius" value="0.1"/-->
+
+    <param name="inflation_radius" value="0.2"/>
+    <param name="cost_radius" value="0.5"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
