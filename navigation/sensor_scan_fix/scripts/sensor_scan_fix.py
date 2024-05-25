@@ -13,8 +13,8 @@ def callback_Laser(msg):
 	#new_sensor.header.stamp=rospy.Time.now()
 	new_sensor.ranges=list(new_sensor.ranges)
 	#print(type(new_sensor.ranges))
-	for i in range(481-20,481+25):
-		new_sensor.ranges[i]=math.inf
+	for i in range(481 - 25,481+25):
+		new_sensor.ranges[i] = math.inf
 
 def main():
 	
