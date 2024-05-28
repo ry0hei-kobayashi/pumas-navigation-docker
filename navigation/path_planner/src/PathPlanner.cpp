@@ -19,26 +19,26 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     int idx_start = idx_start_y*map.info.width + idx_start_x;
     int idx_goal  = idx_goal_y *map.info.width + idx_goal_x;
 
-    double distance = 0.1;
-    double angle = 1.414213562;
+    //double distance = 0.1;
+    //double angle = 1.414213562;
 
-    while(map.data[idx_goal] != 0)
+    if(map.data[idx_goal] != 0)
     {
         std::cout << "PathPlanner.->Goal point is inside non-free space!!!! >>>> RE-PLANNING" << std::endl;
 
 
-	double new_goal_x = goal_pose.position.x - distance * sin(angle);
-	double new_goal_y = goal_pose.position.y - distance * cos(angle);
-        distance ++;
-	goal_pose.position.x = new_goal_x;
-	goal_pose.position.y = new_goal_y;
+	//double new_goal_x = goal_pose.position.x - distance * sin(angle);
+	//double new_goal_y = goal_pose.position.y - distance * cos(angle);
+        //distance ++;
+	//goal_pose.position.x = new_goal_x;
+	//goal_pose.position.y = new_goal_y;
 
-        // Recalculate the goal indices
-        idx_goal_x  = (int)((goal_pose.position.x  - map.info.origin.position.x)/map.info.resolution);
-        idx_goal_y  = (int)((goal_pose.position.y  - map.info.origin.position.y)/map.info.resolution);
-        idx_goal = idx_goal_y * map.info.width + idx_goal_x;
+        //// Recalculate the goal indices
+        //idx_goal_x  = (int)((goal_pose.position.x  - map.info.origin.position.x)/map.info.resolution);
+        //idx_goal_y  = (int)((goal_pose.position.y  - map.info.origin.position.y)/map.info.resolution);
+        //idx_goal = idx_goal_y * map.info.width + idx_goal_x;
 
-        //return false;
+        return false;
     }
     if(map.data[idx_start] != 0)
     {
