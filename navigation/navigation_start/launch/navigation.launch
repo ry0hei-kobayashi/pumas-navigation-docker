@@ -131,8 +131,8 @@
     <!--param name="inflation_radius" value="0.18"/>
     <param name="cost_radius" value="0.1"/-->
 
-    <param name="inflation_radius" value="0.25"/>
-    <param name="cost_radius" value="0.5"/>
+    <param name="inflation_radius" value="0.15"/>
+    <param name="cost_radius" value="0.2"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
