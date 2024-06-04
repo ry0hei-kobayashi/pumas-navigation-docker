@@ -21,8 +21,8 @@ class CreateMap(smach.State):
     """
     初期位置からマップを作成するための関数
     """
-    def __init__(self):
-        smach.State.__init__(self, outcomes=['success'], input_keys=[])
+    def __init__(self, outcomes) -> None:
+        smach.State.__init__(self, outcomes=outcomes, input_keys=[])
         self.hsrif = HSRInterfaces()
         self.description = description.load_robot_description()
     
@@ -60,5 +60,9 @@ class CreateMap(smach.State):
         self.rotate_robot()
 
     def execute(self, userdata):
+        rospy.loginfo("[" + rospy.get_name() + "]: Start create map")       
+        create_map_txt = "I  will prepare to bring your luggage. Please wait a moment!"
+        self.hsrif.tts.say(create_map_txt, 'en')
         self.create_map()
-        return "success"
+
+        return "next"
