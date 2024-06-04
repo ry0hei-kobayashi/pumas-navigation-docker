@@ -5,7 +5,8 @@
 import rospy
 import smach
 
-from common.speech import DefaultTTS
+from hsrlib.hsrif import HSRInterfaces
+#from common.speech import DefaultTTS
 
 from std_msgs.msg import Bool
 from geometry_msgs.msg import WrenchStamped
@@ -14,15 +15,18 @@ THRESHOLD = 12.0
 
 
 class FollowPerson(smach.State):
-    def __init__(self, robot, move_go = True, timeout=None):
-        smach.State.__init__(self, outcomes=['success', 'failure', 'timeout'])
+    def __init__(self, move_go = True, timeout=None):
+        smach.State.__init__(self, outcomes=['next', 'except'])
 
-        self.robot = robot
-        self.whole_body = self.robot.get('whole_body')
-        self.omni_base = self.robot.get("omni_base")
-        self.gripper = self.robot.get('gripper')
+        self.hsrif = HSRInterfaces()
+        
+        #self.robot = robot
+        #self.whole_body = self.robot.get('whole_body')
+        #self.omni_base = self.robot.get("omni_base")
+        #self.gripper = self.robot.get('gripper')
 
-        self._tts = DefaultTTS()
+        #self._tts = DefaultTTS()
+
 
         self.fp_enable_leg_finder_pub = rospy.Publisher(
             '/hri/leg_finder/enable', Bool)
@@ -46,10 +50,10 @@ class FollowPerson(smach.State):
             if msg.data == True and msg.data != self.fp_legs_found:
                 self.fp_legs_found = True
 
-                self._tts.say('I found you! Now, I will follow you.')
+                self.hsrif.tts.say('I found you! Now, I will follow you.', language='en', sync=True, queue=True)
                 
                 if (self.fisrt):
-                    self._tts.say('If you want me to stop following you, push my hand.')
+                    self.hsrif.tts.say('If you want me to stop following you, push my hand.', language='en', sync=True, queue=True)
                     self.fisrt = False
                 
                 rospy.loginfo('Legs found')
@@ -57,8 +61,8 @@ class FollowPerson(smach.State):
             elif msg.data == False and msg.data != self.fp_legs_found:
                 self.fp_legs_found = False
 
-                self._tts.say(
-                    'Sorry, I lost you! Please come where I can see you.')
+                self.hsrif.tts.say(
+                    'Sorry, I lost you! Please come where I can see you.', language='en', sync=True, queue=True)
                 rospy.loginfo('Legs lost')
         except:
             self.fp_legs_found = False
@@ -81,17 +85,17 @@ class FollowPerson(smach.State):
             rate = rospy.Rate(30)
             
             if self.move_go:
-                self.whole_body.move_to_go()
+                self.hsrif.whole_body.move_to_go()
 
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
 
-            self._tts.say('Push my hand to start following you.')
+            self.hsrif.tts.say('Push my hand to start following you.', language='en', sync=True, queue=True)
 
             while self.pushed == False:
                 rate.sleep()
 
-            self._tts.say('First I will find you. Please, move in front of me, where I can see you.')
+            self.hsrif.tts.say('First I will find you. Please, move in front of me, where I can see you.', language='en', sync=True, queue=True)
             self.fp_enable_leg_finder_pub.publish(True)
 
             while self.pushed == False:
@@ -109,11 +113,11 @@ class FollowPerson(smach.State):
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
 
-            self.whole_body.move_to_go()
+            self.hsrif.whole_body.move_to_go()
 
-            self._tts.say('OK, I will stop following you.')
+            self.hsrif.tts.say('OK, I will stop following you.', language='en', sync=True, queue=True)
 
-            return 'success'
+            return 'next'
 
             # return 'timeout'
         except:
@@ -122,4 +126,4 @@ class FollowPerson(smach.State):
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
 
-            return 'failure'
+            return 'except'

@@ -14,6 +14,7 @@ import hsrb_interface
 from common import speech
 from common.follow_person import FollowPerson
 from common.wait_hand_pushed import WaitHandPushed
+from common.mapping import CreateMap
 
 from navigation_tools.nav_tool_lib import nav_module
     
@@ -53,12 +54,15 @@ def create_sm():
                                                            say_fn=SAY,
                                                            prompt_msg="Push the hand to start",
                                                            success_msg="I will start the carry my luggage task."),
-                               transitions={'success': 'TAKEBAG',
+                               transitions={'success': 'MAPPING',
                                             'timeout': 'WAIT_HAND',
                                             'failure': 'failure'})
         ##########
         # END: TASK INITIALISATION
         ##########                                    
+
+        smach.StateMachine.add('MAPPING', CreateMap(),
+                               transitions={'success': 'TAKEBAG'})
 
         @smach.cb_interface(outcomes=['success', 'failure'])
         def take_bag_cb(userdata):
