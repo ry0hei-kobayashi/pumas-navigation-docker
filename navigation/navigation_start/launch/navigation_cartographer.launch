@@ -22,7 +22,7 @@
     
   <arg name="use_lidar" default="True"/>
   <arg name="use_sonars" default="False"/>
-  <arg name="use_point_cloud" default="False"/>
+  <arg name="use_point_cloud" default="True"/>
   <arg name="use_point_cloud2" value="False"/>
   <arg name="use_bumper" default="False"/>
   <arg name="use_pot_fields" default="True"/>
