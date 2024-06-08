@@ -33,7 +33,7 @@
     
   <arg name="use_lidar" default="True"/>
   <arg name="use_sonars" default="False"/>
-  <arg name="use_point_cloud" default="False"/>
+  <arg name="use_point_cloud" default="True"/>
   <arg name="use_point_cloud2" value="False"/>
   <arg name="use_bumper" default="False"/>
   <arg name="use_pot_fields" default="True"/>
@@ -56,7 +56,7 @@
   <arg name="max_x" default="0.7"/>
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.35"/>
-  <arg name="min_z" default="0.01"/>
+  <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.0"/>
   <!--arg name="max_z" default="1.5"/-->
 
@@ -105,8 +105,7 @@
     
     <param name="obs_detector_debug" value="True"/>
     
-    <param name="pot_fields_k_rej" value="5.7"/>
-    <param name="pot_fields_d0" value="0.4"/>
+    <param name="pot_fields_k_rej" value="0.25"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -134,7 +133,7 @@
     <!--param name="inflation_radius" value="0.18"/>
     <param name="cost_radius" value="0.1"/-->
 
-    <param name="inflation_radius" value="0.15"/>
+    <param name="inflation_radius" value="0.10"/>
     <param name="cost_radius" value="0.2"/>
     
     <param name="max_x" value="$(arg max_x)"/>
