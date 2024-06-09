@@ -14,8 +14,8 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
   
   <!--for rc24-->
-  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_1/map.yaml"/>
-  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_1/map.yaml"/>
+  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_2/map.yaml"/>
+  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/>
 
   <!--for wrs simulator-->
   <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/-->
