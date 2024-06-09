@@ -115,8 +115,6 @@
     <param name="min_z" value="$(arg min_z)"/>
   </node>
 
-  <arg name="topic_name" default="/navigation/obs_detector/enable" />
-  <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
   
   <node name="map_augmenter"  pkg="map_augmenter"  type="map_augmenter_node"  output="screen">
     <param name="laser_scan_topic" value="$(arg laser_scan_topic)"/>
@@ -176,5 +174,7 @@
     <param name="odom_model_type" value="omni-corrected"/>
   </node>
 
+  <arg name="topic_name" default="/navigation/obs_detector/enable" />
+  <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
   
 </launch>
