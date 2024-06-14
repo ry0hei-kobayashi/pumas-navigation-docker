@@ -84,7 +84,7 @@
     <param name="obs_detector_debug" value="True"/>
     
     <param name="pot_fields_d0" value="0.40"/>
-    <param name="pot_fields_k_rej" value="5.7"/>
+    <param name="pot_fields_k_rej" value="2.0"/>
     <!--param name="pot_fields_k_rej" value="0.4"/-->
     
     <param name="max_x" value="$(arg max_x)"/>
