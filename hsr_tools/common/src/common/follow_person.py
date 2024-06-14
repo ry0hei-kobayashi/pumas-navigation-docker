@@ -50,10 +50,12 @@ class FollowPerson(smach.State):
             if msg.data == True and msg.data != self.fp_legs_found:
                 self.fp_legs_found = True
 
-                self.hsrif.tts.say('I found you! Now, I will follow you.', language='en', sync=True, queue=True)
+                #self.hsrif.tts.say('I found you! Now, I will follow you.', language='en', sync=True, queue=True)
+                self.hsrif.tts.say('ついていくのだ', language='ja', sync=True, queue=True)
                 
                 if (self.fisrt):
-                    self.hsrif.tts.say('If you want me to stop following you, push my hand.', language='en', sync=True, queue=True)
+                    #self.hsrif.tts.say('If you want me to stop following you, push my hand.', language='en', sync=True, queue=True)
+                    self.hsrif.tts.say('手が押されたら止まるのだ', language='ja', sync=True, queue=True)
                     self.fisrt = False
                 
                 rospy.loginfo('Legs found')
@@ -61,8 +63,8 @@ class FollowPerson(smach.State):
             elif msg.data == False and msg.data != self.fp_legs_found:
                 self.fp_legs_found = False
 
-                self.hsrif.tts.say(
-                    'Sorry, I lost you! Please come where I can see you.', language='en', sync=True, queue=True)
+                #self.hsrif.tts.say('Sorry, I lost you! Please come where I can see you.', language='en', sync=True, queue=True)
+                self.hsrif.tts.say('見失ったのだ，近くに来てほしいのだ', language='ja', sync=True, queue=True)
                 rospy.loginfo('Legs lost')
         except:
             self.fp_legs_found = False
@@ -90,12 +92,12 @@ class FollowPerson(smach.State):
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
 
-            self.hsrif.tts.say('Push my hand to start following you.', language='en', sync=True, queue=True)
+            self.hsrif.tts.say('手が押されたらついていくのだ', language='ja', sync=True, queue=True)
 
             while self.pushed == False:
                 rate.sleep()
 
-            self.hsrif.tts.say('First I will find you. Please, move in front of me, where I can see you.', language='en', sync=True, queue=True)
+            self.hsrif.tts.say('正面に来てほしいのだ', language='ja', sync=True, queue=True)
             self.fp_enable_leg_finder_pub.publish(True)
 
             while self.pushed == False:
@@ -115,7 +117,7 @@ class FollowPerson(smach.State):
 
             self.hsrif.whole_body.move_to_go()
 
-            self.hsrif.tts.say('OK, I will stop following you.', language='en', sync=True, queue=True)
+            self.hsrif.tts.say('ついていくのをやめるのだ', language='ja', sync=True, queue=True)
 
             return 'next'
 
