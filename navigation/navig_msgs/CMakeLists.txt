@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  graph_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -50,14 +51,19 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-#add_message_files(
-#  FILES
-#)
+add_message_files(
+  FILES
+  Edges.msg
+  GeometryGraph.msg
+)
 
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
    GetInflatedMap.srv
+   GetBoundaryPoints.srv
+   GetGoalPoint.srv
+      PlanPath.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -70,7 +76,7 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  geometry_msgs   nav_msgs   std_msgs
+  geometry_msgs   nav_msgs   std_msgs	graph_msgs
 )
 
 ################################################

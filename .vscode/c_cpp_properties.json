@@ -1,0 +1,29 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/roboworks/nav_ws/devel/include/**",
+        "/home/roboworks/sciurus17_ws/devel/include/**",
+        "/home/roboworks/intc_ws/devel/include/**",
+        "/home/roboworks/sigverse_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/roboworks/nav_ws/src/pumas-navigation-docker/navigation/augment_gridmap_online/include/**",
+        "/home/roboworks/sciurus17_ws/src/sciurus17/vision/erasers_tools/include/**",
+        "/home/roboworks/intc_ws/src/interactive_cleanup/human_pose_estimator/include/**",
+        "/home/roboworks/sciurus17_ws/src/sciurus17/sciurus17_ros/sciurus17_control/include/**",
+        "/opt/ros/noetic/share/tmc_julius/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

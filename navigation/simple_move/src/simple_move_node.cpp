@@ -1,10 +1,10 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Twist.h"
-#include "geometry_msgs/Vector3.h"
+//#include "geometry_msgs/Vector3.h"
 #include "nav_msgs/Path.h"
-#include "std_msgs/Float32.h"
-#include "std_msgs/Float32MultiArray.h"
+#include "std_msgs/Float64.h"
+//#include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Bool.h"
 #include "std_msgs/Empty.h"
@@ -21,6 +21,7 @@
 #define SM_GOAL_POSE_CORRECT_ANGLE 4
 #define SM_GOAL_POSE_FINISH 10
 #define SM_GOAL_POSE_FAILED 12
+#define SM_GOAL_PATH_FIRST_POINT 49
 #define SM_GOAL_PATH_ACCEL 5
 #define SM_GOAL_PATH_CRUISE 6
 #define SM_GOAL_PATH_DECCEL 7
@@ -33,10 +34,7 @@ float goal_angle     = 0;
 bool  new_pose       = false;
 bool  new_path       = false;
 bool  collision_risk = false;
-bool  move_lat       = false;
-bool  use_pot_fields = false;
 nav_msgs::Path goal_path;
-geometry_msgs::Vector3 rejection_force;
 bool stop = false;
 std::string base_link_name = "base_footprint";
 
@@ -46,7 +44,6 @@ void callback_general_stop(const std_msgs::Empty::ConstPtr& msg)
     stop     = true;
     new_pose = false;
     new_path = false;
-    move_lat = false;
 }
 
 void callback_navigation_stop(const std_msgs::Empty::ConstPtr& msg)
@@ -55,7 +52,6 @@ void callback_navigation_stop(const std_msgs::Empty::ConstPtr& msg)
     stop     = true;
     new_pose = false;
     new_path = false;
-    move_lat = false;
 }
 
 void callback_simple_move_stop(const std_msgs::Empty::ConstPtr& msg)
@@ -66,30 +62,27 @@ void callback_simple_move_stop(const std_msgs::Empty::ConstPtr& msg)
     new_path = false;
 }
 
-void callback_goal_dist(const std_msgs::Float32::ConstPtr& msg)
+void callback_goal_dist(const std_msgs::Float64::ConstPtr& msg)
 {
     std::cout << "SimpleMove.->New move received: goal dist= " << msg->data << std::endl;     
     goal_distance = msg->data;
     goal_angle    = 0;
     new_pose = true;
     new_path = false;
-    move_lat = false;
 }
 
-void callback_goal_dist_angle(const std_msgs::Float32MultiArray::ConstPtr& msg)
+void callback_goal_dist_angle(const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
     std::cout << "SimpleMove.->New move received: goal dist= " << msg->data[0] << " and goal angle= " << msg->data[1] << std::endl;
     goal_distance = msg->data[0];
     goal_angle    = msg->data[1];
     new_pose = true;
     new_path = false;
-    move_lat = false;
 }
 
 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
 {
     std::cout << "SimpleMove.->New path received with " << msg->poses.size() << " points with id=" << msg->header.seq << std::endl;
-    move_lat = false;
     if (msg->poses.size() <= 0)
     {
         new_pose = false;
@@ -101,51 +94,30 @@ void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
     }
 }
 
-void callback_move_lateral(const std_msgs::Float32::ConstPtr& msg)
-{
-    goal_distance = msg->data;
-    goal_angle    = 0;
-    new_pose = true;
-    new_path = false;
-    move_lat = true;
-}
 void callback_collision_risk(const std_msgs::Bool::ConstPtr& msg)
 {
     collision_risk = msg->data;
 }
 
-void callback_rejection_force(const geometry_msgs::Vector3::ConstPtr& msg)
-{
-    rejection_force = *msg;
-}
-
-geometry_msgs::Twist calculate_speeds(float robot_x, float robot_y, float robot_t, float goal_x, float goal_y,float min_linear_speed, float max_linear_speed, float angular_speed, float alpha, float beta, bool backwards, bool lateral, bool use_pot_fields=false, double rejection_force_y=0)
+geometry_msgs::Twist calculate_speeds(float robot_x, float robot_y, float robot_t, float goal_x, float goal_y,
+                                      float min_linear_speed, float max_linear_speed, float angular_speed, float alpha, float beta, bool backwards)
 {
     float angle_error = 0;
-    if(backwards) angle_error = (atan2(robot_y - goal_y, robot_x -goal_x)-robot_t);
-    else angle_error = (atan2(goal_y - robot_y, goal_x - robot_x)-robot_t);
+    if(backwards) angle_error = atan2(robot_y - goal_y, robot_x - goal_x) - robot_t;
+    else angle_error = atan2(goal_y - robot_y, goal_x - robot_x) - robot_t;
     if(angle_error >   M_PI) angle_error -= 2*M_PI;
     if(angle_error <= -M_PI) angle_error += 2*M_PI;
-    if(lateral) angle_error -= M_PI/2;
-    if(angle_error <= -M_PI) angle_error += 2*M_PI;
-    if(backwards) max_linear_speed *= -1;
-    
-    geometry_msgs::Twist result;
-    if(lateral)
-        result.linear.y   = max_linear_speed  * exp(-(angle_error * angle_error) / (alpha));
-    else result.linear.x  = max_linear_speed  * exp(-(angle_error * angle_error) / (alpha));
-    result.angular.z = angular_speed * (2 / (1 + exp(-angle_error / beta)) - 1);
 
+    if(backwards) max_linear_speed *= -1;
+    geometry_msgs::Twist result;
+    result.linear.x  = max_linear_speed  * exp(-(angle_error * angle_error) / alpha);
     if(fabs(result.linear.x) < min_linear_speed)
         result.linear.x = 0;
-    if(fabs(result.linear.y) < min_linear_speed)
-        result.linear.y = 0;
-    
-    if(use_pot_fields && !lateral) result.linear.y = rejection_force_y;
+    result.angular.z = angular_speed * (2 / (1 + exp(-angle_error / beta)) - 1);
     return result;
 }
 
-geometry_msgs::Twist calculate_speeds(float robot_angle, float goal_angle, float angular_speed, float beta, bool move_lat)
+geometry_msgs::Twist calculate_speeds(float robot_angle, float goal_angle, float angular_speed, float beta)
 {
     float angle_error = goal_angle - robot_angle;
     if(angle_error >   M_PI) angle_error -= 2*M_PI;
@@ -186,47 +158,52 @@ void get_goal_position_wrt_odom(float goal_distance, float goal_angle, tf::Trans
     float robot_y = transform.getOrigin().y();
     tf::Quaternion q = transform.getRotation();
     float robot_t = atan2((float)q.z(), (float)q.w()) * 2;
+
+    goal_x = robot_x + goal_distance * cos(robot_t + goal_angle);
+    goal_y = robot_y + goal_distance * sin(robot_t + goal_angle);
     goal_t = robot_t + goal_angle;
     if(goal_t >   M_PI) goal_t -= 2*M_PI;
     if(goal_t <= -M_PI) goal_t += 2*M_PI;
-    
-    goal_x = robot_x + goal_distance * cos(robot_t + goal_angle + (move_lat?M_PI/2:0));
-    goal_y = robot_y + goal_distance * sin(robot_t + goal_angle + (move_lat?M_PI/2:0));
-    
-
 }
 
 float get_path_total_distance(nav_msgs::Path& path)
 {
     float dist = 0;
     for(size_t i=1; i < path.poses.size(); i++)
-        dist += sqrt(pow(path.poses[i].pose.position.x - path.poses[i-1].pose.position.x,2) +
-                     pow(path.poses[i].pose.position.y - path.poses[i-1].pose.position.y,2));
+        dist += sqrt(pow(path.poses[i].pose.position.x - path.poses[i-1].pose.position.x,2) + pow(path.poses[i].pose.position.y - path.poses[i-1].pose.position.y,2));
     return dist;
 }
 
-void get_next_goal_from_path(float robot_x, float robot_y, float robot_t, float& goal_x, float& goal_y, int& last_pose_idx, int& next_pose_idx)
+void find_nearest_path_point(float& robot_x, float& robot_y, float& robot_t, float& goal_x, float& goal_y,
+                             int& next_pose_idx, tf::TransformListener& tf_listener)
+{
+    get_robot_position_wrt_map(tf_listener, robot_x, robot_y, robot_t);
+    next_pose_idx = 0;
+    float d1 = sqrt(fabs(goal_path.poses[next_pose_idx].pose.position.x - robot_x) +
+                    fabs(goal_path.poses[next_pose_idx].pose.position.y - robot_y));
+    float d2 = sqrt(fabs(goal_path.poses[next_pose_idx+1].pose.position.x - robot_x) +
+                    fabs(goal_path.poses[next_pose_idx+1].pose.position.y - robot_y));
+    while(d2 < d1)
+    {
+        next_pose_idx++;
+        d1 = sqrt(fabs(goal_path.poses[next_pose_idx].pose.position.x - robot_x) +
+                  fabs(goal_path.poses[next_pose_idx].pose.position.y - robot_y));
+        d2 = sqrt(fabs(goal_path.poses[next_pose_idx+1].pose.position.x - robot_x) +
+                  fabs(goal_path.poses[next_pose_idx+1].pose.position.y - robot_y));
+    }//This is done to avoid looping overall path points to find the nearest one
+    goal_x = goal_path.poses[next_pose_idx+1].pose.position.x;
+    goal_y = goal_path.poses[next_pose_idx+1].pose.position.y;
+}
+
+void get_next_goal_from_path(float robot_x, float robot_y, float robot_t, float& goal_x, float& goal_y, int& next_pose_idx)
 {
     if(next_pose_idx >= goal_path.poses.size()) next_pose_idx = goal_path.poses.size() - 1;
-    float prev_goal_x = goal_path.poses[last_pose_idx].pose.position.x;
-    float prev_goal_y = goal_path.poses[last_pose_idx].pose.position.y;
-    float robot_error_x = robot_x - prev_goal_x;
-    float robot_error_y = robot_y - prev_goal_y;
     float error = 0;
     do
     {
         goal_x = goal_path.poses[next_pose_idx].pose.position.x;
         goal_y = goal_path.poses[next_pose_idx].pose.position.y;
-        float path_vector_x = goal_x - prev_goal_x;
-        float path_vector_y = goal_y - prev_goal_y;
-        float path_vector_mag = sqrt(path_vector_x*path_vector_x + path_vector_y*path_vector_y);
-        path_vector_x = path_vector_mag > 0 ? path_vector_x / path_vector_mag : 0;
-        path_vector_y = path_vector_mag > 0 ? path_vector_y / path_vector_mag : 0;
-        float scalar_projection = robot_error_x*path_vector_x + robot_error_y*path_vector_y;
-        //Error is not euclidean distance, but it is measured projected on the current path segment
-        error = path_vector_mag - scalar_projection;
-        if(error < 0.25)
-            last_pose_idx = next_pose_idx;
+        error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
     }while(error < 0.25 && ++next_pose_idx < goal_path.poses.size());
 }
 
@@ -243,6 +220,24 @@ std_msgs::Float64MultiArray get_next_goal_head_angles(float robot_x, float robot
     msg.data.push_back(-1.0);
     return msg;
 }
+/*
+std_msgs::Float64MultiArray head_to_neutral()
+{
+    std_msgs::Float64MultiArray msg;
+    msg.data.push_back(0.0);
+    msg.data.push_back(0.0);
+    return msg;
+}*/
+
+/*std_msgs::Float64MultiArray arm_to_go()
+{
+    std_msgs::Float64MultiArray msg;
+    msg.data.push_back(0.0);
+    msg.data.push_back(-1.5707);
+    msg.data.push_back(-1.5707);
+    msg.data.push_back(0.0);
+    return msg;
+}*/
 
 int main(int argc, char** argv)
 {
@@ -257,8 +252,6 @@ int main(int argc, char** argv)
     ros::Subscriber sub_navCtrlStop      = n.subscribe("/navigation/stop",  1, callback_navigation_stop);
     ros::Subscriber sub_navSimpleMvStop  = n.subscribe("/simple_move/stop", 1, callback_simple_move_stop);               
     ros::Subscriber sub_gollisionRisk    = n.subscribe("/navigation/obs_detector/collision_risk", 10, callback_collision_risk);
-    ros::Subscriber sub_moveLateral      = n.subscribe("/simple_move/goal_dist_lateral" , 1, callback_move_lateral);
-    ros::Subscriber sub_rejection_force  = n.subscribe("/navigation/obs_detector/pf_rejection_force", 1, callback_rejection_force);
     tf::TransformListener tf_listener;
     ros::Rate loop(RATE);
 
@@ -270,7 +263,9 @@ int main(int argc, char** argv)
     float linear_acceleration = 0.1;
     float fine_dist_tolerance = 0.03;
     float coarse_dist_tolerance = 0.2;
-    
+    std::string  cmd_vel_name="/cmd_vel";
+
+
     float angle_tolerance = 0.05;
     bool  move_head = true;
 
@@ -294,25 +289,27 @@ int main(int argc, char** argv)
         ros::param::get("~angle_tolerance", angle_tolerance);
     if(ros::param::has("~move_head"))
         ros::param::get("~move_head", move_head);
-    if(ros::param::has("~use_pot_fields"))
-        ros::param::get("~use_pot_fields", use_pot_fields);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
+    if(ros::param::has("~cmd_vel_name"))
+        ros::param::get("~cmd_vel_name", cmd_vel_name);
+
 
     std::cout << "SimpleMove.->Control parameters: min_linear=" << min_linear_speed << " max_linear=" << max_linear_speed;
     std::cout << "  linear_accel=" << linear_acceleration << "  max_angular=" << max_angular_speed << std::endl;
     std::cout << "SimpleMove.->alpha=" << alpha << "  beta=" << beta << "  fine_dist_tol=" << fine_dist_tolerance;
     std::cout << "  coarse_dist_tol=" << coarse_dist_tolerance << "  angle_tol=" << angle_tolerance << std::endl;
-    std::cout << "SimpleMove.->Use potential fields rejection force: " << (use_pot_fields ? "True" : "False") << std::endl;
     std::cout << "SimpleMove.->Base link name: " << base_link_name << std::endl;
+    std::cout<<"cmd_vel_name: "<<cmd_vel_name<<std::endl;
 
     std::cout << "SimpleMove.->Waiting for odometry and localization transforms..." << std::endl;
     tf_listener.waitForTransform("map",  base_link_name, ros::Time(0), ros::Duration(1000.0));
     tf_listener.waitForTransform("odom", base_link_name, ros::Time(0), ros::Duration(1000.0));
 
     ros::Publisher pub_goal_reached     = n.advertise<actionlib_msgs::GoalStatus>("/simple_move/goal_reached", 1); 
-    ros::Publisher pub_cmd_vel          = n.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
+    ros::Publisher pub_cmd_vel          = n.advertise<geometry_msgs::Twist>(cmd_vel_name, 1);
     ros::Publisher pub_head_goal_pose   = n.advertise<std_msgs::Float64MultiArray>("/hardware/head/goal_pose", 1);
+    ros::Publisher pub_arm_goal_pose    = n.advertise<std_msgs::Float64MultiArray>("/hardware/arm/goal_pose", 1);
 
     actionlib_msgs::GoalStatus msg_goal_reached;
     int state = SM_INIT;
@@ -325,11 +322,10 @@ int main(int argc, char** argv)
     float goal_t = 0;
     float global_goal_x = 0;
     float global_goal_y = 0;
-    int prev_pose_idx = 0;
     int next_pose_idx = 0;
     float temp_k = 0;
     int attempts = 0;
-    float global_error = 0;
+    float error = 0;
     while(ros::ok())
     {
         if(stop)
@@ -363,10 +359,8 @@ int main(int argc, char** argv)
             }
             if(new_path)
             {
-                state = SM_GOAL_PATH_ACCEL;
+                state = SM_GOAL_PATH_FIRST_POINT;
                 new_path = false;
-                prev_pose_idx = 0;
-                next_pose_idx = 0;
                 global_goal_x = goal_path.poses[goal_path.poses.size() - 1].pose.position.x;
                 global_goal_y = goal_path.poses[goal_path.poses.size() - 1].pose.position.y;
                 std::stringstream ss;
@@ -379,13 +373,13 @@ int main(int argc, char** argv)
             
         case SM_GOAL_POSE_ACCEL:
             get_robot_position_wrt_odom(tf_listener, robot_x, robot_y, robot_t);
-            global_error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
-            if(global_error < fine_dist_tolerance)
+            error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
+            if(error < fine_dist_tolerance)
                 state = SM_GOAL_POSE_CORRECT_ANGLE;
-            else if(global_error < current_linear_speed*current_linear_speed/(linear_acceleration*5))
+            else if(error < current_linear_speed*current_linear_speed/linear_acceleration)
             {
                 state = SM_GOAL_POSE_DECCEL;
-                temp_k = current_linear_speed/sqrt(global_error);
+                temp_k = current_linear_speed/sqrt(error);
             }
             else if(current_linear_speed >= max_linear_speed)
             {
@@ -398,19 +392,19 @@ int main(int argc, char** argv)
                 std::cout << "SimpleMove.->Timeout exceeded while trying to reach goal position. Current state: GOAL_POSE_ACCEL." << std::endl;
             }
             pub_cmd_vel.publish(calculate_speeds(robot_x, robot_y, robot_t, goal_x, goal_y, min_linear_speed, current_linear_speed,
-                                                 max_angular_speed, alpha*2, beta/4, goal_distance < 0, move_lat));
-            current_linear_speed += (linear_acceleration*5)/RATE;
+                                                     max_angular_speed, alpha, beta, goal_distance < 0));
+            current_linear_speed += linear_acceleration/RATE;
             break;
 
             
         case SM_GOAL_POSE_CRUISE:
             get_robot_position_wrt_odom(tf_listener, robot_x, robot_y, robot_t);
-            global_error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
-            if(global_error < fine_dist_tolerance)
+            error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
+            if(error < fine_dist_tolerance)
                 state = SM_GOAL_POSE_CORRECT_ANGLE;
-            else if(global_error < current_linear_speed*current_linear_speed/(linear_acceleration*5))
+            else if(error < current_linear_speed*current_linear_speed/linear_acceleration)
             {
-                temp_k = current_linear_speed/sqrt(global_error);
+                temp_k = current_linear_speed/sqrt(error);
                 state = SM_GOAL_POSE_DECCEL;
             }
             if(--attempts <= 0)
@@ -419,36 +413,37 @@ int main(int argc, char** argv)
                 std::cout << "SimpleMove.->Timeout exceeded while trying to reach goal position. Current state: GOAL_POSE_CRUISE." << std::endl;
             }
             pub_cmd_vel.publish(calculate_speeds(robot_x, robot_y, robot_t, goal_x, goal_y, min_linear_speed, current_linear_speed,
-                                                 max_angular_speed, alpha*2, beta/4, goal_distance < 0, move_lat));
+                                                     max_angular_speed, alpha, beta, goal_distance < 0));
             break;
 
             
         case SM_GOAL_POSE_DECCEL:
             get_robot_position_wrt_odom(tf_listener, robot_x, robot_y, robot_t);
-            global_error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
-            if(global_error < fine_dist_tolerance)
+            error = sqrt((goal_x - robot_x)*(goal_x - robot_x) + (goal_y - robot_y)*(goal_y - robot_y));
+            if(error < fine_dist_tolerance)
                     state = SM_GOAL_POSE_CORRECT_ANGLE;
             if(--attempts <= 0)
             {
                 state = SM_GOAL_POSE_FAILED;
                 std::cout << "SimpleMove.->Timeout exceeded while trying to reach goal position. Current state: GOAL_POSE_DECCEL." << std::endl;
             }
-            current_linear_speed = temp_k * sqrt(global_error);
+            current_linear_speed = temp_k * sqrt(error);
             if(current_linear_speed < min_linear_speed) current_linear_speed = min_linear_speed;
             pub_cmd_vel.publish(calculate_speeds(robot_x, robot_y, robot_t, goal_x, goal_y, min_linear_speed, current_linear_speed,
-                                                 max_angular_speed, alpha*2, beta/4, goal_distance < 0, move_lat, use_pot_fields, rejection_force.y));
+                                                     max_angular_speed, alpha, beta, goal_distance < 0));
             break;
 
 
         case SM_GOAL_POSE_CORRECT_ANGLE:
             get_robot_position_wrt_odom(tf_listener, robot_x, robot_y, robot_t);
-            global_error = (goal_t - robot_t);
-            if (global_error > M_PI) global_error-=2*M_PI;
-            if (global_error <= -M_PI) global_error+=2*M_PI;
-            global_error = fabs(global_error);
-            if(global_error < angle_tolerance)
+            error = (goal_t - robot_t);
+            if (error > M_PI) error-=2*M_PI;
+            if (error <= -M_PI) error+=2*M_PI;
+            error = fabs(error);
+            if(error < angle_tolerance)
                 state = SM_GOAL_POSE_FINISH;
-            pub_cmd_vel.publish(calculate_speeds(robot_t, goal_t, max_angular_speed, beta/4, move_lat));
+            //if(move_head) pub_head_goal_pose.publish(head_to_neutral());
+            pub_cmd_vel.publish(calculate_speeds(robot_t, goal_t, max_angular_speed, beta));
             if(--attempts <= 0)
             {
                 state = SM_GOAL_POSE_FAILED;
@@ -476,7 +471,14 @@ int main(int argc, char** argv)
             current_linear_speed = 0;
             break;
 
-                        
+            
+        case SM_GOAL_PATH_FIRST_POINT:
+            find_nearest_path_point(robot_x, robot_y, robot_t, goal_x, goal_y, next_pose_idx, tf_listener);
+            //pub_arm_goal_pose.publish(arm_to_go());
+            state = SM_GOAL_PATH_ACCEL;
+            break;
+
+            
         case SM_GOAL_PATH_ACCEL:
             if(collision_risk)
             {
@@ -486,14 +488,14 @@ int main(int argc, char** argv)
             }
             else{
                 get_robot_position_wrt_map(tf_listener, robot_x, robot_y, robot_t);
-                get_next_goal_from_path(robot_x, robot_y, robot_t, goal_x, goal_y, prev_pose_idx, next_pose_idx);
-                global_error = sqrt((global_goal_x - robot_x)*(global_goal_x - robot_x) + (global_goal_y - robot_y)*(global_goal_y - robot_y));
-                if(global_error < coarse_dist_tolerance)
+                get_next_goal_from_path(robot_x, robot_y, robot_t, goal_x, goal_y, next_pose_idx);
+                error = sqrt((global_goal_x - robot_x)*(global_goal_x - robot_x) + (global_goal_y - robot_y)*(global_goal_y - robot_y));
+                if(error < coarse_dist_tolerance)
                     state = SM_GOAL_PATH_FINISH;
-                else if(global_error < current_linear_speed*current_linear_speed/linear_acceleration)
+                else if(error < current_linear_speed*current_linear_speed/linear_acceleration)
                 {
                     state = SM_GOAL_PATH_DECCEL;
-                    temp_k = current_linear_speed/sqrt(global_error);
+                    temp_k = current_linear_speed/sqrt(error);
                 }
                 else if(current_linear_speed >= max_linear_speed)
                 {
@@ -506,7 +508,7 @@ int main(int argc, char** argv)
                     std::cout<<"SimpleMove.->Timeout exceeded while trying to reach goal path. Current state: GOAL_PATH_ACCEL."<<std::endl;
                 }
                 pub_cmd_vel.publish(calculate_speeds(robot_x, robot_y, robot_t, goal_x, goal_y, min_linear_speed, current_linear_speed,
-                                                     max_angular_speed, alpha, beta, false, move_lat, use_pot_fields, rejection_force.y));
+                                                     max_angular_speed, alpha, beta, false));
                 if(move_head) pub_head_goal_pose.publish(get_next_goal_head_angles(robot_x, robot_y, robot_t, next_pose_idx));
                 current_linear_speed += linear_acceleration/RATE;
             }
@@ -523,13 +525,13 @@ int main(int argc, char** argv)
             else
             {
                 get_robot_position_wrt_map(tf_listener, robot_x, robot_y, robot_t);
-                get_next_goal_from_path(robot_x, robot_y, robot_t, goal_x, goal_y, prev_pose_idx, next_pose_idx);
-                global_error = sqrt((global_goal_x - robot_x)*(global_goal_x - robot_x) + (global_goal_y - robot_y)*(global_goal_y - robot_y));
-                if(global_error < coarse_dist_tolerance)
+                get_next_goal_from_path(robot_x, robot_y, robot_t, goal_x, goal_y, next_pose_idx);
+                error = sqrt((global_goal_x - robot_x)*(global_goal_x - robot_x) + (global_goal_y - robot_y)*(global_goal_y - robot_y));
+                if(error < coarse_dist_tolerance)
                     state = SM_GOAL_PATH_FINISH;
-                else if(global_error < current_linear_speed*current_linear_speed/linear_acceleration)
+                else if(error < current_linear_speed*current_linear_speed/linear_acceleration)
                 {
-                    temp_k = current_linear_speed/sqrt(global_error);
+                    temp_k = current_linear_speed/sqrt(error);
                     state = SM_GOAL_PATH_DECCEL;
                 }
                 if(--attempts <= 0)
@@ -538,7 +540,7 @@ int main(int argc, char** argv)
                     std::cout<<"SimpleMove.->Timeout exceeded while trying to reach goal path. Current state: GOAL_PATH_CRUISE."<<std::endl;
                 }
                 pub_cmd_vel.publish(calculate_speeds(robot_x, robot_y, robot_t, goal_x, goal_y, min_linear_speed, current_linear_speed,
-                                                     max_angular_speed, alpha, beta, false,move_lat, use_pot_fields, rejection_force.y));
+                                                     max_angular_speed, alpha, beta, false));
                 if(move_head) pub_head_goal_pose.publish(get_next_goal_head_angles(robot_x, robot_y, robot_t, next_pose_idx));
             }
             break;
@@ -554,19 +556,19 @@ int main(int argc, char** argv)
             else
             {
                 get_robot_position_wrt_map(tf_listener, robot_x, robot_y, robot_t);
-                get_next_goal_from_path(robot_x, robot_y, robot_t, goal_x, goal_y, prev_pose_idx, next_pose_idx);
-                global_error = sqrt((global_goal_x - robot_x)*(global_goal_x - robot_x) + (global_goal_y - robot_y)*(global_goal_y - robot_y));
-                if(global_error < coarse_dist_tolerance)
+                get_next_goal_from_path(robot_x, robot_y, robot_t, goal_x, goal_y, next_pose_idx);
+                error = sqrt((global_goal_x - robot_x)*(global_goal_x - robot_x) + (global_goal_y - robot_y)*(global_goal_y - robot_y));
+                if(error < coarse_dist_tolerance)
                     state = SM_GOAL_PATH_FINISH;
                 if(--attempts <= 0)
                 {
                     state = SM_GOAL_PATH_FAILED;
                     std::cout<<"SimpleMove.->Timeout exceeded while trying to reach goal path. Current state:GOAL_PATH_DECCEL."<<std::endl;
                 }
-                current_linear_speed = temp_k * sqrt(global_error);
+                current_linear_speed = temp_k * sqrt(error);
                 if(current_linear_speed < min_linear_speed) current_linear_speed = min_linear_speed;
                 pub_cmd_vel.publish(calculate_speeds(robot_x, robot_y, robot_t, goal_x, goal_y, min_linear_speed, current_linear_speed,
-                                                     max_angular_speed, alpha, beta, false,move_lat, use_pot_fields, rejection_force.y));
+                                                     max_angular_speed, alpha, beta, false));
                 if(move_head) pub_head_goal_pose.publish(get_next_goal_head_angles(robot_x, robot_y, robot_t, next_pose_idx));
             }
             break;
@@ -592,7 +594,7 @@ int main(int argc, char** argv)
             break;
 
         default:
-            std::cout<<"SimpleMove.->A VERY STUPID PERSON PROGRAMMED THIS SHIT. APOLOGIES FOR THE INCONVINIENCE :'(" << std::endl;
+            std::cout << "SimpleMove.->A VERY STUPID PERSON PROGRAMMED THIS SHIT. APOLOGIES FOR THE INCONVINIENCE. :'(" << std::endl;
             return -1;
         }
         ros::spinOnce();

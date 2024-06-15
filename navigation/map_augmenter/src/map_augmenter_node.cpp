@@ -25,7 +25,6 @@ bool use_lidar  = true;
 bool use_sonars = false;
 bool use_cloud  = false;
 bool use_cloud2 = false;
-bool use_online = false;
 
 tf::TransformListener* listener;
 std::string base_link_name      = "/base_footprint";
@@ -160,8 +159,7 @@ nav_msgs::OccupancyGrid get_cost_map(nav_msgs::OccupancyGrid& map, float cost_ra
 bool obstacles_map_with_cloud()
 {
     std::cout << "MapAugmenter.->Trying to get point cloud from topic: " << point_cloud_topic << std::endl;
-    //boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(1.0));
-    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(10.0));
+    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(5.0));
     if(ptr == NULL)
     {
         std::cout << "MapAugmenter.->Cannot get point cloud!!!" << std::endl;
@@ -196,7 +194,7 @@ bool obstacles_map_with_cloud()
 bool obstacles_map_with_cloud2()
 {
     std::cout << "MapAugmenter.->Trying to get point cloud2 from topic: " << point_cloud_topic2 << std::endl;
-    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr=ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic2, ros::Duration(10.0));
+    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr=ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic2, ros::Duration(1.0));
     if(ptr == NULL)
     {
         std::cout << "MapAugmenter.->Cannot get point cloud2!!!" << std::endl;
@@ -231,8 +229,7 @@ bool obstacles_map_with_cloud2()
 bool obstacles_map_with_lidar()
 {
     std::cout << "MapAugmenter.->Trying to get laser scan from topic: " << laser_scan_topic << std::endl;
-    //boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(1.0));
-    boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(10.0));
+    boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(1.0));
     if(ptr == NULL)
     {
         std::cout << "MapAugmenter.->Cannot get laser scan!!!" << std::endl;
@@ -321,34 +318,6 @@ bool callback_augmented_map(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Re
 {
     std::cout << "MapAugmenter.->Augmenting map using: "<<(use_lidar?"lidar ":"")<<(use_sonars?"sonars ":"");
     std::cout << (use_cloud? "point_cloud ":"") << (use_cloud2? "point_cloud2":"") <<std::endl;
- 
-    if(use_online){
-        ros::NodeHandle n_;
-        ros::ServiceClient cltGetStaticMap = n_.serviceClient<nav_msgs::GetMap>("/static_map");
-        ros::ServiceClient cltGetProhibitionMap = n_.serviceClient<nav_msgs::GetMap>("/prohibition_map");
-        nav_msgs::GetMap srvMap;
-        nav_msgs::GetMap srvProhibitionMap;
-        
-        if(!cltGetStaticMap.call(srvMap))
-        {
-            std::cout << "MapAugmenter.->Cannot get static map!!!!" << std::endl;
-            return false;
-        }
-        if(!cltGetProhibitionMap.call(srvProhibitionMap))
-        {
-            std::cout << "MapAugmenter.->Cannot get prohibition map!!!!" << std::endl;
-            return false;
-        }
-        
-        std::cout << "MapAugmenter.->Updating static map and static cost map..." << std::endl;
-        static_map = merge_maps(srvMap.response.map, srvProhibitionMap.response.map);
-        static_map = inflate_map(static_map, inflation_radius);
-        static_cost_map = get_cost_map(static_map, cost_radius);
-        obstacles_map = static_map;
-        for(size_t i=0; i < obstacles_map.data.size(); i++) obstacles_map.data[i] = 0;
-        std::cout << "MapAugmenter.->Statics maps have been updated." << std::endl;
-    } 
- 
     if(use_lidar  && !obstacles_map_with_lidar())
         return false;
     if(use_sonars && !obstacles_map_with_sonars())
@@ -407,36 +376,6 @@ bool decay_map_and_check_if_obstacles(nav_msgs::OccupancyGrid& map, int decay_fa
     return obstacles;
 }
 
-void callback_point_obstacle(const geometry_msgs::PointStamped &added_point)
-{
-    sleep(1);
-    
-    ros::NodeHandle n_;
-    ros::ServiceClient cltGetStaticMap = n_.serviceClient<nav_msgs::GetMap>("/static_map");
-    ros::ServiceClient cltGetProhibitionMap = n_.serviceClient<nav_msgs::GetMap>("/prohibition_map");
-    nav_msgs::GetMap srvMap;
-    nav_msgs::GetMap srvProhibitionMap;
-    
-    if(!cltGetStaticMap.call(srvMap))
-    {
-        std::cout << "MapAugmenter.->Cannot get static map!!!!" << std::endl;
-        return;
-    }
-    if(!cltGetProhibitionMap.call(srvProhibitionMap))
-    {
-        std::cout << "MapAugmenter.->Cannot get prohibition map!!!!" << std::endl;
-        return;
-    }
-    
-    std::cout << "MapAugmenter.->Updating static map with prohibition layer and static cost map..." << std::endl;
-    static_map = merge_maps(srvMap.response.map, srvProhibitionMap.response.map);
-    static_map = inflate_map(static_map, inflation_radius);
-    static_cost_map = get_cost_map(static_map, cost_radius);
-    obstacles_map = static_map;
-    for(size_t i=0; i < obstacles_map.data.size(); i++) obstacles_map.data[i] = 0;
-    std::cout << "MapAugmenter.->Statics maps have been updated." << std::endl;
-}
-
 int main(int argc, char** argv)
 {
     std::cout << "INITIALIZING MAP AUGMENTER BY MARCO NEGRETE..." << std::endl;
@@ -455,8 +394,6 @@ int main(int argc, char** argv)
         ros::param::get("~use_point_cloud", use_cloud);
     if(ros::param::has("~use_point_cloud2"))
         ros::param::get("~use_point_cloud2", use_cloud2);
-    if(ros::param::has("~use_online"))
-        ros::param::get("~use_online", use_online);
     if(ros::param::has("~min_x"))
         ros::param::get("~min_x", minX);
     if(ros::param::has("~max_x"))
@@ -552,18 +489,13 @@ int main(int argc, char** argv)
     if (use_lidar)  listener->waitForTransform(base_link_name, laser_scan_frame,   ros::Time(0), ros::Duration(1000.0));
     std::cout << "MapAugmenter.->Sensor transforms are now available"<< std::endl;
     
-    //Added to update the map after a click
-    ros::NodeHandle n2;
-    ros::Subscriber pointSubscriber = n2.subscribe("/clicked_point", 1, callback_point_obstacle);
-    ////
-    
     ros::ServiceServer srvStaticMap         = n.advertiseService("/map_augmenter/get_static_map"        , callback_static_map);
     ros::ServiceServer srvStaticCostMap     = n.advertiseService("/map_augmenter/get_static_cost_map"   , callback_static_cost_map);
     ros::ServiceServer srvAugmentedMap      = n.advertiseService("/map_augmenter/get_augmented_map"     , callback_augmented_map);
     ros::ServiceServer srvAugmentedCostMap  = n.advertiseService("/map_augmenter/get_augmented_cost_map", callback_augmented_cost_map);
     ros::ServiceServer srvAreThereObstacles = n.advertiseService("/map_augmenter/are_there_obstacles"   , callback_are_there_obstacles);
     ros::ServiceServer srvIsInsideObstacles = n.advertiseService("/map_augmenter/is_inside_obstacles"   , callback_is_inside_obstacles);
-    
+        
     int counter = 0;
     while(ros::ok())
     {

@@ -1,0 +1,37 @@
+People:
+  Guest_0:
+    drink: Coke
+    location: Place_3
+    name: john
+  Guest_1:
+    description: someone has arrived... he is a Man... I believe he is  around 25
+      years old... I would say he is a bit neutral. I might guess he is of latino
+      hispanic descent.
+    drink: None
+    location: None
+    name: someone
+Places:
+  Place_0:
+    location:
+      theta: 0.0
+      x: 0.0
+      y: 0.0
+    occupied: Not_available
+  Place_1:
+    location:
+      theta: -0.05
+      x: -0.33
+      y: -1.7
+    occupied: None
+  Place_2:
+    location:
+      theta: -1.51
+      x: -0.82
+      y: -1.61
+    occupied: None
+  Place_3:
+    location:
+      theta: 3.1
+      x: -1.12
+      y: -0.45
+    occupied: john

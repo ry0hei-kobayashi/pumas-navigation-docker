@@ -1,7 +1,8 @@
 #include "ros/ros.h"
 #include "std_msgs/Empty.h"
 #include "std_msgs/Bool.h"
-#include "std_msgs/Float32MultiArray.h"
+//#include "std_msgs/Float64MultiArray.h"
+#include "std_msgs/Float64MultiArray.h"
 #include "std_srvs/Trigger.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "nav_msgs/Path.h"
@@ -147,7 +148,7 @@ int main(int argc, char** argv)
     ros::Subscriber sub_set_patience       = n.subscribe("/navigation/set_patience", 10, callback_set_patience);
     ros::Publisher pub_obs_detector_enable = n.advertise<std_msgs::Bool   >("/navigation/obs_detector/enable", 1);
     ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path   >("/simple_move/goal_path", 1);
-    ros::Publisher pub_goal_dist_angle     = n.advertise<std_msgs::Float32MultiArray>("/simple_move/goal_dist_angle", 1);
+    ros::Publisher pub_goal_dist_angle     = n.advertise<std_msgs::Float64MultiArray>("/simple_move/goal_dist_angle", 1);
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
 
@@ -156,6 +157,7 @@ int main(int argc, char** argv)
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
     
     ros::Rate loop(RATE);
+    //ros::Rate slow_loop(1);
     ros::Rate slow_loop(1);
 
     float robot_x = 0;
@@ -171,7 +173,7 @@ int main(int argc, char** argv)
     std_msgs::Bool msg_bool;
     std_srvs::Trigger srv_check_obstacles;
     nav_msgs::Path path;
-    std_msgs::Float32MultiArray msg_goal_dist_angle;
+    std_msgs::Float64MultiArray msg_goal_dist_angle;
     msg_goal_dist_angle.data.resize(2);
 
     while(ros::ok())

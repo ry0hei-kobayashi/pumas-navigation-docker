@@ -1,0 +1,17 @@
+pickup:
+ x_min: 0.5
+ x_max: 0.92
+ y_min: -1.77
+ y_max: -1.08
+ z: 0.66
+shelves:
+ x_min: -1.2
+ x_max: -0.7
+ y_min: 0.44
+ y_max: 0.60
+ z: 0.90,0.5,0.05
+ quat_w:  0.0
+ quat_x:  0.0  
+ quat_y:  0.707
+ quat_z:  0.707
+

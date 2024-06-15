@@ -1,7 +1,8 @@
 /// @brief Copyright (C) 2016 Toyota Motor Corporation
 #include <ros/ros.h>
-#include <std_msgs/Float32.h>
-#include <std_msgs/Float32MultiArray.h>
+#include <std_msgs/Float64.h>
+//#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Bool.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <controller_manager_msgs/ControllerState.h>
@@ -47,7 +48,7 @@ tmc_control_msgs::GripperApplyEffortGoal goal;
 
 
 
-void armGoalPoseCallback(const std_msgs::Float32MultiArray::ConstPtr& msg)
+void armGoalPoseCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
   if(msg->data.size() != 4)
   {
@@ -66,7 +67,7 @@ void armGoalPoseCallback(const std_msgs::Float32MultiArray::ConstPtr& msg)
   }
 }
 
-void gripperPoseCallback(const std_msgs::Float32::ConstPtr& msg)
+void gripperPoseCallback(const std_msgs::Float64::ConstPtr& msg)
 {
   // Expected value between [0.0 - 1.0] where 0.0 is close gripper and 1.0 is totally open gripper
   gripper_goal_pose.resize(1);
@@ -75,14 +76,14 @@ void gripperPoseCallback(const std_msgs::Float32::ConstPtr& msg)
   msg_gripper_recived = true;
 }
 
-void gripperTorqueCallback(const std_msgs::Float32::ConstPtr& msg)
+void gripperTorqueCallback(const std_msgs::Float64::ConstPtr& msg)
 {
   goal.effort = msg->data * (-1);
   msg_gripp_torq_recived = true;
 }
 
 
-void torsoGoalPoseCallback(const std_msgs::Float32::ConstPtr& msg)
+void torsoGoalPoseCallback(const std_msgs::Float64::ConstPtr& msg)
 {
   torso_goal_pose = msg->data;
   msg_torso_recived = true;
@@ -115,8 +116,8 @@ int main(int argc, char **argv)
   std::cout << "INITIALIZING ARM_BRIDGE_NODE BY [EDD-II] " << std::endl;
   ros::init(argc, argv, "arm_bridge");
 
-  std_msgs::Float32 msg_torso_current_pose;
-  std_msgs::Float32MultiArray msg_arm_current_pose;
+  std_msgs::Float64 msg_torso_current_pose;
+  std_msgs::Float64MultiArray msg_arm_current_pose;
   std_msgs::Bool msg_arm_goal_pose;
   std_msgs::Bool msg_torso_goal_pose;
 
@@ -150,8 +151,8 @@ int main(int argc, char **argv)
   // Publishers for hsr-hardware
   pub_hsr_arm_gp      = n.advertise<trajectory_msgs::JointTrajectory>("/hsrb/arm_trajectory_controller/command", 10);
   pub_hsr_gripp_gp    = n.advertise<trajectory_msgs::JointTrajectory>("/hsrb/gripper_controller/command", 10);
-  pub_torso_curren_pose = n.advertise<std_msgs::Float32>("/hardware/torso/current_pose", 10);
-  pub_arm_curren_pose = n.advertise<std_msgs::Float32MultiArray>("/hardware/arm/current_pose", 10);
+  pub_torso_curren_pose = n.advertise<std_msgs::Float64>("/hardware/torso/current_pose", 10);
+  pub_arm_curren_pose = n.advertise<std_msgs::Float64MultiArray>("/hardware/arm/current_pose", 10);
   pub_arm_goal_pose   = n.advertise<std_msgs::Bool>("/hardware/arm/armGoalPose", 10);
   pub_torso_goal_pose = n.advertise<std_msgs::Bool>("/hardware/torso/goal_reached", 10);
 

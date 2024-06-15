@@ -1,0 +1,6 @@
+hg: 0.95
+lg: 0.001
+lower: 100
+higher: 500000
+reg_ly: 100
+reg_hy: 450
