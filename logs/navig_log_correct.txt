@@ -1,0 +1,255 @@
+#nomal
+ > roslaunch navigation_start navigation_cartographer.launch
+... logging to /home/hma/.ros/log/d865ddca-2ae9-11ef-a649-00139531414b/roslaunch-hma27-5281.log
+Checking log directory for disk usage. This may take a while.
+Press Ctrl-C to interrupt
+WARNING: disk usage in log directory [/home/hma/.ros/log] is over 1GB.
+It's recommended that you use the 'rosclean' command.
+
+started roslaunch server http://192.168.0.10:43357/
+
+SUMMARY
+========
+
+PARAMETERS
+ * /map_augmenter/cloud_downsampling: 9
+ * /map_augmenter/cost_radius: 0.2
+ * /map_augmenter/inflation_radius: 0.1
+ * /map_augmenter/laser_scan_topic: /hsrb/base_scan
+ * /map_augmenter/max_x: 0.7
+ * /map_augmenter/max_y: 0.35
+ * /map_augmenter/max_z: 1.5
+ * /map_augmenter/min_x: 0.35
+ * /map_augmenter/min_y: -0.35
+ * /map_augmenter/min_z: 0.05
+ * /map_augmenter/point_cloud_topic2: /hsrb/head_rgbd_s...
+ * /map_augmenter/point_cloud_topic: /hsrb/head_rgbd_s...
+ * /map_augmenter/use_lidar: True
+ * /map_augmenter/use_online: True
+ * /map_augmenter/use_point_cloud2: False
+ * /map_augmenter/use_point_cloud: True
+ * /map_augmenter/use_sonars: False
+ * /map_server_bypass/occupied_threshold: 70
+ * /mvn_pln/patience: True
+ * /obs_detector/bumper_f_topic: hsrb/base_f_bumpe...
+ * /obs_detector/cloud_downsampling: 9
+ * /obs_detector/cloud_points_threshold: 100
+ * /obs_detector/laser_scan_topic: /hsrb/base_scan
+ * /obs_detector/lidar_points_threshold: 20
+ * /obs_detector/max_x: 0.7
+ * /obs_detector/max_y: 0.35
+ * /obs_detector/max_z: 1.5
+ * /obs_detector/min_x: 0.35
+ * /obs_detector/min_y: -0.35
+ * /obs_detector/min_z: 0.05
+ * /obs_detector/obs_detector_debug: True
+ * /obs_detector/point_cloud_topic2: /hsrb/head_rgbd_s...
+ * /obs_detector/point_cloud_topic: /hsrb/head_rgbd_s...
+ * /obs_detector/pot_fields_d0: 0.4
+ * /obs_detector/pot_fields_k_rej: 2.0
+ * /obs_detector/use_bumper: False
+ * /obs_detector/use_lidar: True
+ * /obs_detector/use_point_cloud2: /hsrb/head_rgbd_s...
+ * /obs_detector/use_point_cloud: True
+ * /obs_detector/use_pot_fields: True
+ * /obs_detector/use_sonars: False
+ * /path_planner/diagonal_paths: True
+ * /rosdistro: noetic
+ * /rosversion: 1.15.15
+ * /simple_move/cmd_vel_name: /hsrb/command_vel...
+ * /simple_move/control_alpha: 0.3
+ * /simple_move/control_beta: 0.12
+ * /simple_move/max_angular_speed: 1.1
+ * /simple_move/max_linear_speed: 0.8
+ * /simple_move/use_pot_fields: True
+
+NODES
+  /
+    fake_global_pose (killer_node/fake_global_pose.py)
+    killer_node (killer_node/killer_node.py)
+    map_augmenter (map_augmenter/map_augmenter_node)
+    map_server_bypass (map_server_bypass/map_server_bypass_node)
+    mvn_pln (mvn_pln/mvn_pln_node)
+    obs_detector (obstacle_detector/obs_detect_node)
+    path_planner (path_planner/path_planner_node)
+    prohibition_map_server (map_server/map_server)
+    rostopic_pub_node (rostopic/rostopic)
+    rviz (rviz/rviz)
+    simple_move (simple_move/simple_move_node)
+  /hardware/
+    arm (arm/arm_node)
+    head (head/head_node)
+    led (head/led_node)
+
+ROS_MASTER_URI=http://192.168.0.2:11311
+
+process[killer_node-1]: started with pid [5304]
+process[fake_global_pose-2]: started with pid [5305]
+process[rviz-3]: started with pid [5306]
+process[hardware/head-4]: started with pid [5307]
+
+--------------------->
+INITIALIZING HEAD_BRIDGE_NODE BY EDD-II
+process[hardware/led-5]: started with pid [5308]
+process[hardware/arm-6]: started with pid [5309]
+
+------------------------->
+INITIALIZING ARM_BRIDGE_NODE BY [EDD-II]
+process[map_server_bypass-7]: started with pid [5316]
+process[path_planner-8]: started with pid [5322]
+INITIALIZING PATH CALCULATOR BY MARCO NEGRETE...
+process[simple_move-9]: started with pid [5356]
+process[obs_detector-10]: started with pid [5363]
+INITIALIZING SIMPLE MOVE NODE BY MARCO NEGRETE...
+PathPlanner.->Calculate diagonal paths: True
+PathPlanner.->Smooth alpha: 0.1   smooth beta: 0.9
+PathPlanner.->Waiting for map services...
+process[map_augmenter-11]: started with pid [5365]
+[ INFO] [1718438068.645461681]: waitForService: Service [/map_augmenter/get_static_map] has not been advertised, waiting...
+process[prohibition_map_server-12]: started with pid [5366]
+process[mvn_pln-13]: started with pid [5371]
+INITIALIZING MAP AUGMENTER BY MARCO NEGRETE...
+INITIALIZING MVN_PLN NODE BY MARCO NEGRETE...
+process[rostopic_pub_node-14]: started with pid [5372]
+[ INFO] [1718438068.725443490]: Loading map from image "/home/hma/usr/ros_ws/hsr_ws/src/pumas-navigation-docker/navigation/navigation_start/maps/prohibition_maps/blank/map.pgm"
+[ INFO] [1718438068.757460152]: Read a 600 X 600 map @ 0.050 m/cell
+MvnPln.->Patience: True  Proximity criterion: 2  base link name: base_footprint
+MvnPln.->Waiting for localization transform...
+Initializing fake_pose_integrator
+MapAugmenter.->Parameters: min_x =0.35  max_x =0.7  min_y =-0.35  max_y =0.35  min_z =0.05  max_z =1.5
+MapAugmenter.->Parameters: decay_factor=10  inflation=0.1  cost_radius=0.2
+MapAugmenter.->Parameters: cloud_downsampling=9  cloud_downsampling2=9  lidar_downsampling=2  base link name: /base_footprint
+MapAugmenter.->Waiting for service to get static map...
+INITIALIZING OBSTACLE DETECTOR NODE BY MARCO NEGRETE...
+[ INFO] [1718438068.848139867]: Sending map
+MapAugmenter.->Generating static map with prohibition layer and static cost map...
+MapAugmenter.->WARNING!!! Cannot merge maps of different sizes!!!
+MapAugmenter.->Statics maps are ready.
+MapAugmenter.->Trying to get first messages from active sensor topics: /hsrb/head_rgbd_sensor/depth_registered/rectified_points   /hsrb/base_scan
+SimpleMove.->Control parameters: min_linear=0.05 max_linear=0.8  linear_accel=0.1  max_angular=1.1
+SimpleMove.->alpha=0.3  beta=0.12  fine_dist_tol=0.03  coarse_dist_tol=0.2  angle_tol=0.05
+SimpleMove.->Use potential fields rejection force: True
+SimpleMove.->Base link name: base_footprint
+SimpleMove.->Waiting for odometry and localization transforms...
+ObsDetector.->Starting obs detection using: lidar point_cloud
+ObsDetector.->Using parameters: min_x=0.35  max_x=0.7  min_y=-0.35  max_y=0.35  min_z=0.05  max_z=1.5
+ObsDetector.->Point cloud topic: /hsrb/head_rgbd_sensor/depth_registered/rectified_points   lidar topic name: /hsrb/base_scan
+ObsDetector.->Params for cloud: threshold=100  downsampling=9
+ObsDetector.->Params for lidar: threshold=20  downsampling=1
+ObsDetector.->Calculate potential fields: True
+ObsDetector.->Base link frame: base_link
+ObsDetector.->Waiting for first messages from active sensors: /hsrb/head_rgbd_sensor/depth_registered/rectified_points /hsrb/base_scan
+publishing and latching message. Press ctrl-C to terminate
+killing: /pose_integrator
+ObsDetector.->First messages received...
+ObsDetector.->Waiting for transforms to be available...
+ObsDetector.->Waiting for sensor transforms
+ObsDetector.->Sensor transforms are now available
+MapAugmenter.->First messages received...
+MapAugmenter.->Waiting for localization transform
+MapAugmenter.->Localization transform is now available
+MapAugmenter.->Waiting for sensor transforms
+MapAugmenter.->Sensor transforms are now available
+[ INFO] [1718438069.692588183]: waitForService: Service [/map_augmenter/get_static_map] is now available.
+PathPlanner.->Augmented Map services are now available...
+ObsDetector.->Starting detection using: lidar point_cloud
+Wait for arm goal pose: true
+MvnPln.->Localization transform is ready ...
+MvnPln.->Waiting for path planner to be ready...
+MvnPln.->Path planner is ready.
+mvnPln.->Waiting for map augmenter to be ready...
+MvnPln.->Map Augmenter is ready...
+SimpleMove.->Low level control ready. Waiting for new goal.
+MvnPln.->MVN PLN READY. Waiting for new goal.
+MvnPln.->New goal received. Current task goal_id: 0
+Led color changed
+PathPlanner.-> Received path planning request usign augmented map...
+MapAugmenter.->Augmenting map using: lidar point_cloud
+[ INFO] [1718438084.485083355]: Sending map
+MapAugmenter.->Updating static map and static cost map...
+MapAugmenter.->WARNING!!! Cannot merge maps of different sizes!!!
+MapAugmenter.->Statics maps have been updated.
+MapAugmenter.->Trying to get laser scan from topic: /hsrb/base_scan
+MapAugmenter.->Trying to get point cloud from topic: /hsrb/head_rgbd_sensor/depth_registered/rectified_points
+PathCalculator.-> Calculating by A* from -0.00713186  0.000882657  to -1.27979  -0.971471
+PathPlanner.->A* Algorithm ended after 132 steps
+PathCalculator.->Resulting path by A* has 25 points.
+PathCalculator.->Smoothing finished after 76 attempts
+MvnPln.->Obstacle detector enable flag sent. Waiting for obs detector to be enabled...
+ObsDetector.->Starting detection using: lidar point_cloud
+MvnPln.->Obstacle detector is now available.
+MvnPln. Starting path following
+SimpleMove.->New path received with 25 points with id=0
+MvnPln.->Error less than proximity criterion. Sending near goal point status.
+Led color changed
+SimpleMove.->WARNING! Collision risk detected!!!!!
+SimpleMove.->FAILED path traking.
+SimpleMove.->Low level control ready. Waiting for new goal.
+MvnPln.->COLLISION RISK DETECTED before goal is reached.
+PathPlanner.-> Received path planning request usign augmented map...
+MapAugmenter.->Augmenting map using: lidar point_cloud
+[ INFO] [1718438089.316262917]: Sending map
+MapAugmenter.->Updating static map and static cost map...
+MapAugmenter.->WARNING!!! Cannot merge maps of different sizes!!!
+MapAugmenter.->Statics maps have been updated.
+MapAugmenter.->Trying to get laser scan from topic: /hsrb/base_scan
+MapAugmenter.->Trying to get point cloud from topic: /hsrb/head_rgbd_sensor/depth_registered/rectified_points
+PathCalculator.-> Calculating by A* from -0.154767  -0.132607  to -1.27979  -0.971471
+PathPlanner.->Goal point is inside non-free space!!!! >>>> RE-PLANNING
+PathPlanner.-> Cannot calculte path from start to goal positions using augmented map...
+MvnPln.->Cannot calc path to -1.27979 -0.971471
+SimpleMove.->Simple move stop signal received
+SimpleMove.->Low level control ready. Waiting for new goal.
+MvnPln.->Temporal obstacles detected. Waiting for them to move.
+Led color changed
+MvnPln.->New goal received. Current task goal_id: 1
+Led color changed
+Led color changed
+PathPlanner.-> Received path planning request usign augmented map...
+MapAugmenter.->Augmenting map using: lidar point_cloud
+[ INFO] [1718438097.583626243]: Sending map
+MapAugmenter.->Updating static map and static cost map...
+MapAugmenter.->WARNING!!! Cannot merge maps of different sizes!!!
+MapAugmenter.->Statics maps have been updated.
+MapAugmenter.->Trying to get laser scan from topic: /hsrb/base_scan
+MapAugmenter.->Trying to get point cloud from topic: /hsrb/head_rgbd_sensor/depth_registered/rectified_points
+PathCalculator.-> Calculating by A* from -0.157107  -0.13365  to -0.245531  -0.231567
+PathPlanner.->A* Algorithm ended after 3 steps
+PathCalculator.->Resulting path by A* has 2 points.
+MvnPln.->Obstacle detector enable flag sent. Waiting for obs detector to be enabled...
+ObsDetector.->Starting detection using: lidar point_cloud
+MvnPln.->Obstacle detector is now available.
+MvnPln. Starting path following
+SimpleMove.->New path received with 2 points with id=1
+MvnPln.->Error less than proximity criterion. Sending near goal point status.
+SimpleMove.->Path succesfully followed.
+Led color changed
+SimpleMove.->Low level control ready. Waiting for new goal.
+MvnPln.->Path followed succesfully.
+ObsDetector.->Stopping obstacle detection...
+MvnPln.->Correcting final angle.
+SimpleMove.->New move received: goal dist= 0 and goal angle= 2.00773
+SimpleMove.->Successful move with dist=0 angle=2.00773
+SimpleMove.->Low level control ready. Waiting for new goal.
+MvnPln.->Final angle corrected succesfully.
+MvnPln.->TASK FINISHED.
+Led color changed
+MvnPln.->MVN PLN READY. Waiting for new goal.
+^C[rostopic_pub_node-14] killing on exit
+[mvn_pln-13] killing on exit
+[prohibition_map_server-12] killing on exit
+[map_augmenter-11] killing on exit
+[obs_detector-10] killing on exit
+[simple_move-9] killing on exit
+[path_planner-8] killing on exit
+[map_server_bypass-7] killing on exit
+[hardware/arm-6] killing on exit
+[hardware/led-5] killing on exit
+[hardware/head-4] killing on exit
+[rviz-3] killing on exit
+[fake_global_pose-2] killing on exit
+[killer_node-1] killing on exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+done
+
