@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
+  <include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/>
   <!-- Remapping topics -->
   <remap from="/static_obstacle_map_ref" to="/get_distance_map"/>
   <remap from="/static_map" to="/get_distance_map"/>
@@ -13,13 +14,14 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
 
   <!-- Arguments for maps -->
-  <arg name="prohibition_map_file" default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
-  <arg name="static_map_file" default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/>
+  <arg name="prohibition_map_file" default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_2/map.yaml"/>
+  <arg name="static_map_file" default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/>
 
   <!-- Additional arguments -->
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
   <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
-  <arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
+  <!--arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/-->
+  <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="bumper_f_topic" default="hsrb/base_f_bumper_sensor"/>
   
   <arg name="use_lidar" default="True"/>
@@ -101,7 +103,7 @@
     <!--param name="inflation_radius" value="0.25"/>
     <param name="cost_radius" value="0.5"/-->
     <param name="inflation_radius" value="0.2"/>
-    <param name="cost_radius" value="0.35"/>
+    <param name="cost_radius" value="0.4"/>
     <!--param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
     <param name="max_y" value="$(arg max_y)"/>

@@ -16,6 +16,10 @@ lme = libManageEnv()
 
 
 from geometry_msgs.msg import Pose2D
+#pose = Pose2D(x = 5.5,
+#              y = -1.7,
+#              theta = 0.0
+#              )
 pose = Pose2D(x = 0.0,
               y = 0.0,
               theta = 0.0
