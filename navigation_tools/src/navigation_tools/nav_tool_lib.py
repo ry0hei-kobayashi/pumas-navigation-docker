@@ -6,6 +6,7 @@ import math
 import rospy
 import hsrb_interface
 import tf
+
 from std_msgs.msg import Float32MultiArray, Bool, Empty
 from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D
 from actionlib_msgs.msg import GoalStatus
@@ -57,6 +58,7 @@ class NavModule:
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
                 self.replan_safe_point()
                 #TODO turn or backwards 
+                
             if msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')
                 rospy.loginfo('NavigationStatus -> Replanning by search_safe_point')
@@ -94,9 +96,8 @@ class NavModule:
 
     def replan_safe_point(self):
         rospy.loginfo('called replan_safe_point')
-        #current global goal
-        current_goal_pose2d = self.pose_stamped2pose_2d(self.global_pose)
-        safe_point = self.search_safe_point.get_most_safe_point(current_goal_pose2d, goal_torelance=0.5, refer_size=0.5)
+        goal_pose2d = self.pose_stamped2pose_2d(self.global_goal_xyz)
+        safe_point = self.search_safe_point.get_most_safe_point(goal_pose2d, goal_torelance=4, refer_size=2)
 
         if safe_point:
             rospy.loginfo(safe_point)
@@ -133,6 +134,9 @@ class NavModule:
             attempts = int(timeout * 10)
         else:
             attempts = float('inf')
+        
+        #important: for replan_safe_point 
+        self.global_goal_xyz = goal
 
         self.pub_global_goal_xyz.publish(goal)
         rate.sleep()
@@ -294,5 +298,5 @@ if __name__ == "__main__":
     nav = NavModule(select="hsr")
 
     #example
-    nav.go_abs(6.8, 0.7, 0, 0, 'pumas')
+    nav.go_abs(5.1, 2.8, 0, 0, 'pumas')
 
