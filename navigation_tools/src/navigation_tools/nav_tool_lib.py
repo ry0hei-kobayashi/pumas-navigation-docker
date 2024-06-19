@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import math
@@ -7,81 +7,68 @@ import rospy
 import hsrb_interface
 import tf
 from std_msgs.msg import Float32MultiArray, Bool, Empty
-from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped
+from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D
 from actionlib_msgs.msg import GoalStatus
 
-global globalGoalReached
-global goalReached
-global omnibase
-global pubGlobalGoalXYZ
-global whole_body
-global robot_stop
+from navigation_tools.search_safe_point import SearchSafePoint
 
-globalGoalReached = True
-goalReached = True
-robot_stop = False
-
-
-def callback_global_goal_reached(msg):
-    global globalGoalReached
-    
-    globalGoalReached = False
-    if msg.status == GoalStatus.SUCCEEDED:    
-        globalGoalReached = True
-
-
-def callback_goal_reached(msg):
-    global goalReached
-    
-    goalReached = False
-    if msg.status == GoalStatus.SUCCEEDED:
-        goalReached = True
-
-
-def callback_stop(msg):
-    global robot_stop
-    robot_stop = True
-
-
-class nav_module():
-    """docstring for nav_module"""
-
+class NavModule:
     def __init__(self, select="hsr"):
+        self.global_goal_reached = True
+        self.goal_reached = True
+        self.robot_stop = False
 
-        global omnibase
-        global robot
-        global whole_body
-        self.navigation_setter = select
-        self.goal = Float32MultiArray()
-        omnibase = 0
-        robot = hsrb_interface.Robot()
-        omnibase = robot.get("omni_base")
-        whole_body = robot.get("whole_body")
-        
-        #pubMvnPlnGetCloseXYA   = nh->advertise<geometry_msgs::PoseStamped >("/move_base_simple/goal", 10);
-        #pubSimpleMoveDistAngle = nh->advertise<std_msgs::Float32MultiArray>("/simple_move/goal_dist_angle", 10);
-        #pubNavigationStop      = nh->advertise<std_msgs::Empty>            ("/navigation/stop", 10);
-        
-        self.pubGlobalGoalXYZ = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
-        self.pubMoveRel = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
-        self.pubDistAngle = rospy.Publisher('/simple_move/goal_dist_angle', Float32MultiArray, queue_size=1)
-        self.pubRobotStop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
+        self.robot = hsrb_interface.Robot()
+        self.omnibase = self.robot.get("omni_base")
+        self.whole_body = self.robot.get("whole_body")
 
-        #subNavigationStatus    = nh->subscribe("/navigation/status"       , 10, &JuskeshinoNavigation::callbackNavigationStatus);
-        #subSimpleMoveStatus    = nh->subscribe("/simple_move/goal_reached", 10, &JuskeshinoNavigation::callbackSimpleMoveStatus);
-        #subNavigationStop      = nh->subscribe("/navigation/stop"         , 10, &JuskeshinoNavigation::callbackNavigationStop);
-        #subStop                = nh->subscribe("/stop"                    , 10, &JuskeshinoNavigation::callbackStop);
-                
-        rospy.Subscriber("/navigation/status", GoalStatus, callback_global_goal_reached)
-        rospy.Subscriber("/simple_move/goal_reached", GoalStatus, callback_goal_reached)
-        rospy.Subscriber("/stop", Empty, callback_stop)
+        self.search_safe_point = SearchSafePoint()
+
+        self.pub_global_goal_xyz = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
+        self.pub_move_rel = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
+        self.pub_dist_angle = rospy.Publisher('/simple_move/goal_dist_angle', Float32MultiArray, queue_size=1)
+        self.pub_robot_stop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
+
+        rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
+        rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
+        rospy.Subscriber("/stop", Empty, self.callback_stop)
         rospy.Subscriber("/global_pose", PoseStamped, self.global_pose_callback)
-        
-        rospy.sleep(1.0) #DO NOT DELET THIS CODE, IMPORTANT
-        
-        self.set_navigation_type(select)
 
+        rospy.sleep(1.0)  # DO NOT DELETE THIS CODE, IMPORTANT
+
+        self.set_navigation_type(select)
         self.global_pose = PoseStamped()
+
+    def callback_global_goal_reached(self, msg):
+        self.global_goal_reached = False
+
+        if msg.status == GoalStatus.SUCCEEDED:
+            self.global_goal_reached = True
+            #return 'success'
+
+        if msg.status == GoalStatus.ACTIVE:
+            if msg.text == 'Waiting for temporal obstacles to move':
+                rospy.loginfo('NavigationStatus -> Waiting for temporal obstacle to move')
+                rospy.loginfo('NavigationStatus -> Replanning by search_safe_point')
+                self.replan_safe_point()
+
+        if msg.status == GoalStatus.ABORTED:
+            if msg.text == 'Cannot calculate path from start to goal point':
+                rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
+                self.replan_safe_point()
+                #TODO turn or backwards 
+            if msg.text == 'Cancelling current movement':
+                rospy.loginfo('NavigationStatus -> Cancelling current movement')
+                rospy.loginfo('NavigationStatus -> Replanning by search_safe_point')
+                self.replan_safe_point()
+
+    def callback_goal_reached(self, msg):
+        self.goal_reached = False
+        if msg.status == GoalStatus.SUCCEEDED:
+            self.goal_reached = True
+
+    def callback_stop(self, msg):
+        self.robot_stop = True
 
     def set_navigation_type(self, type_nav):
         if type_nav == "hsr" or type_nav == "pumas":
@@ -96,17 +83,40 @@ class nav_module():
     def global_pose_callback(self, msg):
         self.global_pose = msg
 
-    def getClose(self, x, y, yaw, timeout, goal_distance=None):
-        global globalGoalReached
-        global robot_stop
+    def pose_stamped2pose_2d(self, pose_stamped):
+        pose2d = Pose2D()
+        pose2d.x = pose_stamped.pose.position.x
+        pose2d.y = pose_stamped.pose.position.y
+        orientation = pose_stamped.pose.orientation
+        euler = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        pose2d.theta = euler[2]  #euler[2] is yaw
+        return pose2d
+
+    def replan_safe_point(self):
+        rospy.loginfo('called replan_safe_point')
+        #current global goal
+        current_goal_pose2d = self.pose_stamped2pose_2d(self.global_pose)
+        safe_point = self.search_safe_point.get_most_safe_point(current_goal_pose2d, goal_torelance=0.5, refer_size=0.5)
+
+        if safe_point:
+            rospy.loginfo(safe_point)
+            goal = PoseStamped()
+            goal.header.frame_id = self.global_pose.header.frame_id
+            goal.pose.position.x = safe_point.x
+            goal.pose.position.y = safe_point.y
+            q = tf.transformations.quaternion_from_euler(0, 0, safe_point.theta)
+            goal.pose.orientation.x = q[0]
+            goal.pose.orientation.y = q[1]
+            goal.pose.orientation.z = q[2]
+            goal.pose.orientation.w = q[3]
+            self.pub_global_goal_xyz.publish(goal)
+
+    def get_close(self, x, y, yaw, timeout, goal_distance=None):
         rate = rospy.Rate(10)
-        
-        #goal = Float32MultiArray()
-        #goal.data = [x, y, yaw]
-        
+
         goal = PoseStamped()
         goal.header.frame_id = "map"
-        
+
         goal.pose.position.x = x
         goal.pose.position.y = y
         goal.pose.position.z = 0
@@ -116,97 +126,87 @@ class nav_module():
         goal.pose.orientation.y = q[1]
         goal.pose.orientation.z = q[2]
         goal.pose.orientation.w = q[3]
-        
-        globalGoalReached = False
-        robot_stop = False
-        if timeout != 0:
-            attemps = int(timeout*10)
-        else:
-            attemps = 10000000000000
-        # print  goal.data
-        
-        self.pubGlobalGoalXYZ.publish(goal)
-        rate.sleep()
-        rospy.sleep(5.)
-        while not globalGoalReached and not rospy.is_shutdown() and not robot_stop and attemps >= 0:
 
+        self.global_goal_reached = False
+        self.robot_stop = False
+        if timeout != 0:
+            attempts = int(timeout * 10)
+        else:
+            attempts = float('inf')
+
+        self.pub_global_goal_xyz.publish(goal)
+        rate.sleep()
+        rospy.sleep(5.0)
+
+        while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             if goal_distance:
                 now_x, now_y = self.global_pose.pose.position.x, self.global_pose.pose.position.y
                 now_distance = math.sqrt((x - now_x) ** 2 + (y - now_y) ** 2)
-                #print(globalGoalReached, robot_stop, attemps, now_distance)
                 if now_distance < goal_distance:
                     break
-            #else:
-            #    print(globalGoalReached, robot_stop, attemps) #TODO
 
-            attemps -= 1
+            attempts -= 1
             rate.sleep()
-        robot_stop = False
-        if not globalGoalReached:
+
+        self.robot_stop = False
+        if not self.global_goal_reached:
             msg_stop = Empty()
-            self.pubRobotStop.publish(msg_stop)
+            self.pub_robot_stop.publish(msg_stop)
             rate.sleep()
-            rospy.sleep(5.)
-        x = rospy.Duration.from_sec(2.5)
-        rospy.sleep(x)
+            rospy.sleep(5.0)
+        rospy.sleep(rospy.Duration.from_sec(2.5))
 
     def go_abs(self, x, y, theta, timeout=0.0, type_nav=None, goal_distance=None):
         print("Call ABS mode in pumas nav")
         if type_nav == "pumas":
-            self.getClose(x, y, theta, timeout, goal_distance)
+            self.get_close(x, y, theta, timeout, goal_distance)
         elif type_nav == "hsr":
-            omnibase.go_abs(x, y, theta, timeout)
+            self.omnibase.go_abs(x, y, theta, timeout)
         else:
             if self.navigation_setter == "pumas":
-                self.getClose(x, y, theta, timeout)
+                self.get_close(x, y, theta, timeout)
             else:
-                omnibase.go_abs(x, y, theta, timeout)
+                self.omnibase.go_abs(x, y, theta, timeout)
 
-    def moveDistAngle(self, x, yaw, timeout):
-        global goalReached
-        global robot_stop
+    def move_dist_angle(self, x, yaw, timeout):
         rate = rospy.Rate(10)
         goal = Float32MultiArray()
-        goalReached = False
-        robot_stop = False
+        self.goal_reached = False
+        self.robot_stop = False
         goal.data = [x, yaw]
-        # print  goal.data
+
         if timeout != 0:
-            attemps = int(timeout*10)
+            attempts = int(timeout * 10)
         else:
-            attemps = 10000000000000
-        self.pubDistAngle.publish(goal)
+            attempts = float('inf')
+
+        self.pub_dist_angle.publish(goal)
         rate.sleep()
-        rospy.sleep(5.)
-        while not goalReached and not rospy.is_shutdown() and not robot_stop and attemps >= 0:
-            attemps -= 1
+        rospy.sleep(5.0)
+
+        while not self.goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
+            attempts -= 1
             rate.sleep()
-        robot_stop = False
-        if not goalReached:
+
+        self.robot_stop = False
+        if not self.goal_reached:
             msg_stop = Empty()
-            self.pubRobotStop.publish(msg_stop)
+            self.pub_robot_stop.publish(msg_stop)
             rate.sleep()
-            rospy.sleep(5.)
-        rate.sleep()
-        x = rospy.Duration.from_sec(2.5)
-        rospy.sleep(x)
+            rospy.sleep(5.0)
+        rospy.sleep(rospy.Duration.from_sec(2.5))
 
     def go_dist_angle(self, x=0.0, yaw=0.0, timeout=0.0, type_nav=None):
-        self.moveDistAngle(x, yaw, timeout)
+        self.move_dist_angle(x, yaw, timeout)
 
-    def moveRel(self, x, y, yaw, timeout):
-        global globalGoalReached
-        global robot_stop
+    def move_rel(self, x, y, yaw, timeout):
         rate = rospy.Rate(10)
-        globalGoalReached = False
-        robot_stop = False
-        
-        #goal = Float32MultiArray()
-        #goal.data = [x, y, yaw]
-        
+        self.global_goal_reached = False
+        self.robot_stop = False
+
         goal = PoseStamped()
         goal.header.frame_id = "base_link"
-        
+
         goal.pose.position.x = x
         goal.pose.position.y = y
         goal.pose.position.z = 0
@@ -216,76 +216,83 @@ class nav_module():
         goal.pose.orientation.y = q[1]
         goal.pose.orientation.z = q[2]
         goal.pose.orientation.w = q[3]
-        
-        # print  goal.data
+
         if timeout != 0:
-            attemps = int(timeout*10)
+            attempts = int(timeout * 10)
         else:
-            attemps = 10000000000000
-        self.pubMoveRel.publish(goal)
+            attempts = float('inf')
+
+        self.pub_move_rel.publish(goal)
         rate.sleep()
-        rospy.sleep(5.)
-        while not globalGoalReached and not rospy.is_shutdown() and not robot_stop and attemps >= 0:
-            attemps -= 1
+        rospy.sleep(5.0)
+
+        while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
+            attempts -= 1
             rate.sleep()
-        robot_stop = False
-        if not globalGoalReached:
+
+        self.robot_stop = False
+        if not self.global_goal_reached:
             msg_stop = Empty()
-            self.pubRobotStop.publish(msg_stop)
+            self.pub_robot_stop.publish(msg_stop)
             rate.sleep()
-            rospy.sleep(5.)
-        rate.sleep()
-        x = rospy.Duration.from_sec(2.5)
-        rospy.sleep(x)
+            rospy.sleep(5.0)
+        rospy.sleep(rospy.Duration.from_sec(2.5))
 
     def go_rel(self, x=0.0, y=0.0, yaw=0.0, timeout=0.0, type_nav=None):
         print("Call REL mode in pumas nav")
         if type_nav == "pumas":
-            self.moveRel(x, y, yaw, timeout)
+            self.move_rel(x, y, yaw, timeout)
         elif type_nav == "hsr":
-            omnibase.go_rel(x, y, yaw, timeout)
+            self.omnibase.go_rel(x, y, yaw, timeout)
         else:
             if self.navigation_setter == "pumas":
-                self.moveRel(x, y, yaw, timeout)
+                self.move_rel(x, y, yaw, timeout)
             else:
-                omnibase.go_rel(x, y, yaw, timeout)
+                self.omnibase.go_rel(x, y, yaw, timeout)
 
     ##############################
     ##   HSR Functions bypass   ##
     ##############################
 
     def cancel_goal(self):
-        omnibase.cancel_goal()
-
+        self.omnibase.cancel_goal()
     def create_follow_trajectory_goal(self, poses, time_from_starts=[], ref_frame_id=None):
-        return omnibase.create_follow_trajectory_goal(poses, time_from_starts, ref_frame_id)
+        return self.omnibase.create_follow_trajectory_goal(poses, time_from_starts, ref_frame_id)
 
     def create_go_pose_goal(self, pose, ref_frame_id=None):
-        return omnibase.create_go_pose_goal(pose, ref_frame_id)
+        return self.omnibase.create_go_pose_goal(pose, ref_frame_id)
 
     def execute(self, goal):
-        omnibase.execute(goal)
+        self.omnibase.execute(goal)
 
     def follow_trajectory(self, poses, time_from_starts=[], ref_frame_id=None):
-        omnibase.follow_trajectory(poses, time_from_starts, ref_frame_id)
+        self.omnibase.follow_trajectory(poses, time_from_starts, ref_frame_id)
 
     def get_pose(self, ref_frame_id=None):
-        return omnibase.get_pose(ref_frame_id)
+        return self.omnibase.get_pose(ref_frame_id)
 
-    def go(self,  x, y, yaw, timeout=0.0, relative=False):
-        omnibase.go(x, y, yaw, timeout, relative)
+    def go(self, x, y, yaw, timeout=0.0, relative=False):
+        self.omnibase.go(x, y, yaw, timeout, relative)
 
     def go_pose(self, pose=Pose(Vector3(x=0.0, y=0.0, z=0.0), Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)), timeout=0.0, ref_frame_id=None):
-        omnibase.go_pose(pose, timeout, ref_frame_id)
+        self.omnibase.go_pose(pose, timeout, ref_frame_id)
 
     def is_moving(self):
-        return omnibase.is_moving()
+        return self.omnibase.is_moving()
 
     def is_succeeded(self):
-        return omnibase.is_succeeded()
+        return self.omnibase.is_succeeded()
 
     def move(self, pose, timeout=0.0, ref_frame_id=None):
-        omnibase.move(pose, timeout, ref_frame_id)
+        self.omnibase.move(pose, timeout, ref_frame_id)
 
     def pose(self):
-        return omnibase.pose
+        return self.omnibase.pose
+
+if __name__ == "__main__":
+    rospy.init_node('navigation_module')
+    nav = NavModule(select="hsr")
+
+    #example
+    nav.go_abs(6.8, 0.7, 0, 0, 'pumas')
+

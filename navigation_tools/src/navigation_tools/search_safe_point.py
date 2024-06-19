@@ -27,8 +27,8 @@ class SearchSafePoint(Node):
             self.logwarn(e)
 
         self.map_data_msg = OccupancyGrid()
-        self.topic_grid_map = "/rtabmap/grid_map"
-        self.topic_cost_map = "/move_base_flex/global_costmap/costmap"
+        self.topic_grid_map = "/augment_map"
+        self.topic_cost_map = "/dynamic_obstacle_map"
         self.safe_th = 100
         self.debug_mode = False
         self.sub_register("map_data_msg", self.topic_grid_map, queue_size=1, callback_func=self.run)
@@ -205,18 +205,19 @@ class SearchSafePoint(Node):
                 refer_cost_map = trim_cost_map[(y - calc_area):(y + calc_area), (x - calc_area):(x + calc_area)]
                 sum_cost_map = np.sum(refer_cost_map)
 
-                # グリッド単位で見たときの，本来のナビゲーション目的地との距離
-                orig_goal_distance = abs(x - goal_torelance) + abs(y - goal_torelance)
+                ## グリッド単位で見たときの，本来のナビゲーション目的地との距離
+                #orig_goal_distance = abs(x - goal_torelance) + abs(y - goal_torelance)
 
-                # 距離によって，コスト値に重みをつける
-                if orig_goal_distance < 4:
-                    weight = 1.0
-                elif orig_goal_distance < 8:
-                    weight = 1.5
-                elif orig_goal_distance < 16:
-                    weight = 2.0
-                else:
-                    weight = 3.0
+                ## 距離によって，コスト値に重みをつける
+                #if orig_goal_distance < 4:
+                #    weight = 1.0
+                #elif orig_goal_distance < 8:
+                #    weight = 1.5
+                #elif orig_goal_distance < 16:
+                #    weight = 2.0
+                #else:
+                #    weight = 3.0
+                weight = 1.0
 
                 sum_cost_map = weight * sum_cost_map
 
