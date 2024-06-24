@@ -30,6 +30,9 @@ class NavModule:
         self.pub_dist_angle = rospy.Publisher('/simple_move/goal_dist_angle', Float32MultiArray, queue_size=1)
         self.pub_robot_stop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
 
+        #for lib env manage
+        self.pub_robot_stop = rospy.Publisher('/lme/first_rotate', Bool, queue_size=1)
+
         rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
         rospy.Subscriber("/stop", Empty, self.callback_stop)
@@ -58,6 +61,7 @@ class NavModule:
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
                 self.replan_safe_point()
                 #TODO turn or backwards 
+                #lme first rotate
                 
             if msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')

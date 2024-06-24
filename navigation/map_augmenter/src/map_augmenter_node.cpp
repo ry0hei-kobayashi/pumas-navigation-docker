@@ -160,8 +160,8 @@ nav_msgs::OccupancyGrid get_cost_map(nav_msgs::OccupancyGrid& map, float cost_ra
 bool obstacles_map_with_cloud()
 {
     std::cout << "MapAugmenter.->Trying to get point cloud from topic: " << point_cloud_topic << std::endl;
-    //boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(1.0));
-    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(10.0));
+    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(1.0));
+    //boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic, ros::Duration(10.0));
     if(ptr == NULL)
     {
         std::cout << "MapAugmenter.->Cannot get point cloud!!!" << std::endl;
@@ -196,7 +196,8 @@ bool obstacles_map_with_cloud()
 bool obstacles_map_with_cloud2()
 {
     std::cout << "MapAugmenter.->Trying to get point cloud2 from topic: " << point_cloud_topic2 << std::endl;
-    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr=ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic2, ros::Duration(10.0));
+    //boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr=ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic2, ros::Duration(10.0));
+    boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr=ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic2, ros::Duration(1.0));
     if(ptr == NULL)
     {
         std::cout << "MapAugmenter.->Cannot get point cloud2!!!" << std::endl;
@@ -231,8 +232,8 @@ bool obstacles_map_with_cloud2()
 bool obstacles_map_with_lidar()
 {
     std::cout << "MapAugmenter.->Trying to get laser scan from topic: " << laser_scan_topic << std::endl;
-    //boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(1.0));
-    boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(10.0));
+    boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(1.0));
+    //boost::shared_ptr<sensor_msgs::LaserScan const> ptr = ros::topic::waitForMessage<sensor_msgs::LaserScan>(laser_scan_topic, ros::Duration(10.0));
     if(ptr == NULL)
     {
         std::cout << "MapAugmenter.->Cannot get laser scan!!!" << std::endl;

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
+  <include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/>
+
   <remap from="/get_distance_map" to="/get_cartographer_map"/>
   <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/>
   
@@ -16,7 +18,8 @@
   
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
   <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
-  <arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
+  <!--arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/-->
+  <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="point_cloud_topic2" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
   <arg name="bumper_f_topic" default="hsrb/base_f_bumper_sensor"/>
     
@@ -35,9 +38,11 @@
   <arg name="min_x" default="0.35"/>
   <arg name="max_x" default="0.70"/>
   <arg name="min_y" default="-0.35"/>
-  <arg name="max_y" default="0.35"/>
-  <arg name="min_z" default="0.05"/>
+  <arg name="max_y" default="0.35"/> <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.50"/>
+
+  <arg name="pot_fields_d0" default="0.35"/>
+  <arg name="pot_fields_k_rej" default="2.0"/>
    
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
@@ -46,18 +51,19 @@
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
+    <!--param name="occupied_threshold" value="70"/-->
     <param name="occupied_threshold" value="70"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen">
-    <!--param name="diagonal_paths" value="True"/-->
+    <param name="diagonal_paths" value="True"/>
     <param name="diagonal_paths" value="True"/>
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
     <!--param name="max_linear_speed" value="0.8"/-->
     <param name="max_linear_speed" value="0.8"/>
-    <param name="max_angular_speed" value="1.1"/>
+    <param name="max_angular_speed" value="1.3"/>
     <param name="control_alpha" value="0.3"/>
     <param name="control_beta" value="0.12"/>
     <param name="use_pot_fields" value="$(arg use_pot_fields)"/>
@@ -83,8 +89,10 @@
     
     <param name="obs_detector_debug" value="True"/>
     
-    <param name="pot_fields_d0" value="0.40"/>
-    <param name="pot_fields_k_rej" value="2.0"/>
+    <!--param name="pot_fields_d0" value="0.35"/-->
+    <!--param name="pot_fields_k_rej" value="2.0"/-->
+    <param name="pot_fields_d0" value="$(arg pot_fields_d0)"/>
+    <param name="pot_fields_k_rej" value="$(arg pot_fields_k_rej)"/>
     <!--param name="pot_fields_k_rej" value="0.4"/-->
     
     <param name="max_x" value="$(arg max_x)"/>
@@ -111,8 +119,8 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.1"/>
-    <param name="cost_radius" value="0.2"/>
+    <param name="inflation_radius" value="0.15"/>
+    <param name="cost_radius" value="0.5"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -127,6 +135,16 @@
     <remap from="/static_map" to="/prohibition_map"/>
     <remap from="/map" to="/prohibition_layer_map"/>
   </node>
+
+  <!--node name="map_enhancer" pkg="augment_gridmap_online" type="augment_gridmap_online_node" output="screen">
+      <remap from="point_obstacle" to="/clicked_point"/>
+
+      <param name="obstacle_radius" value="0.05" type="double"/>
+      <param name="input_map" value="/fixed_prohibition_layer_map"/>
+      <remap from="/grid_map/get_augmented_map" to="/prohibition_map"/>
+      <remap from="/grid_map/augmented_map" to="/prohibition_layer_map"/>
+  </node-->
+
   
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>

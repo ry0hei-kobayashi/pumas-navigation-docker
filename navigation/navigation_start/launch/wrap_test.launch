@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+  <arg name="pot_fields_k_rej" default="5.7"/>
+
+  <include file="$(find navigation_start)/launch/navigation_cartographer.launch">
+     <param name="pot_fields_k_rej" value="$(arg pot_fields_k_rej)"/>
+  </include>
+
+</launch>
