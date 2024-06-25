@@ -42,6 +42,7 @@ class NavModule:
 
         self.set_navigation_type(select)
         self.global_pose = PoseStamped()
+        self.global_goal_xyz = PoseStamped() 
 
     def callback_global_goal_reached(self, msg):
         self.global_goal_reached = False
