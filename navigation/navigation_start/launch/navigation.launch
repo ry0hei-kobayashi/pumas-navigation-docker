@@ -20,8 +20,8 @@
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/>
 
   <!--for wrs simulator-->
-  <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/-->
-  <!--arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/-->
+  <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
+  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/-->
 
   <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
   
@@ -55,7 +55,7 @@
   <arg name="max_z" default="1.00"/-->
 
   <arg name="min_x" default="0.35"/>
-  <arg name="max_x" default="0.7"/>
+  <arg name="max_x" default="0.35"/>
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.35"/>
   <arg name="min_z" default="0.05"/>
@@ -69,7 +69,7 @@
   </group>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen">
-    <param name="diagonal_paths" value="False"/>
+    <param name="diagonal_paths" value="True"/>
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
@@ -108,6 +108,8 @@
     <param name="obs_detector_debug" value="False"/>
     
     <param name="pot_fields_k_rej" value="0.25"/>
+    <!--same as min_x value-->
+    <param name="pot_fields_d0" value="0.35"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -133,7 +135,9 @@
     <!--param name="inflation_radius" value="0.18"/>
     <param name="cost_radius" value="0.1"/-->
 
+    <!--(black box) inflation_size-->
     <param name="inflation_radius" value="0.2"/>
+
     <param name="cost_radius" value="0.4"/>
     
     <param name="max_x" value="$(arg max_x)"/>
