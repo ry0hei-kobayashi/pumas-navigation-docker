@@ -16,12 +16,12 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
   
   <!--for rc24-->
-  <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_2/map.yaml"/>
-  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/-->
+  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_2/map.yaml"/>
+  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/>
 
   <!--for wrs simulator-->
-  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
-  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/>
+  <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
+  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/-->
 
   <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
   
@@ -55,7 +55,7 @@
   <arg name="max_z" default="1.00"/-->
 
   <arg name="min_x" default="0.35"/>
-  <arg name="max_x" default="0.7"/>
+  <arg name="max_x" default="0.35"/>
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.35"/>
   <arg name="min_z" default="0.05"/>
@@ -136,9 +136,9 @@
     <param name="cost_radius" value="0.1"/-->
 
     <!--(black box) inflation_size-->
-    <param name="inflation_radius" value="0.15"/>
+    <param name="inflation_radius" value="0.2"/>
 
-    <param name="cost_radius" value="0.5"/>
+    <param name="cost_radius" value="0.4"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
