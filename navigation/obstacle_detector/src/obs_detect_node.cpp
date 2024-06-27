@@ -245,6 +245,89 @@ visualization_msgs::MarkerArray get_force_arrow_markers(geometry_msgs::Vector3& 
     return markers;
 }
 
+visualization_msgs::Marker createBoundingBoxMarker()
+{
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = base_link_name;
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "bounding_box";
+    marker.id = 0;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = (maxX + minX) / 2.0;
+    marker.pose.position.y = (maxY + minY) / 2.0;
+    marker.pose.position.z = (maxZ + minZ) / 2.0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = maxX - minX;
+    marker.scale.y = maxY - minY;
+    marker.scale.z = maxZ - minZ;
+    marker.color.a = 0.5;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    return marker;
+}
+
+visualization_msgs::MarkerArray createPotFieldMarkers(geometry_msgs::Vector3& f1, geometry_msgs::Vector3& f2)
+{
+    visualization_msgs::MarkerArray markers;
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = base_link_name;
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "pot_fields";
+    marker.type = visualization_msgs::Marker::ARROW;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.1;  // arrow shaft
+    marker.scale.y = 0.2;  // arrow head
+    marker.color.a = 1.0; 
+
+    //lidar pot field
+    marker.id = 0;
+    marker.color.r = 0.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
+    marker.points.push_back(geometry_msgs::Point());
+    geometry_msgs::Point point;
+    point.x = f1.x;
+    point.y = f1.y;
+    point.z = f1.z;
+    marker.points.push_back(point);
+    markers.markers.push_back(marker);
+
+    //pcl pot field
+    marker.id = 1;
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    marker.points.clear();
+    marker.points.push_back(geometry_msgs::Point());
+    point.x = f2.x;
+    point.y = f2.y;
+    point.z = f2.z;
+    marker.points.push_back(point);
+    markers.markers.push_back(marker);
+
+    //lidar+pcl pot field
+    marker.id = 2;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker.points.clear();
+    marker.points.push_back(geometry_msgs::Point());
+    point.x = f1.x + f2.x;
+    point.y = f1.y + f2.y;
+    point.z = f1.z + f2.z;
+    marker.points.push_back(point);
+    markers.markers.push_back(marker);
+
+    return markers;
+}
+
+
 int main(int argc, char** argv)
 {
     std::cout << "INITIALIZING OBSTACLE DETECTOR NODE BY MARCO NEGRETE... " << std::endl;
@@ -325,6 +408,10 @@ int main(int argc, char** argv)
     ros::Publisher  pub_pot_fields_rej = n.advertise<geometry_msgs::Vector3>("/navigation/obs_detector/pf_rejection_force", 1);
     std_msgs::Bool msg_collision_risk;
     geometry_msgs::Vector3 msg_rejection_force;
+
+    //for visualize bbox and pot fields
+    ros::Publisher pub_bounding_box = n.advertise<visualization_msgs::Marker>("bounding_box_marker", 1);
+    ros::Publisher pub_pot_fields = n.advertise<visualization_msgs::MarkerArray>("pot_fields_marker", 1);
         
     while(ros::ok())
     {
@@ -344,6 +431,12 @@ int main(int argc, char** argv)
 
                 pub_pot_fields_rej.publish(msg_rejection_force);
                 pub_pot_fields_mrk.publish(get_force_arrow_markers(rejection_force_lidar, rejection_force_cloud));
+		//for visualize bbox
+		visualization_msgs::Marker bounding_box_marker = createBoundingBoxMarker();
+                pub_bounding_box.publish(bounding_box_marker);
+		//for visualize pot fields
+      	        visualization_msgs::MarkerArray pot_field_markers = createPotFieldMarkers(rejection_force_lidar, rejection_force_cloud);
+	        pub_pot_fields.publish(pot_field_markers);
             }
             //if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
             //    std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
