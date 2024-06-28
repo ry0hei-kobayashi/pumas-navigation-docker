@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
-  <include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/>
+  <!--include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/-->
 
   <remap from="/get_distance_map" to="/get_cartographer_map"/>
   <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/>
