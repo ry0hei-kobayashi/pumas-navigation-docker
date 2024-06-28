@@ -23,15 +23,20 @@ class NavModule:
         self.omnibase = self.robot.get("omni_base")
         self.whole_body = self.robot.get("whole_body")
 
+        #for safe_point
         self.search_safe_point = SearchSafePoint()
+        self.goal_torelance = 0
+        self.refer_size = 2
 
+        #publishers
         self.pub_global_goal_xyz = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
         self.pub_move_rel = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
         self.pub_dist_angle = rospy.Publisher('/simple_move/goal_dist_angle', Float32MultiArray, queue_size=1)
         self.pub_robot_stop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
+        #self.pub_robot_stop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
 
         #for lib env manage
-        self.pub_robot_stop = rospy.Publisher('/lme/first_rotate', Bool, queue_size=1)
+        #self.pub_robot_stop = rospy.Publisher('/lme/first_rotate', Bool, queue_size=1)
 
         rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
@@ -43,6 +48,7 @@ class NavModule:
         self.set_navigation_type(select)
         self.global_pose = PoseStamped()
         self.global_goal_xyz = PoseStamped() 
+
 
     def callback_global_goal_reached(self, msg):
         self.global_goal_reached = False
@@ -101,8 +107,11 @@ class NavModule:
 
     def replan_safe_point(self):
         rospy.loginfo('called replan_safe_point')
+        print('goal_torelance = ', self.goal_torelance)
+        print('refer_size = ', self.refer_size)
         goal_pose2d = self.pose_stamped2pose_2d(self.global_goal_xyz)
-        safe_point = self.search_safe_point.get_most_safe_point(goal_pose2d, goal_torelance=4, refer_size=2)
+        #called safe_point
+        safe_point = self.search_safe_point.get_most_safe_point(goal_pose2d, self.goal_torelance, self.refer_size)
 
         if safe_point:
             rospy.loginfo(safe_point)
@@ -116,6 +125,11 @@ class NavModule:
             goal.pose.orientation.z = q[2]
             goal.pose.orientation.w = q[3]
             self.pub_global_goal_xyz.publish(goal)
+        else:
+            #TODO: increase goal torelance
+            self.goal_torelance += 1  #grid
+            #self.refer_size += 1     #grid
+
 
     def get_close(self, x, y, yaw, timeout, goal_distance=None):
         rate = rospy.Rate(10)

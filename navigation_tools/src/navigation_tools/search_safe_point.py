@@ -247,7 +247,6 @@ class SearchSafePoint(Node):
         # label_data = self.get_point_label(self.map_data_msg, 1.89, -0.642)
         # trim_map_img = self.get_area_label(self.map_data_msg, 3.7, -0.2, return_size=50, debug=self.debug_mode)
 
-
 if __name__ == "__main__":
     rospy.init_node(os.path.basename(__file__).split(".")[0])
     sms = SearchSafePoint()

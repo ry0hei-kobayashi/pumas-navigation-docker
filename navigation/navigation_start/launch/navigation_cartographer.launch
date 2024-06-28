@@ -65,7 +65,6 @@
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
     <param name="diagonal_paths" value="True"/>
-    <param name="diagonal_paths" value="True"/>
   </node>
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
