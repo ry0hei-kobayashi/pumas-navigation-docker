@@ -84,18 +84,32 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
                 node_neighbors[6] = current_node->index - map.info.width + 1;
                 node_neighbors[7] = current_node->index - map.info.width - 1;
             }
+
            
             for(size_t i=0; i < node_neighbors.size(); i++)
             {
-                if(map.data[node_neighbors[i]] != 0 || nodes[node_neighbors[i]].in_closed_list)
-                    continue;
-           
-                Node* neighbor = &nodes[node_neighbors[i]];
+                //if(map.data[node_neighbors[i]] != 0 || nodes[node_neighbors[i]].in_closed_list)
+
+		//add by R kobayashi
+		int neighbor_index = node_neighbors[i];
+
                 float delta_g = i < 4 ? 1.0 : 1.414213562;
                 float g_value = current_node->g_value + (i < 4 ? 1.0 : 1.414213562) + cost_map.data[node_neighbors[i]];
                 float h_value;
                 int   h_value_x = node_neighbors[i]%map.info.width - idx_goal_x;
                 int   h_value_y = node_neighbors[i]/map.info.width - idx_goal_y;
+
+                if(map.data[node_neighbors[i]] <  0 || neighbor_index >= static_cast<int>(map.data.size())){ //nodes[node_neighbors[i]].in_closed_list)
+                    continue;
+		}
+
+                if (map.data[neighbor_index] != 0 || nodes[neighbor_index].in_closed_list) {
+	            continue;
+	        }
+           
+                //Node* neighbor = &nodes[node_neighbors[i]];
+                Node* neighbor = &nodes[neighbor_index];
+
                 if(diagonal_paths)
                     h_value = sqrt(h_value_x*h_value_x + h_value_y*h_value_y);
                 else
