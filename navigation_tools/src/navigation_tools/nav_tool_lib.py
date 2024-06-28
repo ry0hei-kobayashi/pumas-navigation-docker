@@ -31,7 +31,7 @@ class NavModule:
         self.pub_robot_stop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
 
         #for lib env manage
-        self.pub_robot_stop = rospy.Publisher('/lme/first_rotate', Bool, queue_size=1)
+        #self.pub_robot_stop = rospy.Publisher('/lme/first_rotate', Bool, queue_size=1)
 
         rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
