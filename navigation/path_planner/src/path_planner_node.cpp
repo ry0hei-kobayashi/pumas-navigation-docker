@@ -28,8 +28,10 @@ bool callback_a_star_with_static_map(nav_msgs::GetPlan::Request& req, nav_msgs::
         std::cout << "PathPlanner.-> Cannot get static cost map!!!!" << std::endl;
         return false;
     }
+    //bool success = PathPlanner::AStar(srvStaticMap.response.map, srvCostMap.response.map,
+    //                                     req.start.pose, req.goal.pose, diagonal_paths, resp.plan);
     bool success = PathPlanner::AStar(srvStaticMap.response.map, srvCostMap.response.map,
-                                         req.start.pose, req.goal.pose, diagonal_paths, resp.plan);
+                                         req.start.pose, req.goal.pose, resp.plan);
     if(success)
         resp.plan = PathPlanner::SmoothPath(resp.plan, smooth_alpha, smooth_beta);
     else
@@ -52,8 +54,10 @@ bool callback_a_star_with_augmented_map(nav_msgs::GetPlan::Request& req, nav_msg
         std::cout << "PathPlanner.-> Cannot get augmented cost map!!!!" << std::endl;
         return false;
     }
+    //bool success = PathPlanner::AStar(srvStaticMap.response.map, srvCostMap.response.map,
+    //                                     req.start.pose, req.goal.pose, diagonal_paths, resp.plan);
     bool success = PathPlanner::AStar(srvStaticMap.response.map, srvCostMap.response.map,
-                                         req.start.pose, req.goal.pose, diagonal_paths, resp.plan);
+                                         req.start.pose, req.goal.pose, resp.plan);
     if(success)
         resp.plan = PathPlanner::SmoothPath(resp.plan, smooth_alpha, smooth_beta);
     else
@@ -67,8 +71,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "path_planner");
     ros::NodeHandle n("~");
 
-    if(ros::param::has("~diagonal_paths"))
-    	ros::param::get("~diagonal_paths", diagonal_paths);
+    //if(ros::param::has("~diagonal_paths"))
+    //	ros::param::get("~diagonal_paths", diagonal_paths);
     if(ros::param::has("~smooth_alpha"))
     	ros::param::get("~smooth_alpha", smooth_alpha);
     if(ros::param::has("~smooth_beta"))

@@ -11,10 +11,18 @@ public:
     PathPlanner();
     ~PathPlanner();
 
-    static bool AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map,
-                      geometry_msgs::Pose& startPose, geometry_msgs::Pose& goalPose, bool diagonal_paths, nav_msgs::Path& resultPath);
+    //static bool AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map, geometry_msgs::Pose& startPose, geometry_msgs::Pose& goalPose, bool diagonal_paths, nav_msgs::Path& resultPath);
+
+    static bool AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map, geometry_msgs::Pose& startPose, geometry_msgs::Pose& goalPose, nav_msgs::Path& resultPath);
+    //add by ryohei k 2024/6/29
+    static nav_msgs::OccupancyGrid GrowObstacles(nav_msgs::OccupancyGrid& map, float growDist);
+    static bool NearnessToObstacles(nav_msgs::OccupancyGrid& map, float distOfInfluence, int*& resultPotentials);
+
+
     static nav_msgs::Path SmoothPath(nav_msgs::Path& path, float weight_data = 0.1, float weight_smooth = 0.9, float tolerance = 0.00001);
+
 };
+
 
 class Node
 {

@@ -13,6 +13,9 @@ docker compose -f localization-docker-compose.yml up
 ## MAP BUILDER
 following readme at hsr_hector pkg
 
+## Debug only one node
+catkin build -DCMAKE_BUILD_TYPE=Debug 
+rosrun --prefix 'gnome-terminal -x gdb --args' package_name node_name
 
 
 # robot navigation system introduction
