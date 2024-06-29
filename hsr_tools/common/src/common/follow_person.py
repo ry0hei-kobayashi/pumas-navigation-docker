@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 
@@ -11,7 +11,12 @@ from hsrlib.hsrif import HSRInterfaces
 from std_msgs.msg import Bool
 from geometry_msgs.msg import WrenchStamped
 
-THRESHOLD = 12.0
+from time import sleep
+
+#hsrb 71,hsrc55
+#THRESHOLD = 12.0
+#hsrb 22
+THRESHOLD = 21.0
 
 
 class FollowPerson(smach.State):
@@ -99,9 +104,12 @@ class FollowPerson(smach.State):
             self.fp_enable_leg_finder_pub.publish(True)
 
             while self.pushed == False:
+
                 if self.fp_legs_found == False:
                     self.fp_start_follow_pub.publish(False)
+
                     while self.fp_legs_found == False:
+
                         rate.sleep()
 
                     self.fp_start_follow_pub.publish(True)
