@@ -6,17 +6,16 @@ import rospy
 import smach
 
 from hsrlib.hsrif import HSRInterfaces
+from hsrlib.utils import utils
 #from common.speech import DefaultTTS
 
 from std_msgs.msg import Bool
 from geometry_msgs.msg import WrenchStamped
 
-from time import sleep
-
 #hsrb 71,hsrc55
 #THRESHOLD = 12.0
 #hsrb 22
-THRESHOLD = 21.0
+#THRESHOLD = 21.0
 
 
 class FollowPerson(smach.State):
@@ -40,15 +39,15 @@ class FollowPerson(smach.State):
 
         self.fp_legs_found_sub = rospy.Subscriber(
             '/hri/leg_finder/legs_found', Bool, self._fp_legs_found_cb)
-        self.fp_wrist_wrench_sub = rospy.Subscriber(
-            '/hsrb/wrist_wrench/raw', WrenchStamped, self._wrist_wrench_cb)
+        #self.fp_wrist_wrench_sub = rospy.Subscriber(
+        #    '/hsrb/wrist_wrench/raw', WrenchStamped, self._wrist_wrench_cb)
 
         self.move_go = move_go
 
         self.fp_legs_found = False
         self.fisrt = True
 
-        self.pushed = False
+        #self.pushed = False
 
     def _fp_legs_found_cb(self, msg):
         try:
@@ -72,18 +71,18 @@ class FollowPerson(smach.State):
         except:
             self.fp_legs_found = False
 
-    def _wrist_wrench_cb(self, msg):
-        try:
-            self.pushed = False
-            current_value = msg.wrench.force.x
-            if THRESHOLD > 0.:
-                if current_value > THRESHOLD:
-                    self.pushed = True
-            else:
-                if current_value < -THRESHOLD:
-                    self.pushed = True
-        except:
-            self.pushed = False
+    #def _wrist_wrench_cb(self, msg):
+    #    try:
+    #        self.pushed = False
+    #        current_value = msg.wrench.force.x
+    #        if THRESHOLD > 0.:
+    #            if current_value > THRESHOLD:
+    #                self.pushed = True
+    #        else:
+    #            if current_value < -THRESHOLD:
+    #                self.pushed = True
+    #    except:
+    #        self.pushed = False
 
     def execute(self, userdata):
         try:
@@ -97,13 +96,18 @@ class FollowPerson(smach.State):
 
             self.hsrif.tts.say('Push my hand to start following you.', language='en', sync=True, queue=True)
 
-            while self.pushed == False:
+            #while self.pushed == False:
+            #    rate.sleep()
+            while not utils.is_arm_touched():
                 rate.sleep()
 
             self.hsrif.tts.say('First I will find you. Please, move in front of me, where I can see you.', language='en', sync=True, queue=True)
             self.fp_enable_leg_finder_pub.publish(True)
 
-            while self.pushed == False:
+            #while self.pushed == False:
+
+            while not utils.is_arm_touched():
+                rate.sleep()
 
                 if self.fp_legs_found == False:
                     self.fp_start_follow_pub.publish(False)
