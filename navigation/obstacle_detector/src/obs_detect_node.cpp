@@ -438,6 +438,9 @@ int main(int argc, char** argv)
         
     while(ros::ok())
     {
+        ros::param::get("~pot_fields_k_rej", pot_fields_k_rej);
+        ros::param::get("~pot_fields_d0", pot_fields_d0);
+
         if(enable)
         {
             msg_collision_risk.data = collision_risk_lidar || collision_risk_cloud;
@@ -464,11 +467,12 @@ int main(int argc, char** argv)
 	        pub_pot_fields.publish(pot_field_markers);
 
             }
-            //if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
-            //    std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
-            //if(use_cloud  && no_data_cloud_counter++ > no_sensor_data_timeout*RATE)
-            //    std::cout << "ObsDetector.->WARNING!!! No cloud data received from topic: " << point_cloud_topic << std::endl;              
+            if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
+                std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
+            if(use_cloud  && no_data_cloud_counter++ > no_sensor_data_timeout*RATE)
+                std::cout << "ObsDetector.->WARNING!!! No cloud data received from topic: " << point_cloud_topic << std::endl;              
         }
+
         ros::spinOnce();
         loop.sleep();
     }

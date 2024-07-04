@@ -185,6 +185,11 @@
   </node>
 
   <arg name="topic_name" default="/navigation/obs_detector/enable" />
+
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
+
+  <node name="pot_fields_updator_node"  pkg="navigation_tools"  type="pot_fields_updator.py" output="screen" respawn="true"/>
+
+
   
 </launch>
