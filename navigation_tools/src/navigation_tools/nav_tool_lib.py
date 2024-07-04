@@ -67,7 +67,7 @@ class NavModule:
                 #else:
                 #    self.publish_next_point()
 
-                self.recovery_from_cost()
+                #self.recovery_from_cost()
 
                 
 
