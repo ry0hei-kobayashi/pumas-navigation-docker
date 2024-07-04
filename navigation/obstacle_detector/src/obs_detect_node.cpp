@@ -76,6 +76,8 @@ void get_robot_pose(float& robot_x, float& robot_y, float& robot_t)
 
 float get_search_distance()
 {
+    ros::param::get("~max_x", maxX);
+
     float robot_x, robot_y, robot_a;
     get_robot_pose(robot_x, robot_y, robot_a);
     float dist_to_goal = sqrt(pow(global_goal_x - robot_x, 2) + pow(global_goal_x - robot_x, 2));
@@ -86,6 +88,10 @@ float get_search_distance()
 
 bool check_collision_risk_with_cloud(sensor_msgs::PointCloud2::Ptr msg, double& rejection_force_x, double& rejection_force_y)
 {
+    ros::param::get("/obs_detector/pot_fields_k_rej", pot_fields_k_rej);
+    ros::param::get("~pot_fields_d0", pot_fields_d0);
+    ros::param::get("~max_x", maxX);
+
     if(current_speed_linear <= 0 && !debug) return false;
     
     float optimal_x = get_search_distance();
@@ -135,6 +141,9 @@ bool check_collision_risk_with_cloud(sensor_msgs::PointCloud2::Ptr msg, double& 
 
 bool check_collision_risk_with_lidar(sensor_msgs::LaserScan::Ptr msg, double& rejection_force_x, double& rejection_force_y)
 {
+    ros::param::get("~pot_fields_k_rej", pot_fields_k_rej);
+    ros::param::get("~pot_fields_d0", pot_fields_d0);
+
     if(current_speed_linear <= 0 && !debug) return false;
     
     float optimal_x = get_search_distance();
@@ -270,6 +279,7 @@ visualization_msgs::MarkerArray get_force_arrow_markers(geometry_msgs::Vector3& 
 
 visualization_msgs::Marker createBoundingBoxMarker()
 {
+    ros::param::get("~max_x", maxX);
     visualization_msgs::Marker marker;
     marker.header.frame_id = base_link_name;
     marker.header.stamp = ros::Time::now();
@@ -438,8 +448,6 @@ int main(int argc, char** argv)
         
     while(ros::ok())
     {
-        ros::param::get("~pot_fields_k_rej", pot_fields_k_rej);
-        ros::param::get("~pot_fields_d0", pot_fields_d0);
 
         if(enable)
         {
@@ -463,14 +471,13 @@ int main(int argc, char** argv)
                 pub_bounding_box.publish(bounding_box_marker);
 		//for visualize pot fields
       	        visualization_msgs::MarkerArray pot_field_markers = createPotFieldMarkers(rejection_force_lidar, rejection_force_cloud);
-
 	        pub_pot_fields.publish(pot_field_markers);
 
             }
-            if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
-                std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
-            if(use_cloud  && no_data_cloud_counter++ > no_sensor_data_timeout*RATE)
-                std::cout << "ObsDetector.->WARNING!!! No cloud data received from topic: " << point_cloud_topic << std::endl;              
+            //if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
+            //    std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
+            //if(use_cloud  && no_data_cloud_counter++ > no_sensor_data_timeout*RATE)
+            //    std::cout << "ObsDetector.->WARNING!!! No cloud data received from topic: " << point_cloud_topic << std::endl;              
         }
 
         ros::spinOnce();
