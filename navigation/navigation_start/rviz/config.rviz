@@ -31,8 +31,6 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: LaserScan
-  - Class: my_rviz_plugins/CreateAreaPanel
-    Name: CreateAreaPanel
 Preferences:
   PromptSaveOnExit: true
 Toolbars:

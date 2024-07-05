@@ -11,8 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
-#include <ros/ros.h>
+#include <algorithm> // for std::min and std::max
 
 namespace ros_augmented_gridmaps {
 
@@ -40,13 +39,15 @@ private:
             std_srvs::Empty::Response& response);
       bool getAugmentedMapCallback(nav_msgs::GetMap::Request& request,
             nav_msgs::GetMap::Response& response);
-      // void addObstacleToMap(geometry_msgs::PointStamped added_point);
+      void addObstacleToMap(const geometry_msgs::PointStamped& added_point);
       void makeObstaclesMarkers(const float min_x, const float max_x, const float min_y, const float max_y, const float cen_x, const float cen_y);
 
-      //add by r.kobayashi 2024/7/5
-      int pointX2Cell(const float x);
-      int pointY2Cell(const float y);
+      // Add by r.kobayashi 2024/7/5
+      int  pointToCell(float coordinate, float origin, float resolution, int max_index);
       void drawObstacles();
+      void publishEnhancedMap();
+      void publishObstacleMarkers();
+
       std::string fn_;
       bool is_adding_;
 
@@ -59,5 +60,5 @@ private:
       nav_msgs::MapMetaData map_metadata;
       nav_msgs::OccupancyGrid enhanced_map;
 };
-} // end namespace ros_augmented_gridmaps
 
+} // end namespace ros_augmented_gridmaps
