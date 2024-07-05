@@ -326,7 +326,8 @@ int main(int argc, char** argv)
 	    ROS_WARN("MvnPln. -> will move error: %f", error);
 
 
-            if(error < proximity_criterion && !near_goal_sent && error > 0.001)
+            //if(error < proximity_criterion && !near_goal_sent && error > 0.001)
+            if(error < proximity_criterion && !near_goal_sent && error > 0.03)
             {
                 near_goal_sent = true;
                 std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
