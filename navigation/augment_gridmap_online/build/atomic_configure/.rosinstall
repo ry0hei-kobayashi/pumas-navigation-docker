@@ -1,2 +1,0 @@
-- setup-file:
-    local-name: /home/roboworks/catkin_ws/src/pumas-navigation-docker/navigation/augment_gridmap_online/build/devel/setup.sh
