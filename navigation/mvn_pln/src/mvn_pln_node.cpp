@@ -321,7 +321,10 @@ int main(int argc, char** argv)
         case SM_WAIT_FOR_MOVE_FINISHED:
             get_robot_position(listener, robot_x, robot_y, robot_a);
             error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
-            if(error < proximity_criterion && !near_goal_sent)
+	    ROS_WARN("MvnPln. -> will move error: %f", error);
+
+
+            if(error < proximity_criterion && !near_goal_sent && error > 0.001)
             {
                 near_goal_sent = true;
                 std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
