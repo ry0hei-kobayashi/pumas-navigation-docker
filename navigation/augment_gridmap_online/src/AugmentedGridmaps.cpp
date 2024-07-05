@@ -12,6 +12,8 @@ AugmentedGridMap::AugmentedGridMap(ros::NodeHandle &nodeHandle)
   ros::NodeHandle private_nh("~"); 
   private_nh.param<bool>("debug",debug,false);
   private_nh.param<std::string>("input_map",input_map,"map");
+  private_nh.param<std::string>("env_file_name", fn_, "env_furniture_rc24_3330.yaml");
+  private_nh.param<bool>("add_static_obstacles", is_adding_, true);
 
   mapSubscriber = nodeHandle_.subscribe(input_map,1,&AugmentedGridMap::saveMap,this);
   // Latched publisher for data
@@ -33,111 +35,7 @@ AugmentedGridMap::AugmentedGridMap(ros::NodeHandle &nodeHandle)
   //
   //add by ryohei.k code by nyan
   //
-  //////////////////////////////
-  // Draw obstacles from file //
-  //////////////////////////////
 
-  // Start by reading yaml
-  // Get path
-  std::string pkg_path = ros::package::getPath("augment_gridmap_online");
-  std::string yaml_file = pkg_path + "/io/areas.yaml";
-  
-  // Load file
-  //YAML::Node config = YAML::LoadFile(yaml_file);
-  try 
-  {
-    YAML::Node config = YAML::LoadFile(yaml_file);
-
-    //-------------------- Iterate through each area in YAML file ------------------------//
-    for (YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
-      // std::string area_name = it->first.as<std::string>(); // Get area_name if needed
-      YAML::Node area_data = it->second; // Get points in area
-      
-      // Declare list of x&y of points
-      std::vector<float> x;
-      std::vector<float> y;
-
-      // Extract x, y in each point
-      for (const auto& data: area_data){
-        x.push_back(data[0].as<float>());
-        y.push_back(data[1].as<float>());
-      }
-
-      // Check if the lists are not empty
-      if (x.empty() || y.empty()) {
-        ROS_ERROR("Empty list detected. Exiting.");
-        return;
-      }
-
-      // Initialize min max values
-      float min_x = x[0];
-      float max_x = x[0];
-      float min_y = y[0];
-      float max_y = y[0];
-
-      // Find min max of x
-      for(const auto& val: x) {
-        if (val < min_x) min_x = val;
-        if (val > max_x) max_x = val;
-      }
-      // Find min max of y
-      for(const auto& val: y) {
-        if (val < min_y) min_y = val;
-        if (val > max_y) max_y = val;
-      }      
-      ROS_INFO("min_x: %f, max_x: %f, min_y: %f, max_y: %f", min_x, max_x, min_y, max_y);
-
-      // Draw obstacles on Occupancy Grid Map
-      for (int i = pointX2Cell(min_x); i < pointX2Cell(max_x); ++i) {
-        for (int j = pointY2Cell(min_y); j < pointY2Cell(max_y); ++j) {
-          enhanced_map.data[i+j*map_metadata.width] = 100;
-        }
-      }
-      ROS_INFO("Draw on Occupancy Grid Map works!");
-      // Calculate the center point
-      float cen_x = 0;
-      float cen_y = 0;
-
-      for (const auto& x_coordinate: x) {
-        cen_x += x_coordinate;
-      }  
-      cen_x = cen_x / x.size();
-
-      for (const auto& y_coordinate: y) {
-        cen_y += y_coordinate;
-      } 
-      cen_y = cen_y / y.size();
-
-      ROS_INFO("center point x: %f, y: %f", cen_x, cen_y);
-      
-      // Prepare marker
-      makeObstaclesMarkers(min_x, max_x, min_y, max_y, cen_x, cen_y);
-    } //-------------------------- End iterate through yaml file------------------------//
-
-
-    // Checks if original map has data
-    if (original_map.data.size() < 1)
-    {
-      ROS_ERROR("Do not have original map to enhance yet");
-    }
-
-    // Publish enhanced map
-    augmented_map_pub.publish( enhanced_map );
-
-    // Publish obstacle markers
-    for (const auto& marker: obstacle_markers_) {
-      obstacle_marker_pub.publish(marker);
-      ROS_INFO("Publishing markers");
-    } 
-  } 
-  catch (const YAML::BadFile& e) 
-  {
-    ROS_ERROR("Failed to load YAML file: %s", yaml_file.c_str());
-  }
-
-  /////////////////
-  // End drawing //
-  /////////////////
 
   ROS_INFO("Map enhancer node Initialization finished");
   return;
@@ -164,12 +62,9 @@ void AugmentedGridMap::saveMap(const nav_msgs::OccupancyGrid &map)
   ROS_INFO("Got a map of: [%d,%d] @ %f resolution", enhanced_map.info.width, enhanced_map.info.height, enhanced_map.info.resolution);
   augmented_map_pub.publish( enhanced_map );
   augmented_metadata_pub.publish( map_metadata );
-  // Publish obstacle markers
-  if (obstacle_markers_.size() != 0) {
-    for (const auto& marker: obstacle_markers_) {
-      obstacle_marker_pub.publish(marker);
-      ROS_INFO("Publishing markers");
-    }
+  if (is_adding_) {
+    ROS_INFO("STARTING DRAWING OBSTACLES");
+    drawObstacles();
   }
   return;
 }
@@ -221,15 +116,18 @@ void AugmentedGridMap::makeObstaclesMarkers(const float min_x, const float max_x
   marker.ns = "obstacles";
   marker.action = visualization_msgs::Marker::ADD;
   marker.type = visualization_msgs::Marker::CUBE;
-  marker.header.frame_id = ""
-  marker.header.frame_id = enhanced_map.header.frame_id;
+  if(enhanced_map.header.frame_id == "") {
+    marker.header.frame_id = "map";
+  } else { 
+    marker.header.frame_id = enhanced_map.header.frame_id;
+  }
   marker.header.stamp = ros::Time();
   marker.pose.orientation.x = 0.0;
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
   marker.pose.orientation.w = 1.0;
-  marker.scale.x = (max_x - min_x) / 2.0;
-  marker.scale.y = (max_y - min_y) / 2.0;
+  marker.scale.x = (max_x - min_x);
+  marker.scale.y = (max_y - min_y);
   marker.scale.z = 0.5; // Obstacle height
   marker.id = obstacle_markers_.size();
   marker.color = color;
@@ -250,12 +148,17 @@ int AugmentedGridMap::pointX2Cell(const float x) {
 
   int cell_x = (x - x_orig )/resolution;
   
-  // if ( (cell_x > map_metadata.width ) || (cell_x < 0))
-  // {
-  //   ROS_ERROR("Point falls x coordinate outside map");
-  //   return;
-  // }
-
+  if (cell_x > map_metadata.width )
+  {
+    ROS_WARN("Point falls x coordinate outside map");
+    return map_metadata.width;
+  }
+  else if (cell_x < 0)
+  {
+    ROS_WARN("Point falls x coordinate outside map");
+    return 0;
+  }
+  
   return static_cast<int>(cell_x);
 }
 
@@ -266,13 +169,120 @@ int AugmentedGridMap::pointY2Cell(const float y) {
 
   int cell_y = (y - y_orig )/resolution;
 
-  // if ( (cell_y > map_metadata.height ) || (cell_y < 0))
-  // {
-  //   ROS_ERROR("Point falls y coordinate outside map");
-  //   return; 
-  // }
+  if (cell_y > map_metadata.height )
+  {
+    ROS_WARN("Point falls x coordinate outside map");
+    return map_metadata.width;
+  }
+  else if (cell_y < 0)
+  {
+    ROS_WARN("Point falls x coordinate outside map");
+    return 0;
+  }
 
   return static_cast<int>(cell_y);
+}
+
+void AugmentedGridMap::drawObstacles() {
+  // Starting read yaml file //
+  // Get path
+  std::string pkg_path = ros::package::getPath("hma_env_manage");
+  std::string yaml_file = pkg_path + "/io/config/" + fn_;
+  
+  try //------------------------ Try to load file -----------------------// 
+  {
+    YAML::Node config = YAML::LoadFile(yaml_file);
+
+    //-------------------- Iterate YAML file ------------------------//
+    if (config["furniture"]) {
+      for (YAML::const_iterator it = config["furniture"].begin(); it != config["furniture"].end(); ++it) {
+        YAML::Node plane_data = it->second["plane"]; // Get points in plane
+        
+        // Declare list of x&y of points
+        std::vector<float> x;
+        std::vector<float> y;
+
+        // Extract x, y in each point
+        for (const auto& data: plane_data){
+          x.push_back(data[0].as<float>());
+          y.push_back(data[1].as<float>());
+        }
+
+        // Check if the lists are not empty
+        if (x.empty() || y.empty()) {
+          ROS_ERROR("Empty list detected. Exiting.");
+          return;
+        }
+
+        // Initialize min max values
+        float min_x = x[0];
+        float max_x = x[0];
+        float min_y = y[0];
+        float max_y = y[0];
+
+        // Find min max of x
+        for(const auto& val: x) {
+          if (val < min_x) min_x = val;
+          if (val > max_x) max_x = val;
+        }
+        // Find min max of y
+        for(const auto& val: y) {
+          if (val < min_y) min_y = val;
+          if (val > max_y) max_y = val;
+        }      
+        ROS_INFO("min_x: %f, max_x: %f, min_y: %f, max_y: %f", min_x, max_x, min_y, max_y);
+
+        // Draw obstacles on Occupancy Grid Map
+        for (int i = pointX2Cell(min_x); i < pointX2Cell(max_x); ++i) {
+          for (int j = pointY2Cell(min_y); j < pointY2Cell(max_y); ++j) {
+            enhanced_map.data[i+j*map_metadata.width] = 100;
+          }
+        }
+        ROS_INFO("Draw on Occupancy Grid Map works!");
+
+        // Calculate the center point
+        float cen_x = 0;
+        float cen_y = 0;
+
+        for (const auto& x_coordinate: x) {
+          cen_x += x_coordinate;
+        }  
+        cen_x = cen_x / x.size();
+
+        for (const auto& y_coordinate: y) {
+          cen_y += y_coordinate;
+        } 
+        cen_y = cen_y / y.size();
+
+        ROS_INFO("center point x: %f, y: %f", cen_x, cen_y);
+        
+        // Prepare marker
+        makeObstaclesMarkers(min_x, max_x, min_y, max_y, cen_x, cen_y);
+      } //-------------------------- End iterate through yaml file------------------------//
+
+
+      // Checks if original map has data
+      if (original_map.data.size() < 1)
+      {
+        ROS_ERROR("Do not have original map to enhance yet");
+        return;
+      } else {
+        // Publish enhanced map
+        augmented_map_pub.publish( enhanced_map );
+        augmented_metadata_pub.publish( map_metadata );
+
+        // Publish obstacle markers
+        for (const auto& marker: obstacle_markers_) {
+          obstacle_marker_pub.publish(marker);
+          ROS_INFO("Publishing markers");
+        } 
+      }
+    }
+  } //------------------------ End try -------------------------//
+  catch (const YAML::BadFile& e) 
+  {
+    ROS_ERROR("Failed to load YAML file: %s", yaml_file.c_str());
+  }
 }
 
 } // end namespace ros_augmented_gridmaps

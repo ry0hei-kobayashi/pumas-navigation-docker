@@ -1,0 +1,8 @@
+prefix=/home/roboworks/catkin_ws/src/pumas-navigation-docker/navigation/augment_gridmap_online/build/devel
+
+Name: augment_gridmap_online
+Description: Description of augment_gridmap_online
+Version: 0.0.0
+Cflags: -I/home/roboworks/catkin_ws/src/pumas-navigation-docker/navigation/augment_gridmap_online/include
+Libs: -L${prefix}/lib 
+Requires: 
