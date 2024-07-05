@@ -43,6 +43,10 @@ private:
       void addObstacleToMap(geometry_msgs::PointStamped added_point);
       void makeObstaclesMarkers(const float min_x, const float max_x, const float min_y, const float max_y, const float cen_x, const float cen_y);
 
+      //add by r.kobayashi 2024/7/5
+      int pointX2Cell(const float x);
+      int pointY2Cell(const float y);
+
       std::vector<geometry_msgs::Point> obstacles;
       std::vector<visualization_msgs::Marker> obstacle_markers_; // markers for obstacles
       float obstacle_radius;
