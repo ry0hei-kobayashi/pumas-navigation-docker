@@ -39,8 +39,10 @@ private:
             std_srvs::Empty::Response& response);
       bool getAugmentedMapCallback(nav_msgs::GetMap::Request& request,
             nav_msgs::GetMap::Response& response);
-      void addObstacleToMap(const geometry_msgs::PointStamped& added_point);
-      void makeObstaclesMarkers(const float min_x, const float max_x, const float min_y, const float max_y, const float cen_x, const float cen_y);
+      void ClickedAddObstacleToMap(const geometry_msgs::PointStamped& added_point);
+      void YamlAddObstacleToMap(const geometry_msgs::PointStamped& added_point);
+      void makeYamlObstaclesMarkers(const float min_x, const float max_x, const float min_y, const float max_y, const float cen_x, const float cen_y);
+      void makeClickedObstaclesMarkers();
 
       // Add by r.kobayashi 2024/7/5
       int  pointToCell(float coordinate, float origin, float resolution, int max_index);
@@ -62,3 +64,4 @@ private:
 };
 
 } // end namespace ros_augmented_gridmaps
+

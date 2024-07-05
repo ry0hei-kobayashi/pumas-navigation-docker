@@ -190,7 +190,9 @@ int main(int argc, char** argv)
         switch(state)
         {
         case SM_INIT:
-            std::cout << "MvnPln.->MVN PLN READY. Waiting for new goal. " << std::endl;
+            //std::cout << "MvnPln.->MVN PLN READY. Waiting for new goal. " << std::endl;
+	    ROS_WARN("Pumas Navigation. -> Ready!!!!!!!!! ");
+	    ROS_WARN("MvnPln.->MVN PLN READY. Waiting for new goal.");
             state = SM_WAITING_FOR_TASK;
             break;
 
