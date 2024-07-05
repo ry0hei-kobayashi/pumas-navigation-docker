@@ -189,8 +189,11 @@ void callback_point_cloud(sensor_msgs::PointCloud2::Ptr msg)
 
 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
 {
-     global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
-     global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+    //if (!msg->poses.empty()){
+    global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
+    global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+    //}
+    //TODO MvnPln sending near goal status
 }
 
 void callbackEnable(const std_msgs::Bool::ConstPtr& msg)
