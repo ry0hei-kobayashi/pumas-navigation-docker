@@ -19,6 +19,10 @@
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_2/map.yaml"/>
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/>
 
+  <!--for env objs to map-->
+  <arg name="env_file_name" default="env_furniture_rc24_3330_2.yaml"/>
+  <arg name="add_static_obstacles" default="true"/>
+
   <!--for wrs simulator-->
   <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/-->
@@ -160,12 +164,16 @@
     <remap from="/map" to="/fixed_prohibition_layer_map"/>
   </node>
   
+
   <node name="map_enhancer" pkg="augment_gridmap_online" type="augment_gridmap_online_node" output="screen">
     <remap from="point_obstacle" to="/clicked_point"/>
     <param name="obstacle_radius" value="0.05" type="double"/>
     <param name="input_map" value="/fixed_prohibition_layer_map"/>
     <remap from="/grid_map/get_augmented_map" to="/prohibition_map"/>
     <remap from="/grid_map/augmented_map" to="/prohibition_layer_map"/>
+
+    <param name="env_file_name" value="$(arg env_file_name)"/>
+    <param name="add_static_obstacles" value="$(arg add_static_obstacles)"/>
   </node>
   
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
