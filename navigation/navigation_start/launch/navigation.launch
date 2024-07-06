@@ -23,7 +23,7 @@
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_ohirome/map.yaml"/>
 
   <!--for env objs to map-->
-  <arg name="env_file_name" default="env_furniture_rc24_3330_2.yaml"/>
+  <arg name="env_file_name" default="env_furniture_rc24_ohirome.yaml"/>
   <arg name="add_static_obstacles" default="true"/>
 
   <!--for wrs simulator-->
