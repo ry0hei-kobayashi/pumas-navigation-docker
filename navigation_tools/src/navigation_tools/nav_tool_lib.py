@@ -353,6 +353,12 @@ if __name__ == "__main__":
     #nav.go_abs(4.78, -0.32, -1.57, 0, 'pumas')
     #nav.go_abs(3.68, -1.65, -1.57, 0, 'pumas')
     #nav.go_abs(2.14, 1.5, -1.57, 0, 'pumas')
-    nav.go_abs(5.2, -2.0, -1.57, 0, 'pumas')
+    #nav.go_abs(0, 0, -1.57, 0, 'pumas')
 
+    i = 0
+    while not rospy.is_shutdown():
+        nav.go_abs(0, 0, 0, 0, 'pumas')
+        rospy.sleep(0.5)
+        i += 1
+        print('num_try: move2originPoint ',i)
 
