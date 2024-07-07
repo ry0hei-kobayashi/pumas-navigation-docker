@@ -7,7 +7,7 @@ import smach
 import numpy as np
 
 from hsrlib.hsrif import HSRInterfaces
-from hsrlib.utils import utils, description
+from hsrlib.utils import utils, description, joints
 
 from navigation_tools.nav_tool_lib import NavModule
 #from common.speech import DefaultTTS
@@ -22,7 +22,7 @@ from geometry_msgs.msg import WrenchStamped
 
 
 class FollowPerson(smach.State):
-    def __init__(self, move_go = True, timeout=None):
+    def __init__(self, move_joints = False, timeout=None):
         smach.State.__init__(self, outcomes=['next', 'except'], input_keys=['way_point_list'], output_keys=['way_point_list'])
 
         self.hsrif = HSRInterfaces()
@@ -44,15 +44,22 @@ class FollowPerson(smach.State):
 
         self.fp_legs_found_sub = rospy.Subscriber(
             '/hri/leg_finder/legs_found', Bool, self._fp_legs_found_cb)
-        #self.fp_wrist_wrench_sub = rospy.Subscriber(
-        #    '/hsrb/wrist_wrench/raw', WrenchStamped, self._wrist_wrench_cb)
 
-        self.move_go = move_go
 
         self.fp_legs_found = False
         self.fisrt = True
 
-        #self.pushed = False
+        #false -> go pose , true -> custom_pose
+        self.move_joints = move_joints
+
+        #set custom_pose
+        self.follow_pose = joints.get_go_pose()
+        self.follow_pose["wrist_flex_joint"] = np.deg2rad(-90.0)
+        self.follow_pose["wrist_roll_joint"] = np.deg2rad(0.0)
+        self.follow_pose["arm_lift_joint"]   = 0.26
+        self.follow_pose["arm_roll_joint"]   = 2.0
+        self.follow_pose["arm_flex_joint"]   = -0.16
+
 
     def _fp_legs_found_cb(self, msg):
         try:
@@ -76,26 +83,16 @@ class FollowPerson(smach.State):
         except:
             self.fp_legs_found = False
 
-    #def _wrist_wrench_cb(self, msg):
-    #    try:
-    #        self.pushed = False
-    #        current_value = msg.wrench.force.x
-    #        if THRESHOLD > 0.:
-    #            if current_value > THRESHOLD:
-    #                self.pushed = True
-    #        else:
-    #            if current_value < -THRESHOLD:
-    #                self.pushed = True
-    #    except:
-    #        self.pushed = False
-
     def execute(self, userdata):
         try:
             rate = rospy.Rate(30)
             rospy.loginfo("exucute")
             
-            if self.move_go:
+            if self.move_joints:
+                self.hsrif.whole_body.move_to_joint_positions(self.follow_pose)
+            else:
                 self.hsrif.whole_body.move_to_go()
+
             rospy.loginfo("first pose")
 
             self.fp_enable_leg_finder_pub.publish(False)
@@ -104,8 +101,6 @@ class FollowPerson(smach.State):
             self.hsrif.tts.say('Push my hand to start following you.', language='en', sync=True, queue=True)
             rospy.loginfo("Push my hand to start following you.")
 
-            #while self.pushed == False:
-            #    rate.sleep()
             while not utils.is_arm_touched():
                 rate.sleep()
 
@@ -113,7 +108,6 @@ class FollowPerson(smach.State):
             rospy.loginfo("First I will find you.")
             self.fp_enable_leg_finder_pub.publish(True)
 
-            #while self.pushed == False:
 
             way_point_list = []
 

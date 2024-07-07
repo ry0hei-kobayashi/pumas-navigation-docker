@@ -6,10 +6,13 @@ import rospy
 import roslib
 import smach
 import math
+
 from hsrlib.hsrif import HSRInterfaces
 from hsrlib.utils import utils, description
+
 from std_srvs.srv import Empty, EmptyRequest
 from geometry_msgs.msg import Twist
+from nav_msgs.srv import GetMap, GetMapRequest, GetMapResponse
 
 # from hsrnavlib import LibHSRNavigation
 
@@ -38,7 +41,6 @@ class CreateMap(smach.State):
 
         rospy.sleep(1)
 
-        # パブリッシャーの作成
         cmd_vel_pub = rospy.Publisher("/hsrb/command_velocity", Twist, queue_size=10)
         # メッセージのインスタンス化
         twist_msg = Twist()
@@ -59,10 +61,28 @@ class CreateMap(smach.State):
     def create_map(self):
         self.rotate_robot()
 
+
+    def call_augment_map_service(self):
+
+        rospy.wait_for_service('/map_augmenter/get_augmented_map')
+        try:
+            augment_map = rospy.ServiceProxy('/map_augmenter/get_augmented_map', GetMap)
+            request = GetMapRequest()
+            response = augment_map(request)
+
+        except rospy.ServiceException as e:
+             rospy.logerr("Service call failed: %s" % e)
+             #return None
+
+
     def execute(self, userdata):
         rospy.loginfo("[" + rospy.get_name() + "]: Start create map")       
         create_map_txt = "I  will prepare to bring your luggage. Please wait a moment!"
         self.hsrif.tts.say(create_map_txt, 'en')
         self.create_map()
+
+        #call augment map for get cartgrapher map
+        rospy.sleep(2)
+        self.call_augment_map_service()
 
         return "next"
