@@ -4,7 +4,8 @@ import os
 import threading
 
 import dearpygui.dearpygui as dpg
-import pyperclip
+# import pyperclip
+import pyclip
 import rospy
 from hsrlib.utils import description
 from tamlib.node_template import Node
@@ -52,7 +53,8 @@ class GetPose(Node):
         """クリップボードに座標をコピー"""
         x, y, yaw = self.pos
         text = f"({x}, {y}, {yaw})"
-        pyperclip.copy(text)
+        # pyperclip.copy(text)
+        pyclip.copy(text)
 
     def run(self) -> None:
         p_loop_rate = rospy.get_param("~loop_rate", 1)
