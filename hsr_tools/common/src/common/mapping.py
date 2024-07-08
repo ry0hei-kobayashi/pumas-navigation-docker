@@ -85,7 +85,8 @@ class CreateMap(smach.State):
         rospy.sleep(2)
         self.call_augment_map_service()
 
-        reconf_laser_obstacle_enable.update_configuration({"enable": True})
-        reconf_depth_obstacle_enable.update_configuration({"enable": True})
+        #reconf_laser_obstacle_enable.update_configuration({"enable": True})
+        
+        #reconf_depth_obstacle_enable.update_configuration({"enable": True})
 
         return "next"

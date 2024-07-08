@@ -118,16 +118,16 @@ class FollowPerson(smach.State):
                 rospy.loginfo("current_time")
                 rate.sleep()
 
-                if current_time - last_pose_time >= 5:
+                if current_time - last_pose_time >= 3:
 
-                    current_pose_list = []                    
-                    current_pose = self.nav.pose()
-                    rospy.loginfo(current_pose)
-                    current_pose_list.append(current_pose)
+                    # current_pose_list = []                    
+                    current_pose = self.nav.pose() # List
+                    # rospy.loginfo(current_pose)
+                    # current_pose_list.append(current_pose)
                     
                     
                     if current_pose:
-                        way_point_list.append(current_pose_list)
+                        way_point_list.append(current_pose)
                         rospy.loginfo(way_point_list)
                     last_pose_time = current_time
 
