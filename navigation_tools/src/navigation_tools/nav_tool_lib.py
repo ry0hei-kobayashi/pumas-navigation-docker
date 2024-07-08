@@ -3,7 +3,9 @@
 
 import math
 import rospy
-import hsrb_interface
+#import hsrb_interface
+from hsrlib.hsrif import HSRInterfaces
+
 import tf
 
 from std_msgs.msg import Float32MultiArray, Bool, Empty
@@ -17,17 +19,26 @@ class NavModule:
     """Navigation Module for the robot"""
 
     def __init__(self, select="hsr"):
+        print("called init")
         self.global_goal_reached = True
         self.goal_reached = True
         self.robot_stop = False
 
-        self.robot = hsrb_interface.Robot()
-        self.omnibase = self.robot.get("omni_base")
-        self.whole_body = self.robot.get("whole_body")
-
+        #self.robot = hsrb_interface.Robot()
+        #self.whole_body.omni_base = self.robot.get("omni_base")
+        #self.whole_body = self.robot.get("whole_body")
+        self.hsrif = HSRInterfaces()
+        #self.whole_body.omni_base = self.hsrif.omni_base
+        #self.whole_body = self.hsrif.whole_body
+        
         self.distance_from_cost = 0.1
         self.marker_num = 0
         self.points = []
+
+        self.set_navigation_type(select)
+        self.global_pose = PoseStamped()
+        # self.global_goal_xyz = PoseStamped()
+        self.global_goal_xyz = None
 
         self.pub_global_goal_xyz = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
         self.pub_move_rel = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
@@ -47,11 +58,8 @@ class NavModule:
 
         rospy.sleep(1.0)
 
-        self.set_navigation_type(select)
-        self.global_pose = PoseStamped()
-        self.global_goal_xyz = PoseStamped()
-
     def callback_global_goal_reached(self, msg):
+        print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
         self.global_goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
             self.global_goal_reached = True
@@ -60,19 +68,19 @@ class NavModule:
             if msg.text == 'Waiting for temporal obstacles to move':
                 rospy.loginfo('NavigationStatus -> Waiting for temporal obstacle to move')
 
+                if not self.points:
+                   self.replan_safe_point()
+                   self.distance_from_cost += 0.2
+                else:
+                   self.publish_next_point()
 
-                #if not self.points:
-                #    self.replan_safe_point()
-                #    self.distance_from_cost += 0.2
-                #else:
-                #    self.publish_next_point()
-
-                #self.recovery_from_cost()
+                self.recovery_from_cost()
 
                 
 
         if msg.status == GoalStatus.ABORTED:
             if msg.text == 'Cannot calculate path from start to goal point':
+                rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
 
                 if not self.points:
                     self.replan_safe_point()
@@ -115,37 +123,45 @@ class NavModule:
 
     def replan_safe_point(self):
         rospy.loginfo('called replan_safe_point')
-        current_goal_pose2d = self.pose_stamped2pose_2d(self.global_goal_xyz)
-        radius = self.distance_from_cost
-        num_points = 8
-        self.points = self.calculate_safe_points(current_goal_pose2d, radius, num_points)
+        print("self.global_goal_xyz: ", self.global_goal_xyz)
+        try:
+            current_goal_pose2d = self.pose_stamped2pose_2d(self.global_goal_xyz)
+            radius = self.distance_from_cost
+            num_points = 8
+            self.points = self.calculate_safe_points(current_goal_pose2d, radius, num_points)
 
-        if self.points:
-            self.publish_next_point()
-        else:
-            rospy.loginfo('called replan_safe_point -> but not found')
+            if self.points:
+                self.publish_next_point()
+            else:
+                rospy.loginfo('called replan_safe_point -> but not found')
+        except Exception as e:
+            print(e)
 
     def publish_next_point(self):
-        if self.points:
-            safe_point = self.points.pop(0)  # Remove the first goal
-            goal = PoseStamped()
-            goal.header.frame_id = self.global_pose.header.frame_id
-            goal.pose.position.x = safe_point.x
-            goal.pose.position.y = safe_point.y
+        rospy.loginfo("called publish next point")
+        try:
+            if self.points:
+                safe_point = self.points.pop(0)  # Remove the first goal
+                goal = PoseStamped()
+                goal.header.frame_id = self.global_pose.header.frame_id
+                goal.pose.position.x = safe_point.x
+                goal.pose.position.y = safe_point.y
 
 
-            # robot will rotate original goal rotation
-            goal_direction = math.atan2(self.global_goal_xyz.pose.position.y - safe_point.y,
-                                        self.global_goal_xyz.pose.position.x - safe_point.x)
+                # robot will rotate original goal rotation
+                goal_direction = math.atan2(self.global_goal_xyz.pose.position.y - safe_point.y,
+                                            self.global_goal_xyz.pose.position.x - safe_point.x)
 
-            q = tf.transformations.quaternion_from_euler(0, 0, goal_direction)
-            goal.pose.orientation.x = q[0]
-            goal.pose.orientation.y = q[1]
-            goal.pose.orientation.z = q[2]
-            goal.pose.orientation.w = q[3]
+                q = tf.transformations.quaternion_from_euler(0, 0, goal_direction)
+                goal.pose.orientation.x = q[0]
+                goal.pose.orientation.y = q[1]
+                goal.pose.orientation.z = q[2]
+                goal.pose.orientation.w = q[3]
 
-            self.marker_plot(goal)
-            self.pub_global_goal_xyz.publish(goal)
+                self.marker_plot(goal)
+                self.pub_global_goal_xyz.publish(goal)
+        except Exception as e:
+            print(e)
 
     def calculate_safe_points(self, center_pose2d, radius, num_points):
         points = []
@@ -208,6 +224,7 @@ class NavModule:
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
         self.global_goal_xyz = goal
+        print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
         self.pub_global_goal_xyz.publish(goal)
         rospy.sleep(5.0)
 
@@ -228,12 +245,12 @@ class NavModule:
         if type_nav == "pumas":
             self.get_close(x, y, theta, timeout, goal_distance)
         elif type_nav == "hsr":
-            self.omnibase.go_abs(x, y, theta, timeout)
+            self.whole_body.omni_base.go_abs(x, y, theta, timeout)
         else:
             if self.navigation_setter == "pumas":
                 self.get_close(x, y, theta, timeout)
             else:
-                self.omnibase.go_abs(x, y, theta, timeout)
+                self.whole_body.omni_base.go_abs(x, y, theta, timeout)
 
     def move_dist_angle(self, x, yaw, timeout):
         rate = rospy.Rate(10)
@@ -278,12 +295,12 @@ class NavModule:
         if type_nav == "pumas":
             self.move_rel(x, y, yaw, timeout)
         elif type_nav == "hsr":
-            self.omnibase.go_rel(x, y, yaw, timeout)
+            self.whole_body.omni_base.go_rel(x, y, yaw, timeout)
         else:
             if self.navigation_setter == "pumas":
                 self.move_rel(x, y, yaw, timeout)
             else:
-                self.omnibase.go_rel(x, y, yaw, timeout)
+                self.whole_body.omni_base.go_rel(x, y, yaw, timeout)
 
     def create_goal_pose(self, x, y, yaw, frame_id):
         goal = PoseStamped()
@@ -310,55 +327,55 @@ class NavModule:
     ##############################
 
     def cancel_goal(self):
-        self.omnibase.cancel_goal()
+        self.whole_body.omni_base.cancel_goal()
 
     def create_follow_trajectory_goal(self, poses, time_from_starts=[], ref_frame_id=None):
-        return self.omnibase.create_follow_trajectory_goal(poses, time_from_starts, ref_frame_id)
+        return self.whole_body.omni_base.create_follow_trajectory_goal(poses, time_from_starts, ref_frame_id)
 
     def create_go_pose_goal(self, pose, ref_frame_id=None):
-        return self.omnibase.create_go_pose_goal(pose, ref_frame_id)
+        return self.whole_body.omni_base.create_go_pose_goal(pose, ref_frame_id)
 
     def execute(self, goal):
-        self.omnibase.execute(goal)
+        self.whole_body.omni_base.execute(goal)
 
     def follow_trajectory(self, poses, time_from_starts=[], ref_frame_id=None):
-        self.omnibase.follow_trajectory(poses, time_from_starts, ref_frame_id)
+        self.whole_body.omni_base.follow_trajectory(poses, time_from_starts, ref_frame_id)
 
     def get_pose(self, ref_frame_id=None):
-        return self.omnibase.get_pose(ref_frame_id)
+        return self.whole_body.omni_base.get_pose(ref_frame_id)
 
     def go(self, x, y, yaw, timeout=0.0, relative=False):
-        self.omnibase.go(x, y, yaw, timeout, relative)
+        self.whole_body.omni_base.go(x, y, yaw, timeout, relative)
 
     def go_pose(self, pose=Pose(Vector3(x=0.0, y=0.0, z=0.0), Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)), timeout=0.0, ref_frame_id=None):
-        self.omnibase.go_pose(pose, timeout, ref_frame_id)
+        self.whole_body.omni_base.go_pose(pose, timeout, ref_frame_id)
 
     def is_moving(self):
-        return self.omnibase.is_moving()
+        return self.whole_body.omni_base.is_moving()
 
     def is_succeeded(self):
-        return self.omnibase.is_succeeded()
+        return self.whole_body.omni_base.is_succeeded()
 
     def move(self, pose, timeout=0.0, ref_frame_id=None):
-        self.omnibase.move(pose, timeout, ref_frame_id)
+        self.whole_body.omni_base.move(pose, timeout, ref_frame_id)
 
     def pose(self):
-        return self.omnibase.pose
+        return self.whole_body.omni_base.pose
 
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
     nav = NavModule(select="hsr")
 
     # example usage
-    #nav.go_abs(4.78, -0.32, -1.57, 0, 'pumas')
+    nav.go_abs(2.3, 0.1, -1.57, 0, 'pumas')
     #nav.go_abs(3.68, -1.65, -1.57, 0, 'pumas')
     #nav.go_abs(2.14, 1.5, -1.57, 0, 'pumas')
     #nav.go_abs(0, 0, -1.57, 0, 'pumas')
 
-    i = 0
-    while not rospy.is_shutdown():
-        nav.go_abs(0, 0, 0, 0, 'pumas')
-        rospy.sleep(0.5)
-        i += 1
-        print('num_try: move2originPoint ',i)
+    #i = 0
+    #while not rospy.is_shutdown():
+    #    nav.go_abs(0, 0, 0, 0, 'pumas')
+    #    rospy.sleep(0.5)
+    #    i += 1
+    #    print('num_try: move2originPoint ',i)
 
