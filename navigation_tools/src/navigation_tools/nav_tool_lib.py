@@ -295,12 +295,12 @@ class NavModule:
         if type_nav == "pumas":
             self.move_rel(x, y, yaw, timeout)
         elif type_nav == "hsr":
-            self.whole_body.omni_base.go_rel(x, y, yaw, timeout)
+            self.hsrif.omni_base.go_rel(x, y, yaw, timeout)
         else:
             if self.navigation_setter == "pumas":
                 self.move_rel(x, y, yaw, timeout)
             else:
-                self.whole_body.omni_base.go_rel(x, y, yaw, timeout)
+                self.hsrif.omni_base.go_rel(x, y, yaw, timeout)
 
     def create_goal_pose(self, x, y, yaw, frame_id):
         goal = PoseStamped()
@@ -327,40 +327,40 @@ class NavModule:
     ##############################
 
     def cancel_goal(self):
-        self.whole_body.omni_base.cancel_goal()
+        self.hsrif.omni_base.cancel_goal()
 
     def create_follow_trajectory_goal(self, poses, time_from_starts=[], ref_frame_id=None):
-        return self.whole_body.omni_base.create_follow_trajectory_goal(poses, time_from_starts, ref_frame_id)
+        return self.hsrif.omni_base.create_follow_trajectory_goal(poses, time_from_starts, ref_frame_id)
 
     def create_go_pose_goal(self, pose, ref_frame_id=None):
-        return self.whole_body.omni_base.create_go_pose_goal(pose, ref_frame_id)
+        return self.hsrif.omni_base.create_go_pose_goal(pose, ref_frame_id)
 
     def execute(self, goal):
-        self.whole_body.omni_base.execute(goal)
+        self.hsrif.omni_base.execute(goal)
 
     def follow_trajectory(self, poses, time_from_starts=[], ref_frame_id=None):
-        self.whole_body.omni_base.follow_trajectory(poses, time_from_starts, ref_frame_id)
+        self.hsrif.omni_base.follow_trajectory(poses, time_from_starts, ref_frame_id)
 
     def get_pose(self, ref_frame_id=None):
-        return self.whole_body.omni_base.get_pose(ref_frame_id)
+        return self.hsrif.omni_base.get_pose(ref_frame_id)
 
     def go(self, x, y, yaw, timeout=0.0, relative=False):
-        self.whole_body.omni_base.go(x, y, yaw, timeout, relative)
+        self.hsrif.omni_base.go(x, y, yaw, timeout, relative)
 
     def go_pose(self, pose=Pose(Vector3(x=0.0, y=0.0, z=0.0), Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)), timeout=0.0, ref_frame_id=None):
-        self.whole_body.omni_base.go_pose(pose, timeout, ref_frame_id)
+        self.hsrif.omni_base.go_pose(pose, timeout, ref_frame_id)
 
     def is_moving(self):
-        return self.whole_body.omni_base.is_moving()
+        return self.hsrif.omni_base.is_moving()
 
     def is_succeeded(self):
-        return self.whole_body.omni_base.is_succeeded()
+        return self.hsrif.omni_base.is_succeeded()
 
     def move(self, pose, timeout=0.0, ref_frame_id=None):
-        self.whole_body.omni_base.move(pose, timeout, ref_frame_id)
+        self.hsrif.omni_base.move(pose, timeout, ref_frame_id)
 
     def pose(self):
-        return self.whole_body.omni_base.pose
+        return self.hsrif.omni_base.pose
 
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
