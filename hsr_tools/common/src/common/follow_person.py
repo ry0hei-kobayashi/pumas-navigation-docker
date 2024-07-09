@@ -9,6 +9,8 @@ import numpy as np
 from hsrlib.hsrif import HSRInterfaces
 from hsrlib.utils import utils, description, joints
 
+from geometry_msgs.msg import Pose2D
+
 from navigation_tools.nav_tool_lib import NavModule
 #from common.speech import DefaultTTS
 
@@ -113,23 +115,29 @@ class FollowPerson(smach.State):
 
             last_pose_time = rospy.get_time()
 
+            
             while not utils.is_arm_touched():
                 current_time = rospy.get_time()
-                rospy.loginfo("current_time")
+                #rospy.loginfo("current_time")
                 rate.sleep()
 
-                #if current_time - last_pose_time >= 3:
+                if current_time - last_pose_time >= 1:
+                    nav_pose = self.nav.pose()
+                    current_pose = Pose2D(nav_pose().x, nav_pose().y, nav_pose().theta)
+                    
 
                     # current_pose_list = []                    
                     #current_pose = self.nav.pose() # List
+                    #current_pose = [current_pose()]
                     # rospy.loginfo(current_pose)
                     # current_pose_list.append(current_pose)
                     
                     
-                    #if current_pose:
-                    #    way_point_list.append(current_pose)
-                    #    rospy.loginfo(way_point_list)
-                    #last_pose_time = current_time
+                    if current_pose:
+                        way_point_list.append(current_pose)
+                        #rospy.loginfo(current_pose)
+                        #rospy.loginfo(way_point_list)
+                    last_pose_time = current_time
 
                 if self.fp_legs_found == False:
                     self.fp_start_follow_pub.publish(False)
@@ -142,8 +150,8 @@ class FollowPerson(smach.State):
 
                 rate.sleep()
 
-            #userdata.way_point_list = way_point_list
-            #rospy.loginfo(userdata.way_point_list)
+            userdata.way_point_list = way_point_list
+            rospy.logwarn(userdata.way_point_list)
 
             self.fp_legs_found = False
 
