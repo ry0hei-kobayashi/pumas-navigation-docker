@@ -52,7 +52,9 @@
 
   <!--set same param max_x-->
   <arg name="pot_fields_d0" default="0.35"/>
-  <arg name="pot_fields_k_rej" default="5.7"/>
+  <arg name="pot_fields_k_rej" default="0.5"/>
+  <!--arg name="pot_fields_d0" default="0.35"/>
+  <arg name="pot_fields_k_rej" default="2.0"/-->
    
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
@@ -62,7 +64,7 @@
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
     <!--param name="occupied_threshold" value="70"/-->
-    <param name="occupied_threshold" value="70"/>
+    <param name="occupied_threshold" value="10"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
@@ -128,7 +130,7 @@
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
     <param name="inflation_radius" value="0.15"/>
-    <param name="cost_radius" value="0.5"/>
+    <param name="cost_radius" value="0.20"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
