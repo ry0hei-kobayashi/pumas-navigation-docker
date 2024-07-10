@@ -91,8 +91,6 @@ class NavModule:
                 self.recovery_from_cost()
             
 
-                
-
         elif msg.status == GoalStatus.ABORTED:
             if msg.text == 'Cannot calculate path from start to goal point':
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
@@ -356,9 +354,9 @@ class NavModule:
             rospy.sleep(5.0)
         rospy.sleep(2.5)
 
-    ##############################
-    ##   HSR Functions bypass   ##
-    ##############################
+    #########################################
+    ##   HSR Functions bypass with hsrif   ##
+    #########################################
 
     def cancel_goal(self):
         self.hsrif.omni_base.cancel_goal()
@@ -394,7 +392,7 @@ class NavModule:
         self.hsrif.omni_base.move(pose, timeout, ref_frame_id)
 
     def pose(self):
-        return self.hsrif.omni_base.pose
+        return self.hsrif.omni_base.get_pose
 
 if __name__ == "__main__":
     rospy.init_node('navigation_module')

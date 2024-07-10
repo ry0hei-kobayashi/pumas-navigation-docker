@@ -89,7 +89,7 @@ std::string frame_id;
 //Parameter-passed values
 std::string laser_scan_topic = "/scan";
 std::string laser_scan_frame = "laser_link";
-bool show_hypothesis = false;
+bool show_hypothesis = true;
 int scan_downsampling = 1;
 
 std::vector<float> downsample_scan(std::vector<float>& ranges, int downsampling)
@@ -357,7 +357,8 @@ bool get_nearest_legs_to_last_legs(std::vector<float>& legs_x, std::vector<float
             nearest_y = legs_y[i];
         }
     }
-    return min_dist < 0.33;
+    return min_dist < 0.20;
+    //return min_dist < 0.33;
     /*
        if(min_dist > 0.5)
        {

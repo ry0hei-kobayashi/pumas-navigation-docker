@@ -9,6 +9,9 @@ import numpy as np
 from hsrlib.hsrif import HSRInterfaces
 from hsrlib.utils import utils, description, joints
 
+from geometry_msgs.msg import Pose2D, PointStamped
+
+
 from navigation_tools.nav_tool_lib import NavModule
 #from common.speech import DefaultTTS
 
@@ -45,9 +48,12 @@ class FollowPerson(smach.State):
         self.fp_legs_found_sub = rospy.Subscriber(
             '/hri/leg_finder/legs_found', Bool, self._fp_legs_found_cb)
 
+        self.leg_pose_sub = rospy.Subscriber(
+            '/hri/leg_finder/leg_pose', PointStamped, self.legs_pose_cb)
 
         self.fp_legs_found = False
         self.fisrt = True
+        self.distance_flag = False
 
         #false -> go pose , true -> custom_pose
         self.move_joints = move_joints
@@ -60,6 +66,21 @@ class FollowPerson(smach.State):
         self.follow_pose["arm_roll_joint"]   = 2.0
         self.follow_pose["arm_flex_joint"]   = -0.16
 
+    def legs_pose_cb(self, msg): 
+        self.leg_pose = msg
+              
+        if self.leg_pose.point.x > 1.2:
+            if not self.distance_flag:                                                          
+                self.hsrif.tts.say('Sorry, Please walk slowly.', language='en', sync=True, queue=True)
+                self.distance_flag = True  # Set flag to True to indicate message has been spoken
+        else:
+            self.distance_flag = False  # Reset flag when person is within acceptable distance
+
+        #if self.leg_pose.point.x > 1.5:
+        #    self.hsrif.tts.say('Sorry, Please walk slowly.', language='en', sync=True, queue=True)
+        #    self.distance_flag == True
+
+
 
     def _fp_legs_found_cb(self, msg):
         try:
@@ -69,18 +90,22 @@ class FollowPerson(smach.State):
                 self.hsrif.tts.say('I found you! Now, I will follow you.', language='en', sync=True, queue=True)
                 
                 if (self.fisrt):
-                    self.hsrif.tts.say('If you want me to stop following you, push my hand.', language='en', sync=True, queue=True)
+                    self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=True)
                     self.fisrt = False
+
                 
                 rospy.loginfo('Legs found')
 
+
             elif msg.data == False and msg.data != self.fp_legs_found:
                 self.fp_legs_found = False
+                self.distance_flag == False
 
                 self.hsrif.tts.say(
                     'Sorry, I lost you! Please come where I can see you.', language='en', sync=True, queue=True)
                 rospy.loginfo('Legs lost')
         except:
+            self.distance_flag == False
             self.fp_legs_found = False
 
     def execute(self, userdata):
@@ -93,15 +118,20 @@ class FollowPerson(smach.State):
             else:
                 self.hsrif.whole_body.move_to_go()
 
-            rospy.loginfo("first pose")
 
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
 
-            self.hsrif.tts.say('Push my hand to start following you.', language='en', sync=True, queue=True)
-            rospy.loginfo("Push my hand to start following you.")
+            rospy.loginfo("first pose")
+
+            self.hsrif.tts.say('Operator, please come in front of me.', language='en', sync=True)
+            rospy.sleep(1)
+            self.hsrif.tts.say("Touch my hand to start following you.", 'en', sync=True)
+
+            rospy.loginfo("Touch my hand to start following you.")
 
             while not utils.is_arm_touched():
+
                 rate.sleep()
 
             self.hsrif.tts.say('First I will find you. Please, move in front of me, where I can see you.', language='en', sync=True, queue=True)
@@ -109,51 +139,56 @@ class FollowPerson(smach.State):
             self.fp_enable_leg_finder_pub.publish(True)
 
 
+
+
             way_point_list = []
-
             last_pose_time = rospy.get_time()
-
+            say_counter = 0
             while not utils.is_arm_touched():
-                current_time = rospy.get_time()
-                rospy.loginfo("current_time")
-                rate.sleep()
-
-                #if current_time - last_pose_time >= 3:
-
-                    # current_pose_list = []                    
-                    #current_pose = self.nav.pose() # List
-                    # rospy.loginfo(current_pose)
-                    # current_pose_list.append(current_pose)
-                    
-                    
-                    #if current_pose:
-                    #    way_point_list.append(current_pose)
-                    #    rospy.loginfo(way_point_list)
-                    #last_pose_time = current_time
 
                 if self.fp_legs_found == False:
                     self.fp_start_follow_pub.publish(False)
+                    self.distance_flag = False
+
 
                     while self.fp_legs_found == False:
 
                         rate.sleep()
 
                     self.fp_start_follow_pub.publish(True)
+                #rate.sleep()
+
+
+                current_time = rospy.get_time()
+                #rospy.loginfo("current_time")
+                diff =  current_time - last_pose_time
+
+                if diff >= 5:
+                    nav_pose = self.nav.pose()
+                    current_pose = Pose2D(nav_pose().x, nav_pose().y, nav_pose().theta)
+                    
+                    if current_pose:
+                        way_point_list.append(current_pose)
+
+                    last_pose_time = current_time
 
                 rate.sleep()
 
-            #userdata.way_point_list = way_point_list
-            #rospy.loginfo(userdata.way_point_list)
+            userdata.way_point_list = way_point_list
+            rospy.logwarn(userdata.way_point_list)
 
             self.fp_legs_found = False
+            self.distance_flag = False
 
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
 
-            self.hsrif.whole_body.move_to_go()
+            #self.hsrif.whole_body.move_to_go()
 
+            
             self.hsrif.tts.say('OK, I will stop following you.', language='en', sync=True, queue=True)
             rospy.loginfo('OK, I will stop following you.')
+
 
             return 'next'
 
@@ -162,6 +197,7 @@ class FollowPerson(smach.State):
             import traceback
             traceback.print_exc()
             self.fp_legs_found = False
+            self.distance_flag = False
 
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)

@@ -5,26 +5,36 @@
 #include "std_msgs/Float64MultiArray.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/PointStamped.h"
-#include "std_msgs/Float32.h"
+//#include "std_msgs/Float32.h"
+#include "sensor_msgs/LaserScan.h"
 #include "tf/transform_listener.h"
 #include "tf_conversions/tf_eigen.h"
 
 
+
 ros::NodeHandle* n;
+ros::Subscriber  sub_lidar;
 ros::Subscriber  sub_legs_pose;
 ros::Publisher   pub_cmd_vel;
 ros::Publisher   pub_head_pose;
 tf::TransformListener* listener;
 std::string legs_pose_topic = "/hri/leg_finder/leg_pose";
+std::string laser_topic = "/hsrb/base_scan";
+
 //Potential fields can be used only with an omnidirectional base.
-float repulsiveForce = 0.0;
+//float repulsiveForce = 0.0;
+float repulsiveForceX = 0.0;
+float repulsiveForceY = 0.0;
+float KInfRep = 0.03;
+
 
 //Values passed as parameters
-float control_alpha  = 0.6548;// 0.6548 ;//= 0.9; // = 1.2
+float control_alpha  = 0.6548;
 float control_beta   = 0.3;
 float max_linear     = 0.3;
-float max_angular    = 0.7;//0.7 // 0.8 // 0.7
-float dist_to_human  = 0.9;
+float max_angular    = 0.7;
+float dist_to_human  = 1.0;
+
 bool  move_backwards = false;
 bool  move_head      = false;
 bool pot_fields = false;
@@ -46,7 +56,10 @@ geometry_msgs::Twist calculate_speeds(float goal_x, float goal_y)
         result.linear.x  = distance * exp(-(angle_error * angle_error) / control_alpha);
         result.linear.y  = 0;
         if(pot_fields)
-            result.linear.y = repulsiveForce;
+            //result.linear.y = repulsiveForce;
+	    result.linear.x -= KInfRep * repulsiveForceX;
+            result.linear.y -= KInfRep * repulsiveForceY;
+
         //std::cout << result.linear.y << std::endl;
         result.angular.z = max_angular * (2 / (1 + exp(-angle_error / control_beta)) - 1);
     }
@@ -94,11 +107,31 @@ void callback_legs_pose(const geometry_msgs::PointStamped::ConstPtr& msg)
     new_legs_pose = true;
 }
 
-void callback_rejection_force(const geometry_msgs::Vector3::ConstPtr& msg)
+//void callback_rejection_force(const geometry_msgs::Vector3::ConstPtr& msg)
+//{
+//    geometry_msgs::Vector3 rejection_force = *msg;
+//    repulsiveForce = rejection_force.y;
+//}
+
+void callback_lidar(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
-    geometry_msgs::Vector3 rejection_force = *msg;
-    repulsiveForce = rejection_force.y;
+    repulsiveForceX = 0.0;
+    repulsiveForceY = 0.0;
+    float laser_threshold = 2.0;
+    for(size_t i = 0; i < msg->ranges.size(); i++)
+    {
+        if(msg->ranges[i] < laser_threshold) //msg->range_max)
+        {
+            float angle = msg->angle_min + i * msg->angle_increment;
+            float force = 1 / (msg->ranges[i] * msg->ranges[i]);
+            repulsiveForceX -= force * cos(angle);
+            repulsiveForceY -= force * sin(angle);
+            std::cout << repulsiveForceX << std::endl;
+            std::cout << repulsiveForceY << std::endl;
+        }
+    }
 }
+
 
 void callback_enable(const std_msgs::Bool::ConstPtr& msg)
 {
@@ -106,9 +139,12 @@ void callback_enable(const std_msgs::Bool::ConstPtr& msg)
     {
         std::cout << "LegFinder.->Enable recevied" << std::endl;
         sub_legs_pose = n->subscribe(legs_pose_topic, 1, callback_legs_pose);      
+        sub_lidar = n->subscribe(laser_topic, 1, callback_lidar);
+
     }
     else
         sub_legs_pose.shutdown();
+        sub_lidar.shutdown();
     enable = msg->data;
 }
 
@@ -149,7 +185,7 @@ int main(int argc, char** argv)
     if(ros::param::has("~head_topic"))
         ros::param::get("~head_topic", head_topic);
     
-    ros::Subscriber sub_rejection_force  = n->subscribe("/navigation/obs_detector/pf_rejection_force", 1, callback_rejection_force);
+    //ros::Subscriber sub_rejection_force  = n->subscribe("/navigation/obs_detector/pf_rejection_force", 1, callback_rejection_force);
     ros::Subscriber sub_enable = n->subscribe("/hri/human_following/enable", 1, callback_enable);
     ros::Subscriber sub_stop   = n->subscribe("/stop", 1, callback_stop);
     listener = new tf::TransformListener();
