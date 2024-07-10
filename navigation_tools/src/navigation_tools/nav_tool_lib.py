@@ -14,12 +14,24 @@ from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
 
 from std_srvs.srv import Trigger
+import copy
 
 class NavModule:
     """Navigation Module for the robot"""
+    __instance = None
+
+    def __new__(cls, *args, **kargs):
+        """シングルトン化処理."""
+        if cls.__instance is None:
+            cls.__instance = super(NavModule, cls).__new__(cls)
+            cls.__initialized = False
+        return cls.__instance
 
     def __init__(self, select="hsr"):
-        print("called init")
+
+        if self.__initialized:
+            rospy.logwarn("NavModule -> called class initializaion")
+            return
         self.global_goal_reached = True
         self.goal_reached = True
         self.robot_stop = False
@@ -36,9 +48,11 @@ class NavModule:
         self.points = []
 
         self.set_navigation_type(select)
-        self.global_pose = PoseStamped()
-        # self.global_goal_xyz = PoseStamped()
-        self.global_goal_xyz = None
+        #self.global_pose = PoseStamped()
+        #self.global_goal_xyz = PoseStamped()
+        # self.global_goal_xyz = None
+        self.global_pose = None
+        self.marker = Marker()
 
         self.pub_global_goal_xyz = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
         self.pub_move_rel = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
@@ -59,36 +73,37 @@ class NavModule:
         rospy.sleep(1.0)
 
     def callback_global_goal_reached(self, msg):
-        print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
+        #print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
         self.global_goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
             self.global_goal_reached = True
 
-        if msg.status == GoalStatus.ACTIVE:
+        elif msg.status == GoalStatus.ACTIVE:
             if msg.text == 'Waiting for temporal obstacles to move':
                 rospy.loginfo('NavigationStatus -> Waiting for temporal obstacle to move')
 
-                if not self.points:
+                if len(self.points) == 0:
                    self.replan_safe_point()
                    self.distance_from_cost += 0.2
                 else:
                    self.publish_next_point()
 
                 self.recovery_from_cost()
+            
 
                 
 
-        if msg.status == GoalStatus.ABORTED:
+        elif msg.status == GoalStatus.ABORTED:
             if msg.text == 'Cannot calculate path from start to goal point':
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
 
-                if not self.points:
+                if len(self.points) == 0:
                     self.replan_safe_point()
                     self.distance_from_cost += 0.2
                 else:
                     self.publish_next_point()
 
-            if msg.text == 'Cancelling current movement':
+            elif msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')
 
     def callback_goal_reached(self, msg):
@@ -123,27 +138,33 @@ class NavModule:
 
     def replan_safe_point(self):
         rospy.loginfo('called replan_safe_point')
-        print("self.global_goal_xyz: ", self.global_goal_xyz)
         try:
+            #rospy.logerr(f"self.global_goal_xyz: { self.global_goal_xyz}")
             current_goal_pose2d = self.pose_stamped2pose_2d(self.global_goal_xyz)
             radius = self.distance_from_cost
             num_points = 8
             self.points = self.calculate_safe_points(current_goal_pose2d, radius, num_points)
+            #rospy.logerr(f'points: {self.points}')
 
-            if self.points:
+            if not len(self.points) == 0:
                 self.publish_next_point()
             else:
                 rospy.loginfo('called replan_safe_point -> but not found')
-        except Exception as e:
-            print(e)
+                #self.distance_from_cost += 0.2
+
+        except:
+            import traceback
+            traceback.print_exc()
+
+            
 
     def publish_next_point(self):
         rospy.loginfo("called publish next point")
         try:
-            if self.points:
-                safe_point = self.points.pop(0)  # Remove the first goal
+            if not len(self.points) == 0:
+                safe_point = self.points.pop(0)  # Remove the first value
                 goal = PoseStamped()
-                goal.header.frame_id = self.global_pose.header.frame_id
+                goal.header.frame_id = self.global_goal_xyz.header.frame_id
                 goal.pose.position.x = safe_point.x
                 goal.pose.position.y = safe_point.y
 
@@ -158,8 +179,11 @@ class NavModule:
                 goal.pose.orientation.z = q[2]
                 goal.pose.orientation.w = q[3]
 
-                self.marker_plot(goal)
-                self.pub_global_goal_xyz.publish(goal)
+                # print('remove 1st points: ', goal)
+                self.send_goal(goal)
+                #self.marker_plot(goal)
+                #self.pub_global_goal_xyz.publish(goal)
+    
         except Exception as e:
             print(e)
 
@@ -176,23 +200,23 @@ class NavModule:
         return points
 
     def marker_plot(self, goal):
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "goal_markers"
-        marker.id = self.marker_num
+        
+        self.marker.header.frame_id = "map"
+        self.marker.header.stamp = rospy.Time.now()
+        self.marker.ns = "goal_markers"
+        self.marker.id = self.marker_num
         self.marker_num += 1
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose = goal.pose
-        marker.scale.x = 0.1
-        marker.scale.y = 0.1
-        marker.scale.z = 0.1
-        marker.color.a = 1.0
-        marker.color.r = 1.0
-        marker.color.g = 0.0
-        marker.color.b = 0.0
-        self.pub_marker.publish(marker)
+        self.marker.type = Marker.SPHERE
+        self.marker.action = Marker.ADD
+        self.marker.pose = goal.pose
+        self.marker.scale.x = 0.1
+        self.marker.scale.y = 0.1
+        self.marker.scale.z = 0.1
+        self.marker.color.a = 1.0
+        self.marker.color.r = 1.0
+        self.marker.color.g = 1.0
+        self.marker.color.b = 0.0
+        self.pub_marker.publish(self.marker)
 
     def recovery_from_cost(self):
         rospy.loginfo('NavigationStatus. -> Recovery From Cost -> Rotation')
@@ -223,9 +247,10 @@ class NavModule:
         self.robot_stop = False
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
-        self.global_goal_xyz = goal
-        print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
-        self.pub_global_goal_xyz.publish(goal)
+        self.global_goal_xyz = copy.deepcopy(goal)
+        #print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
+        #self.pub_global_goal_xyz.publish(goal)
+        self.send_goal(goal)
         rospy.sleep(5.0)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
@@ -251,6 +276,15 @@ class NavModule:
                 self.get_close(x, y, theta, timeout)
             else:
                 self.whole_body.omni_base.go_abs(x, y, theta, timeout)
+
+    
+
+    def send_goal(self, goal):
+        rospy.logwarn('NavModule -> sending new goal')
+        rospy.logwarn(goal)
+        self.marker_plot(goal)
+        self.pub_global_goal_xyz.publish(goal)
+
 
     def move_dist_angle(self, x, yaw, timeout):
         rate = rospy.Rate(10)
@@ -280,7 +314,7 @@ class NavModule:
         self.global_goal_reached = False
         self.robot_stop = False
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
-
+    
         self.pub_move_rel.publish(goal)
         rospy.sleep(5.0)
 
