@@ -145,10 +145,10 @@
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
   
   <node name="prohibition_map_server" pkg="map_server" type="map_server" output="screen" args="$(arg prohibition_map_file)">
-    <remap from="/static_map" to="/prohibition_map"/>
+    <remap from="/static_map" to="/map"/>
     <remap from="/map" to="/prohibition_layer_map"/>
+    <!--remap from="/map" to="/dynamic_obstacle_map"/-->
   </node>
-
 
 
   
