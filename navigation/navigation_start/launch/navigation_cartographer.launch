@@ -11,13 +11,15 @@
   
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
+  <node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/>
+
   
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
   
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/blank/map.yaml"/>
   
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
-  <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
+  <arg name="laser_scan_topic" default="/hsrb/base_scan/fix"/>
   <!--arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/-->
   <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="point_cloud_topic2" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
@@ -49,8 +51,8 @@
   <!--arg name="max_z" default="1.5"/-->
 
   <!--set same param max_x-->
-  <arg name="pot_fields_d0" default="0.5"/>
-  <arg name="pot_fields_k_rej" default="2.0"/>
+  <arg name="pot_fields_d0" default="0.35"/>
+  <arg name="pot_fields_k_rej" default="5.7"/>
    
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
@@ -70,9 +72,9 @@
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
     <!--param name="max_linear_speed" value="0.8"/-->
     <param name="max_linear_speed" value="0.8"/>
-    <param name="max_angular_speed" value="1.3"/>
-    <param name="control_alpha" value="0.3"/>
-    <param name="control_beta" value="0.12"/>
+    <param name="max_angular_speed" value="1.5"/>
+    <param name="control_alpha" value="0.4"/>
+    <param name="control_beta" value="0.15"/>
     <param name="use_pot_fields" value="$(arg use_pot_fields)"/>
     <param name="cmd_vel_name" value="$(arg cmd_vel_name)"/>
   </node>
