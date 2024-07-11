@@ -5,9 +5,11 @@
 import rospy
 import smach
 import numpy as np
+import math
 
 from hsrlib.hsrif import HSRInterfaces
 from hsrlib.utils import utils, description, joints
+from tamlib.utils import Logger
 
 from geometry_msgs.msg import Pose2D, PointStamped
 
@@ -17,6 +19,9 @@ from navigation_tools.nav_tool_lib import NavModule
 
 from std_msgs.msg import Bool
 from geometry_msgs.msg import WrenchStamped
+from sensor_msgs.msg import LaserScan
+
+from human_position.msg import HumanCoordinatesArray, Keypoint
 
 #hsrb 71,hsrc55
 #THRESHOLD = 12.0
@@ -24,9 +29,10 @@ from geometry_msgs.msg import WrenchStamped
 #THRESHOLD = 21.0
 
 
-class FollowPerson(smach.State):
+class FollowPerson(smach.State, Logger):
     def __init__(self, move_joints = False, timeout=None):
         smach.State.__init__(self, outcomes=['next', 'except'], input_keys=['way_point_list'], output_keys=['way_point_list'])
+        Logger.__init__(self, loglevel="DEBUG")
 
         self.hsrif = HSRInterfaces()
 
@@ -66,12 +72,15 @@ class FollowPerson(smach.State):
         self.follow_pose["arm_roll_joint"]   = 2.0
         self.follow_pose["arm_flex_joint"]   = -0.16
 
+        self.closest_distance = False
+        self.min_distance = False
+
     def legs_pose_cb(self, msg): 
         self.leg_pose = msg
               
         if self.leg_pose.point.x > 1.2:
             if not self.distance_flag:                                                          
-                self.hsrif.tts.say('Sorry, Please walk slowly.', language='en', sync=True, queue=True)
+                self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=True) # moreをつけました
                 self.distance_flag = True  # Set flag to True to indicate message has been spoken
         else:
             self.distance_flag = False  # Reset flag when person is within acceptable distance
@@ -108,6 +117,56 @@ class FollowPerson(smach.State):
             self.distance_flag == False
             self.fp_legs_found = False
 
+    def distance2center_hip(self, data):
+
+        people = data.human_coordinates_array
+
+        closest_distance = float('inf')
+
+        if people is None:
+            return
+        try:
+            for person in people:
+                keypoint = {kpt.name:kpt for kpt in person.keypoints if kpt.name in ["CENTER_HIP"]}
+
+                if "CENTER_HIP" in keypoint:
+                    self.loginfo("Success to get hip_point.")
+
+                    center_hip = keypoint["CENTER_HIP"]
+                    distance = math.sqrt(center_hip.point.z**2)
+
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        
+            self.closest_distance = closest_distance
+
+        except Exception as e:
+            self.logdebug(f"{e}")
+            pass
+    
+    def distance_leg(self, data):
+        ranges = data.ranges
+        angle_increment = data.angle_increment
+        min_angle = data.angle_min
+
+        min_detect_angle = -15.0 * 3.14/180.0
+        max_detect_angle = 15.0 * 3.14/180.0
+
+        detected_distances = []
+        detected_angles = []
+
+        for i, distance in enumerate(ranges):
+            angle = min_angle + i * angle_increment
+            if min_detect_angle <= angle <= max_detect_angle:
+                detected_distances.append(distance)
+                detected_angles.append(angle)
+
+        if detected_distances:
+            min_distance = min(detected_distances)
+
+        self.min_distance = min_distance
+        print(self.min_distance)
+
     def execute(self, userdata):
         try:
             rate = rospy.Rate(30)
@@ -126,6 +185,33 @@ class FollowPerson(smach.State):
 
             self.hsrif.tts.say('Operator, please come in front of me.', language='en', sync=True)
             rospy.sleep(1)
+
+            # 足の位置と腰の位置の確認
+            hip_sub = rospy.Subscriber('/human_coordinates', HumanCoordinatesArray, self.distance2center_hip)
+            leg_sub = rospy.Subscriber("/hsrb/base_scan", LaserScan, self.distance_leg)
+
+            start_time = rospy.get_time()
+
+            while not rospy.is_shutdown():
+                cur_time = rospy.get_time()
+
+                if cur_time - start_time <= 10:
+                    if self.closest_distance and self.min_distance:
+                        if self.min_distance < 1.0 and (self.closest_distance - self.min_distance) < 0.4:
+                            hip_sub.unregister()
+                            leg_sub.unregister()
+                            break
+                        else:
+                            rate.sleep()
+                            continue
+                    else:
+                        rate.sleep()
+                        continue
+                else:
+                    hip_sub.unregister()
+                    leg_sub.unregister()
+                    break
+
             self.hsrif.tts.say("Touch my hand to start following you.", 'en', sync=True)
 
             rospy.loginfo("Touch my hand to start following you.")
@@ -135,6 +221,7 @@ class FollowPerson(smach.State):
                 rate.sleep()
 
             self.hsrif.tts.say('First I will find you. Please, move in front of me, where I can see you.', language='en', sync=True, queue=True)
+
             rospy.loginfo("First I will find you.")
             self.fp_enable_leg_finder_pub.publish(True)
 
