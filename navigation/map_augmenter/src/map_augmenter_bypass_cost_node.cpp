@@ -38,6 +38,7 @@ std::string laser_scan_frame    = "laser";
 std::string sonars_topic_prefix = "/sonar";
 
 nav_msgs::OccupancyGrid static_map;             //Static map plus prohibition layer with inflation. Calculated once on node start.
+//nav_msgs::OccupancyGrid static_cost_map;        //Cost map calculated using inflated static map and prohibition layer. Calculated once on node start.
 nav_msgs::OccupancyGrid static_cost_map;        //Cost map calculated using inflated static map and prohibition layer. Calculated once on node start.
 nav_msgs::OccupancyGrid obstacles_map;          //Only obstacles map calculated with all enabled sensors, without inflation. Calculated on service request.
 nav_msgs::OccupancyGrid obstacles_inflated_map; //Only obstacles with inflation.
