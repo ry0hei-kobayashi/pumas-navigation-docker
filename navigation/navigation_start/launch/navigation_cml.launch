@@ -41,10 +41,10 @@
   <!--障害物を検出する範囲を指定するパラメータ-->
   <!--depth-->
   <arg name="min_x" default="0.17"/>
-  <arg name="max_x" default="0.5"/>
+  <arg name="max_x" default="0.7"/>
   <!--width, min_y is rightside-->
-  <arg name="min_y" default="-0.25"/>
-  <arg name="max_y" default="0.25"/>
+  <arg name="min_y" default="-0.35"/>
+  <arg name="max_y" default="0.35"/>
   <!--height-->
   <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.5"/>
@@ -52,7 +52,7 @@
 
   <!--set same param max_x-->
   <arg name="pot_fields_d0" default="0.35"/>
-  <arg name="pot_fields_k_rej" default="1.4"/>
+  <arg name="pot_fields_k_rej" default="2.0"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
    
