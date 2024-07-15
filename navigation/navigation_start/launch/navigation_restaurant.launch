@@ -2,8 +2,10 @@
 <launch>
   <!--include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/-->
 
-  <remap from="/get_distance_map" to="/get_cartographer_map"/>
-  <remap from="/static_obstacle_map_ref" to="/dynamic_obstacle_map"/>
+  <!--remap from="/get_distance_map" to="/get_cartographer_map"/>
+  <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/-->
+  <remap from="/cartographer_map" to="/get_cartographer_map"/>
+  <remap from="/dynamic_obstacle_map" to="/get_cartographer_map"/>
   
   <remap from="/laser_2d_pose" to= "/global_pose"/>
   <remap from="/cmd_vel" to="/hsrb/command_velocity"/>
@@ -11,7 +13,7 @@
   
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
-  <node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/>
+  <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
 
   
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
@@ -19,7 +21,7 @@
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/blank/map.yaml"/>
   
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
-  <arg name="laser_scan_topic" default="/hsrb/base_scan/fix"/>
+  <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
   <!--arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/-->
   <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="point_cloud_topic2" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
@@ -40,11 +42,12 @@
 
   <!--障害物を検出する範囲を指定するパラメータ-->
   <!--depth-->
-  <arg name="min_x" default="0.17"/>
-  <arg name="max_x" default="0.5"/>
+  <!--arg name="min_x" default="0.17"/-->
+  <arg name="min_x" default="-0.30"/>
+  <arg name="max_x" default="0.6"/>
   <!--width, min_y is rightside-->
-  <arg name="min_y" default="-0.25"/>
-  <arg name="max_y" default="0.25"/>
+  <arg name="min_y" default="-0.20"/>
+  <arg name="max_y" default="0.45"/>
   <!--height-->
   <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.5"/>
@@ -59,7 +62,13 @@
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
-    <node name="arm" pkg="arm" type="arm_node" output="screen"/>
+
+    <node name="arm" pkg="arm" type="arm_node" output="screen">
+      <rosparam param="torso_goal_pose">0.2</rosparam> <!--arm_lift, meter-->
+      <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
+      <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
+    </node>
+
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">

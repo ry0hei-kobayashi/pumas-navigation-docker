@@ -59,7 +59,12 @@
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
-    <node name="arm" pkg="arm" type="arm_node" output="screen"/>
+    <!--node name="arm" pkg="arm" type="arm_node" output="screen"/-->
+    <node name="arm" pkg="arm" type="arm_node" output="screen">
+    <rosparam param="torso_goal_pose">0.2</rosparam> <!--arm_lift, meter-->
+    <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
+    <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
+    </node>
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
