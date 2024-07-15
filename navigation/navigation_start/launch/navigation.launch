@@ -24,7 +24,7 @@
 
   <!--for env objs to map-->
   <arg name="env_file_name" default="env_furniture_rc24_ohirome.yaml"/>
-  <arg name="add_static_obstacles" default="true"/>
+  <arg name="add_static_obstacles" default="false"/>
 
   <!--for wrs simulator-->
   <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
@@ -151,9 +151,9 @@
     <param name="cost_radius" value="0.1"/-->
 
     <!--(black box) inflation_size-->
-    <param name="inflation_radius" value="0.2"/>
+    <param name="inflation_radius" value="0.15"/>
 
-    <param name="cost_radius" value="0.4"/>
+    <param name="cost_radius" value="0.3"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
