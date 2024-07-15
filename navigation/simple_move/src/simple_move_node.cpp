@@ -272,7 +272,7 @@ int main(int argc, char** argv)
     float fine_dist_tolerance = 0.03;
     float coarse_dist_tolerance = 0.2;
     // float angle_tolerance = 0.01;
-    // float angle_tolerance = 0.05;
+    float angle_tolerance = 0.05;
     bool  move_head = true;
 
     if(ros::param::has("~max_linear_speed"))
