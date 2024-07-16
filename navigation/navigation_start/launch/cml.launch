@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
-  <!--include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/-->
 
-  <remap from="/get_distance_map" to="/get_cartographer_map"/>
-  <!--remap from="/static_distance_map_ref" to="/get_cartographer_map"/-->
-  <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/>
+  <!--remap from="/get_distance_map" to="/get_cartographer_map"/>
+  <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/-->
+  <remap from="/static_distance_map_ref" to="/get_cartographer_map"/>
   
   <remap from="/laser_2d_pose" to= "/global_pose"/>
   <remap from="/cmd_vel" to="/hsrb/command_velocity"/>
@@ -12,7 +11,7 @@
   
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
-  <node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/>
+  <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
 
   
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
@@ -20,7 +19,7 @@
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/blank/map.yaml"/>
   
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
-  <arg name="laser_scan_topic" default="/hsrb/base_scan/fix"/>
+  <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
   <!--arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/-->
   <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="point_cloud_topic2" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
@@ -52,8 +51,6 @@
   <!--arg name="max_z" default="1.5"/-->
 
   <!--set same param max_x-->
-
-  <!--obstacle reaction-->
   <arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
@@ -121,6 +118,8 @@
     <param name="max_z" value="$(arg max_z)"/>
     <param name="min_z" value="$(arg min_z)"/>
   </node>
+
+
   
   
   <node name="map_augmenter"  pkg="map_augmenter"  type="map_augmenter_node"  output="screen">
@@ -137,13 +136,8 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <!--param name="inflation_radius" value="0.18"/>
-    <param name="cost_radius" value="0.35"/-->
-    <!--robo radius-->
-    <!--cost: inflation rad + obstacle size-->
     <param name="inflation_radius" value="0.18"/>
-    <!--path-->
-    <param name="cost_radius" value="0.1"/>
+    <param name="cost_radius" value="0.35"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -156,11 +150,13 @@
 
   <arg name="topic_name" default="/navigation/obs_detector/enable" />
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
+
+
   
-  <node name="prohibition_map_server" pkg="map_server" type="map_server" output="screen" args="$(arg prohibition_map_file)">
-    <remap from="/static_map" to="/prohibition_map"/>
-    <remap from="/map" to="/prohibition_layer_map"/>
-  </node>
+  <!--node name="prohibition_map_server" pkg="map_server" type="map_server" output="screen" args="$(arg prohibition_map_file)"-->
+    <!--remap from="/static_map" to="/prohibition_map"/-->
+    <!--remap from="/map" to="/prohibition_layer_map"/-->
+  <!--/node-->
 
 
 
