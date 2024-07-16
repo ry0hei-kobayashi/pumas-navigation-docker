@@ -124,6 +124,7 @@ nav_msgs::OccupancyGrid inflate_map(nav_msgs::OccupancyGrid& map, float inflatio
     return newMap;
 }
 
+//NearnessToObstacle
 nav_msgs::OccupancyGrid get_cost_map(nav_msgs::OccupancyGrid& map, float cost_radius)
 {
     if(cost_radius < 0)

@@ -35,7 +35,8 @@ def param_updator():
     
             d0_update = rospy.set_param(pot_fields_d0, 0.5)
             k_rej_update = rospy.set_param(pot_fields_k_rej, 2.0)
-            distance_update = rospy.set_param(obs_detect_distance, 0.5)
+            #distance_update = rospy.set_param(obs_detect_distance, 0.5)
+            distance_update = rospy.set_param(obs_detect_distance, 0.7)
     
     
         else:
