@@ -3,8 +3,8 @@
   <!--include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/-->
 
   <remap from="/get_distance_map" to="/get_cartographer_map"/>
-  <remap from="/map" to="/get_cartographer_map"/>
-  <!--remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/-->
+  <!--remap from="/static_distance_map_ref" to="/get_cartographer_map"/-->
+  <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/>
   
   <remap from="/laser_2d_pose" to= "/global_pose"/>
   <remap from="/cmd_vel" to="/hsrb/command_velocity"/>
@@ -52,6 +52,8 @@
   <!--arg name="max_z" default="1.5"/-->
 
   <!--set same param max_x-->
+
+  <!--obstacle reaction-->
   <arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
@@ -135,8 +137,13 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
+    <!--param name="inflation_radius" value="0.18"/>
+    <param name="cost_radius" value="0.35"/-->
+    <!--robo radius-->
+    <!--cost: inflation rad + obstacle size-->
     <param name="inflation_radius" value="0.18"/>
-    <param name="cost_radius" value="0.35"/>
+    <!--path-->
+    <param name="cost_radius" value="0.1"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
