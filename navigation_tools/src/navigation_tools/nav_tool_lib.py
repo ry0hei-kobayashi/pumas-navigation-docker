@@ -78,19 +78,19 @@ class NavModule:
 
     def callback_global_goal_reached(self, msg):
 
-        rospy.logwarn('#######before service#########')
+        #rospy.logwarn('#######before service#########')
 
-        rospy.logerr(self.points)
+        #rospy.logerr(self.points)
 
         path_plan_success = self.path_plan_client()
         if path_plan_success.success:
             rospy.loginfo("NavModule -> pathplan success")
             self.points = []
-            rospy.logerr(self.points)
+            #rospy.logerr(self.points)
         else:
             rospy.loginfo("NavModule -> pathplan fail")
 
-        rospy.logwarn('#######after service#########')
+        #rospy.logwarn('#######after service#########')
         #print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
         self.global_goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
@@ -302,7 +302,7 @@ class NavModule:
 
     def send_goal(self, goal):
         rospy.logwarn('NavModule -> sending new goal')
-        rospy.logwarn(goal)
+        #rospy.logwarn(goal)
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
 
