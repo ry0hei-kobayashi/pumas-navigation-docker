@@ -78,7 +78,7 @@ class FollowPerson(smach.State, Logger):
         # for update pot_fields
         #self.pot_fields_d0 = rospy.get_param('obs_detector/pot_fields_d0')
         #self.pot_fields_k_rej = rospy.get_param('obs_detector/pot_fields_k_rej')
-        #self.update_pot_fields = rospy.Publisher('/navigation/pot_fields_update', Bool, queue_size=10)
+        #self.update_potfields = rospy.Publisher('/navigation/pot_fields_update', Bool, queue_size=10)
         #self.update = Bool()
         #self.update.data = False
         #self.update_potfields.publish(self.update.data)
@@ -185,6 +185,7 @@ class FollowPerson(smach.State, Logger):
             
             #if self.move_joints:
             self.hsrif.whole_body.move_to_joint_positions(self.follow_pose)
+            #self.obs_detect_enable = rospy.Publisher('/navigation/obs_detector/enable', Bool, queue_size=10)
             #else:
             #self.hsrif.whole_body.move_to_go()
 
