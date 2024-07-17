@@ -67,8 +67,8 @@
   <arg name="min_x" default="0.17"/>
   <arg name="max_x" default="0.50"/>
   <!--width, min_y is rightside-->
-  <arg name="min_y" default="-0.3"/>
-  <arg name="max_y" default="0.3"/>
+  <arg name="min_y" default="-0.25"/>
+  <arg name="max_y" default="0.25"/>
   <!--height-->
   <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.5"/>
@@ -152,10 +152,10 @@
     <param name="cost_radius" value="0.1"/-->
 
     <!--(black box) inflation_size-->
-    <param name="inflation_radius" value="0.2"/>
-
-    <!--param name="cost_radius" value="0.37"/-->
-    <param name="cost_radius" value="0.4"/>
+    <!--param name="inflation_radius" value="0.2"/-->
+    <!--param name="cost_radius" value="0.4"/-->
+    <param name="inflation_radius" value="0.17"/>
+    <param name="cost_radius" value="0.35"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
