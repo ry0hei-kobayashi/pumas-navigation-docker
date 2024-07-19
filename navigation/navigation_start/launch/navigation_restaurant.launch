@@ -12,7 +12,7 @@
   
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
-  <node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/>
+  <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
 
   
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
@@ -20,7 +20,7 @@
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/blank/map.yaml"/>
   
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
-  <arg name="laser_scan_topic" default="/hsrb/base_scan/fix"/>
+  <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
   <!--arg name="point_cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/-->
   <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="point_cloud_topic2" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
@@ -50,15 +50,17 @@
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.5"/>
   <!--height-->
-  <arg name="min_z" default="0.03"/>
+  <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="2.0"/>
   <!--arg name="max_z" default="1.5"/-->
 
   <!--set same param max_x-->
 
   <!--obstacle reaction-->
-  <arg name="pot_fields_d0" default="0.55"/>
+  <arg name="pot_fields_d0" default="0.5"/>
   <arg name="pot_fields_k_rej" default="1.0"/>
+  <!--arg name="pot_fields_k_rej" default="0.6"/-->
+
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
    
