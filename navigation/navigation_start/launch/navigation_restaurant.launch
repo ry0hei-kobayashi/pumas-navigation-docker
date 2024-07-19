@@ -35,6 +35,7 @@
   
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
+  <!--obs size-->
   <arg name="cloud_points_threshold" default="100"/>
   <arg name="lidar_points_threshold" default="20"/>
   
@@ -74,8 +75,7 @@
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
-    <!--param name="occupied_threshold" value="70"/-->
-    <param name="occupied_threshold" value="10"/>
+    <param name="occupied_threshold" value="70"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
