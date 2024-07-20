@@ -86,6 +86,7 @@ class NavModule:
         if path_plan_success.success:
             rospy.loginfo("NavModule -> pathplan success")
             self.points = []
+            self.distance_from_cost = 0.1
             #rospy.logerr(self.points)
         else:
             rospy.loginfo("NavModule -> pathplan fail")
