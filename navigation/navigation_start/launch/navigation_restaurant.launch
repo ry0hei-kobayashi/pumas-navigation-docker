@@ -45,7 +45,7 @@
   <!--arg name="min_x" default="-0.35"/>
   <arg name="max_x" default="0.7"/-->
   <arg name="min_x" default="-0.25"/>
-  <arg name="max_x" default="0.7"/>
+  <arg name="max_x" default="0.60"/>
   <!--width, min_y is rightside-->
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.5"/>
@@ -57,8 +57,8 @@
   <!--set same param max_x-->
 
   <!--obstacle reaction-->
-  <arg name="pot_fields_d0" default="0.5"/>
-  <arg name="pot_fields_k_rej" default="1.0"/>
+  <arg name="pot_fields_d0" default="0.4"/>
+  <arg name="pot_fields_k_rej" default="0.35"/>
   <!--arg name="pot_fields_k_rej" default="0.6"/-->
 
   <!--arg name="pot_fields_d0" default="0.35"/>
@@ -77,7 +77,7 @@
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
-    <param name="occupied_threshold" value="70"/>
+    <param name="occupied_threshold" value="78"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
