@@ -91,7 +91,8 @@ class FollowPerson(smach.State, Logger):
         if self.leg_pose.point.x > 1.5:
             if not self.distance_flag:                                                          
                 self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=True) # moreをつけました
-                rospy.sleep(2)
+                rospy.sleep(5)
+                self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=True)
                 self.distance_flag = True  # Set flag to True to indicate message has been spoken
         else:
             self.distance_flag = False  # Reset flag when person is within acceptable distance
@@ -240,8 +241,6 @@ class FollowPerson(smach.State, Logger):
 
             rospy.loginfo("First I will find you.")
             self.fp_enable_leg_finder_pub.publish(True)
-
-
 
 
             way_point_list = []

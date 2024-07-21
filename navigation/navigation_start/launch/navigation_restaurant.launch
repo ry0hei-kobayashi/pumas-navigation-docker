@@ -2,10 +2,9 @@
 <launch>
   <!--include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/-->
 
-  <!--remap from="/get_distance_map" to="/get_cartographer_map"/>
-  <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/-->
-  <remap from="/cartographer_map" to="/get_cartographer_map"/>
-  <remap from="/dynamic_obstacle_map" to="/get_cartographer_map"/>
+  <remap from="/get_distance_map" to="/get_cartographer_map"/>
+  <!--remap from="/static_distance_map_ref" to="/get_cartographer_map"/-->
+  <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/>
   
   <remap from="/laser_2d_pose" to= "/global_pose"/>
   <remap from="/cmd_vel" to="/hsrb/command_velocity"/>
@@ -36,35 +35,41 @@
   
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
+  <!--obs size-->
   <arg name="cloud_points_threshold" default="100"/>
   <arg name="lidar_points_threshold" default="20"/>
   
 
   <!--障害物を検出する範囲を指定するパラメータ-->
   <!--depth-->
-  <!--arg name="min_x" default="0.17"/-->
-  <arg name="min_x" default="-0.30"/>
-  <arg name="max_x" default="0.6"/>
+  <!--arg name="min_x" default="-0.35"/>
+  <arg name="max_x" default="0.7"/-->
+  <arg name="min_x" default="-0.25"/>
+  <arg name="max_x" default="0.7"/>
   <!--width, min_y is rightside-->
-  <arg name="min_y" default="-0.20"/>
-  <arg name="max_y" default="0.45"/>
+  <arg name="min_y" default="-0.35"/>
+  <arg name="max_y" default="0.5"/>
   <!--height-->
   <arg name="min_z" default="0.05"/>
-  <arg name="max_z" default="1.5"/>
+  <arg name="max_z" default="2.0"/>
   <!--arg name="max_z" default="1.5"/-->
 
   <!--set same param max_x-->
-  <arg name="pot_fields_d0" default="0.35"/>
-  <arg name="pot_fields_k_rej" default="0.5"/>
+
+  <!--obstacle reaction-->
+  <arg name="pot_fields_d0" default="0.5"/>
+  <arg name="pot_fields_k_rej" default="1.0"/>
+  <!--arg name="pot_fields_k_rej" default="0.6"/-->
+
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
    
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
-
     <node name="arm" pkg="arm" type="arm_node" output="screen">
-      <rosparam param="torso_goal_pose">0.2</rosparam> <!--arm_lift, meter-->
+      <rosparam param="torso_goal_pose">0.35</rosparam> <!--arm_lift, meter-->
+      <!--rosparam param="torso_goal_pose">0.35</rosparam--> <!--arm_lift, meter-->
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
       <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
     </node>
@@ -72,8 +77,7 @@
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
-    <!--param name="occupied_threshold" value="70"/-->
-    <param name="occupied_threshold" value="10"/>
+    <param name="occupied_threshold" value="70"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
@@ -107,7 +111,7 @@
     <param name="cloud_points_threshold" value="$(arg cloud_points_threshold)"/>
     <param name="lidar_points_threshold" value="$(arg lidar_points_threshold)"/>
     
-    <param name="obs_detector_debug" value="False"/>
+    <param name="obs_detector_debug" value="True"/>
     
     <!--param name="pot_fields_d0" value="0.35"/-->
     <!--param name="pot_fields_k_rej" value="2.0"/-->
@@ -138,8 +142,13 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.15"/>
-    <param name="cost_radius" value="0.20"/>
+    <param name="inflation_radius" value="0.2"/>
+    <param name="cost_radius" value="0.4"/>
+    <!--robo radius-->
+    <!--cost: inflation rad + obstacle size-->
+    <!--param name="inflation_radius" value="0.18"/-->
+    <!--path-->
+    <!--param name="cost_radius" value="0.1"/-->
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -157,6 +166,7 @@
     <remap from="/static_map" to="/prohibition_map"/>
     <remap from="/map" to="/prohibition_layer_map"/>
   </node>
+
 
 
   

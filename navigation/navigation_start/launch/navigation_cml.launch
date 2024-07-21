@@ -41,20 +41,22 @@
 
   <!--障害物を検出する範囲を指定するパラメータ-->
   <!--depth-->
-  <arg name="min_x" default="-0.35"/>
+  <!--arg name="min_x" default="-0.35"/>
+  <arg name="max_x" default="0.7"/-->
+  <arg name="min_x" default="-0.25"/>
   <arg name="max_x" default="0.7"/>
   <!--width, min_y is rightside-->
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.35"/>
   <!--height-->
-  <arg name="min_z" default="0.05"/>
-  <arg name="max_z" default="1.5"/>
+  <arg name="min_z" default="0.03"/>
+  <arg name="max_z" default="2.0"/>
   <!--arg name="max_z" default="1.5"/-->
 
   <!--set same param max_x-->
 
   <!--obstacle reaction-->
-  <arg name="pot_fields_d0" default="0.35"/>
+  <arg name="pot_fields_d0" default="0.55"/>
   <arg name="pot_fields_k_rej" default="2.0"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
@@ -64,6 +66,7 @@
     <node name="led" pkg="head" type="led_node" output="screen"/>
     <node name="arm" pkg="arm" type="arm_node" output="screen">
       <rosparam param="torso_goal_pose">0.35</rosparam> <!--arm_lift, meter-->
+      <!--rosparam param="torso_goal_pose">0.35</rosparam--> <!--arm_lift, meter-->
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
       <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
     </node>
