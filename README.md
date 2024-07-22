@@ -1,5 +1,5 @@
 
-# erasers_navigation
+#　PUMAS Navigation
 
 # How to usr this repository
 ## SLAM
