@@ -1,5 +1,5 @@
 
-# PUMAS Navigation
+# PUMAS Navigation for RoboCup2024 DSPL
 
 # How to usr this repository
 ## SLAM
