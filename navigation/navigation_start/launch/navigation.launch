@@ -16,19 +16,16 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
   
   <!--for rc24-->
-  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24/map.yaml"/>
-  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24/map.yaml"/>
+  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_3330_2/map.yaml"/>
+  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_3330_2/map.yaml"/>
 
   <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/rc24_ohirome/map.yaml"/>
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/rc24_ohirome/map.yaml"/-->
 
   <!--for env objs to map-->
   <arg name="env_file_name" default="env_furniture_rc24.yaml"/>
-  <arg name="add_static_obstacles" default="true"/>
+  <arg name="add_static_obstacles" default="false"/>
 
-  <!--for wrs simulator-->
-  <!--arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/wrs2020/map.yaml"/>
-  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/wrs2020/map.yaml"/-->
 
   <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
   
@@ -94,13 +91,13 @@
     <param name="control_alpha" value="0.2"/>
     <param name="control_beta" value="0.8"/-->
 
-    <param name="max_linear_speed" value="0.8"/>
-    <param name="max_angular_speed" value="1.3"/>
+    <param name="max_linear_speed" value="1.0"/>
+    <param name="max_angular_speed" value="1.15"/>
     <param name="control_alpha" value="0.3"/>
     <param name="control_beta" value="0.12"/>
 
     <!--TODO angle_tolerance-->
-    <param name="angle_tolerance" value="0.01"/>
+    <param name="angle_tolerance" value="0.02"/>
 
     <!--param name="control_alpha" value="0.8"/>
     <param name="control_beta" value="0.3"/-->
@@ -195,22 +192,65 @@
   </node>
   
   <node name="amcl" pkg="amcl" type="amcl" output="screen" args="scan:=$(arg laser_scan_topic) static_map:=/get_distance_map">
-    <!--param name="odom_alpha1" value="0.01"/>
+    <param name="odom_alpha1" value="0.01"/>
     <param name="odom_alpha2" value="0.01"/>
     <param name="odom_alpha3" value="0.01"/>
     <param name="odom_alpha4" value="0.01"/>
-    <param name="odom_alpha5" value="0.01"/-->
+    <param name="odom_alpha5" value="0.01"/>
     <param name="update_min_a" value="0.1"/>
     <param name="laser_min_range" value="0.3"/>
     <param name="odom_model_type" value="omni-corrected"/>
   </node>
 
+  <!-- EMCL2 -->
+  <!--arg name="initial_pose_x" default="0.0"/>
+  <arg name="initial_pose_y" default="0.0/>
+  <arg name="initial_pose_a" default="0.0"/>
+  <node pkg="emcl2" type="emcl2_node" name="emcl2_node" output="screen">
+    <param name="odom_freq"                 value="20"/>
+    <param name="num_particles"             value="500"/>
+
+    <param name="odom_frame_id"             value="odom"/>
+    <param name="footprint_frame_id"        value="base_footprint"/>
+    <param name="base_frame_id"             value="base_link"/>
+
+    <param name="initial_pose_x"            value="$(arg initial_pose_x)"/>
+    <param name="initial_pose_y"            value="$(arg initial_pose_y)"/>
+    <param name="initial_pose_a"            value="$(arg initial_pose_a)"/>
+
+    <param name="odom_fw_dev_per_fw"       value="0.19"/>
+    <param name="odom_fw_dev_per_rot"      value="0.0001"/>
+    <param name="odom_rot_dev_per_fw"      value="0.13"/>
+    <param name="odom_rot_dev_per_rot"     value="0.2"/>
+
+    <param name="laser_likelihood_max_dist" value="0.2"/>
+
+    <param name="alpha_threshold" value="0.5"/>
+    <param name="open_space_threshold" value="0.05"/>
+
+    <param name="expansion_radius_position" value="0.1"/>
+    <param name="expansion_radius_orientation" value="0.2"/>
+
+    <param name="range_threshold" value="0.3"/>
+
+    <param name="update_min_a" value="0.1"/>
+
+    <remap from="scan"                      to="$(arg laser_scan_topic)"/>
+    <param name="laser_min_range"           value="0.3"/>
+    <param name="laser_max_range"           value="100000000.0"/>
+
+    <param name="odom_model_type" value="omni-corrected"/>
+
+    <param name="scan_increment"           value="1"/>
+  </node-->
+  <!-- EMCL2 -->
+
+
   <arg name="topic_name" default="/navigation/obs_detector/enable" />
 
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
 
+  <!--for changing pot_fields dynamically, using for follow me-->
   <node name="pot_fields_updator_node"  pkg="navigation_tools"  type="pot_fields_updator.py" output="screen" respawn="true"/>
-
-
   
 </launch>
