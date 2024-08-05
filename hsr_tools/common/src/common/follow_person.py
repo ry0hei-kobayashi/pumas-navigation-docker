@@ -54,8 +54,8 @@ class FollowPerson(smach.State, Logger):
         self.fp_legs_found_sub = rospy.Subscriber(
             '/hri/leg_finder/legs_found', Bool, self._fp_legs_found_cb)
 
-        self.leg_pose_sub = rospy.Subscriber(
-            '/hri/leg_finder/leg_pose', PointStamped, self.legs_pose_cb)
+        #self.leg_pose_sub = rospy.Subscriber(
+        #    '/hri/leg_finder/leg_pose', PointStamped, self.legs_pose_cb)
 
         self.fp_legs_found = False
         self.fisrt = True
@@ -76,30 +76,30 @@ class FollowPerson(smach.State, Logger):
         self.min_distance = False
 
         # for update pot_fields
-        #self.pot_fields_d0 = rospy.get_param('obs_detector/pot_fields_d0')
-        #self.pot_fields_k_rej = rospy.get_param('obs_detector/pot_fields_k_rej')
-        #self.update_potfields = rospy.Publisher('/navigation/pot_fields_update', Bool, queue_size=10)
-        #self.update = Bool()
-        #self.update.data = False
-        #self.update_potfields.publish(self.update.data)
+        self.pot_fields_d0 = rospy.get_param('obs_detector/pot_fields_d0')
+        self.pot_fields_k_rej = rospy.get_param('obs_detector/pot_fields_k_rej')
+        self.update_potfields = rospy.Publisher('/navigation/pot_fields_update', Bool, queue_size=10)
+        self.update = Bool()
+        self.update.data = False
+        self.update_potfields.publish(self.update.data)
 
-        #self.obs_detect_enable = rospy.Publisher('/navigation/obs_detector/enable', Bool, queue_size=10)
+        self.obs_detect_enable = rospy.Publisher('/navigation/obs_detector/enable', Bool, queue_size=10)
 
-    def legs_pose_cb(self, msg): 
-        self.leg_pose = msg
-              
-        if self.leg_pose.point.x > 1.5:
-            if not self.distance_flag:                                                          
-                self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=True) # moreをつけました
-                rospy.sleep(5)
-                self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=True)
-                self.distance_flag = True  # Set flag to True to indicate message has been spoken
-        else:
-            self.distance_flag = False  # Reset flag when person is within acceptable distance
+    #def legs_pose_cb(self, msg): 
+    #    self.leg_pose = msg
+    #          
+    #    if self.leg_pose.point.x > 1.5:
+    #        if not self.distance_flag:                                                          
+    #            self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=True) # moreをつけました
+    #            rospy.sleep(5)
+    #            self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=True)
+    #            self.distance_flag = True  # Set flag to True to indicate message has been spoken
+    #    else:
+    #        self.distance_flag = False  # Reset flag when person is within acceptable distance
 
-        #if self.leg_pose.point.x > 1.5:
-        #    self.hsrif.tts.say('Sorry, Please walk slowly.', language='en', sync=True, queue=True)
-        #    self.distance_flag == True
+    #    #if self.leg_pose.point.x > 1.5:
+    #    #    self.hsrif.tts.say('Sorry, Please walk slowly.', language='en', sync=True, queue=True)
+    #    #    self.distance_flag == True
 
 
 
@@ -229,11 +229,11 @@ class FollowPerson(smach.State, Logger):
 
             rospy.loginfo("Touch my hand to start following you.")
 
-            #self.update.data = True
-            #self.update_potfields.publish(self.update.data)
-            #self.obs_detect_enable.publish(self.update.data)
+            self.update.data = True
+            self.update_potfields.publish(self.update.data)
+            self.obs_detect_enable.publish(self.update.data)
 
-            while not utils.is_arm_touched():
+            while not utils.is_arm_pressed():
 
                 rate.sleep()
 
@@ -246,7 +246,7 @@ class FollowPerson(smach.State, Logger):
             way_point_list = []
             last_pose_time = rospy.get_time()
             say_counter = 0
-            while not utils.is_arm_touched():
+            while not utils.is_arm_pressed():
 
                 if self.fp_legs_found == False:
                     self.fp_start_follow_pub.publish(False)
@@ -291,8 +291,8 @@ class FollowPerson(smach.State, Logger):
             self.hsrif.tts.say('OK, I will stop following you.', language='en', sync=True, queue=True)
             rospy.loginfo('OK, I will stop following you.')
 
-            #self.update.data = False
-            #self.update_potfields.publish(self.update.data)
+            self.update.data = False
+            self.update_potfields.publish(self.update.data)
 
             return 'next'
 
@@ -305,7 +305,7 @@ class FollowPerson(smach.State, Logger):
 
             self.fp_enable_leg_finder_pub.publish(False)
             self.fp_start_follow_pub.publish(False)
-            #self.update.data = False
-            #self.update_potfields.publish(self.update.data)
+            self.update.data = False
+            self.update_potfields.publish(self.update.data)
 
             return 'except'
