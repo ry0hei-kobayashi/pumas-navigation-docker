@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import copy
 import math
+
 import rospy
-#import hsrb_interface
+
 from hsrlib.hsrif import HSRInterfaces
 
 import tf
@@ -14,10 +16,9 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist
 from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
-
-
 from std_srvs.srv import Trigger
-import copy
+
+
 
 class NavModule:
     """Navigation Module for the robot"""
@@ -39,21 +40,17 @@ class NavModule:
         self.goal_reached = True
         self.robot_stop = False
 
-        #self.robot = hsrb_interface.Robot()
-        #self.whole_body.omni_base = self.robot.get("omni_base")
-        #self.whole_body = self.robot.get("whole_body")
         self.hsrif = HSRInterfaces()
-        #self.whole_body.omni_base = self.hsrif.omni_base
-        #self.whole_body = self.hsrif.whole_body
         
+        # 8 diagonal safe point detection
         self.distance_from_cost = 0.1
         self.marker_num = 0
         self.points = []
 
-        self.set_navigation_type(select)
         #self.global_pose = PoseStamped()
         #self.global_goal_xyz = PoseStamped()
         # self.global_goal_xyz = None
+
         self.global_pose = None
         self.marker = Marker()
 
@@ -76,11 +73,9 @@ class NavModule:
 
         rospy.sleep(1.0)
 
+        self.set_navigation_type(select)
+
     def callback_global_goal_reached(self, msg):
-
-        #rospy.logwarn('#######before service#########')
-
-        #rospy.logerr(self.points)
 
         path_plan_success = self.path_plan_client()
         if path_plan_success.success:
@@ -91,7 +86,6 @@ class NavModule:
         else:
             rospy.loginfo("NavModule -> pathplan fail")
 
-        #rospy.logwarn('#######after service#########')
         #print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
         self.global_goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
@@ -103,6 +97,7 @@ class NavModule:
 
                 #if len(self.points) == 0:
                 #self.recovery_from_cost()
+
                 if not self.points:
                    self.replan_safe_point()
                    self.distance_from_cost += 0.2
@@ -140,6 +135,9 @@ class NavModule:
             rospy.logerr("Invalid navigation mode")
         rospy.loginfo(f"USING {self.navigation_setter.upper()} NAVIGATION BY DEFAULT")
 
+    #def get_navigation_type(self):
+    #    return self.navigation_setter
+
     def global_pose_callback(self, msg):
         self.global_pose = msg
 
@@ -160,13 +158,11 @@ class NavModule:
             radius = self.distance_from_cost
             num_points = 8
             self.points = self.calculate_safe_points(current_goal_pose2d, radius, num_points)
-            #rospy.logerr(f'points: {self.points}')
 
-            #if not len(self.points) == 0:
             if self.points:
                 self.publish_next_point()
             else:
-                self.hsrif.tts.say('Path Planning failed. I will try again.', language='en', queue=True, sync=True)
+                #self.hsrif.tts.say('Path Planning failed. I will try again.', language='en', queue=True, sync=True)
                 rospy.loginfo('called replan_safe_point -> but not found')
                 #self.distance_from_cost += 0.2
 
@@ -174,13 +170,10 @@ class NavModule:
             import traceback
             traceback.print_exc()
 
-            
 
     def publish_next_point(self):
         rospy.loginfo("called publish next point")
-        #try:
-        #if not len(self.points) == 0:
-        #if self.points:
+
         safe_point = self.points.pop(0)  # Remove the first value
         goal = PoseStamped()
         goal.header.frame_id = self.global_goal_xyz.header.frame_id
@@ -198,13 +191,7 @@ class NavModule:
         goal.pose.orientation.z = q[2]
         goal.pose.orientation.w = q[3]
 
-        # print('remove 1st points: ', goal)
         self.send_goal(goal)
-        #self.marker_plot(goal)
-        #self.pub_global_goal_xyz.publish(goal)
-    
-        #except Exception as e:
-        #    print(e)
 
     def calculate_safe_points(self, center_pose2d, radius, num_points):
         points = []
@@ -240,7 +227,7 @@ class NavModule:
     def recovery_from_cost(self):
 
         rospy.loginfo('NavigationStatus. -> Recovery From Cost -> Rotation')
-        self.hsrif.tts.say('Obstacle detected.', language='en')
+        #self.hsrif.tts.say('Obstacle detected.', language='en')
 
         current_orientation = self.global_pose.pose.orientation
         _, _, current_yaw = tf.transformations.euler_from_quaternion([current_orientation.x, current_orientation.y, current_orientation.z, current_orientation.w])
@@ -258,7 +245,6 @@ class NavModule:
         # Stop rotation
         twist.angular.z = 0.0
         self.pub_cmd_vel.publish(twist)
-
         
 
     def get_close(self, x, y, yaw, timeout, goal_distance=None):
@@ -289,15 +275,21 @@ class NavModule:
 
     def go_abs(self, x, y, theta, timeout=0.0, type_nav=None, goal_distance=None):
         if type_nav == "pumas":
-
+            rospy.loginfo("Call ABS mode in pumas nav")
             self.get_close(x, y, theta, timeout, goal_distance)
+
         elif type_nav == "hsr":
-            self.whole_body.omni_base.go_abs(x, y, theta, timeout)
+            rospy.loginfo("Call ABS mode in hsr nav")
+            self.hsrif.omni_base.go_abs(x, y, theta, timeout)
+
         else:
             if self.navigation_setter == "pumas":
+                rospy.loginfo("Call ABS mode in pumas nav")
                 self.get_close(x, y, theta, timeout)
+
             else:
-                self.whole_body.omni_base.go_abs(x, y, theta, timeout)
+                rospy.loginfo("Call ABS mode in hsr nav")
+                self.hsrif.omni_base.go_abs(x, y, theta, timeout)
 
     
 
@@ -311,10 +303,11 @@ class NavModule:
     def move_dist_angle(self, x, yaw, timeout):
         rate = rospy.Rate(10)
         goal = Float32MultiArray()
-        goal.data = [x, yaw]
 
         self.goal_reached = False
         self.robot_stop = False
+        goal.data = [x, yaw]
+
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
         self.pub_dist_angle.publish(goal)
@@ -330,11 +323,13 @@ class NavModule:
         self.move_dist_angle(x, yaw, timeout)
 
     def move_rel(self, x, y, yaw, timeout):
-        rate = rospy.Rate(10)
-        goal = self.create_goal_pose(x, y, yaw, "base_link")
 
+        rate = rospy.Rate(10)
         self.global_goal_reached = False
         self.robot_stop = False
+
+        goal = self.create_goal_pose(x, y, yaw, "base_link")
+
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
     
         self.pub_move_rel.publish(goal)
@@ -347,15 +342,22 @@ class NavModule:
         self.handle_robot_stop()
 
     def go_rel(self, x=0.0, y=0.0, yaw=0.0, timeout=0.0, type_nav=None):
-        rospy.loginfo("Call REL mode in pumas nav")
+
         if type_nav == "pumas":
+            rospy.loginfo("Call REL mode in pumas nav")
             self.move_rel(x, y, yaw, timeout)
+
         elif type_nav == "hsr":
+            rospy.loginfo("Call REL mode in hsr nav")
             self.hsrif.omni_base.go_rel(x, y, yaw, timeout)
+
         else:
+
             if self.navigation_setter == "pumas":
+                rospy.loginfo("Call REL mode in pumas nav")
                 self.move_rel(x, y, yaw, timeout)
             else:
+                rospy.loginfo("Call REL mode in hsr nav")
                 self.hsrif.omni_base.go_rel(x, y, yaw, timeout)
 
     def create_goal_pose(self, x, y, yaw, frame_id):
@@ -420,18 +422,11 @@ class NavModule:
 
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
-    nav = NavModule(select="hsr")
+    nav = NavModule(select="pumas")
 
     # example usage
-    nav.go_abs(6.45, -1.8, -1.57, 0, 'pumas')
-    #nav.go_abs(3.68, -1.65, -1.57, 0, 'pumas')
-    #nav.go_abs(2.14, 1.5, -1.57, 0, 'pumas')
-    #nav.go_abs(0, 0, -1.57, 0, 'pumas')
+    #nav.go_rel(1, 0, 0, 0, 'hsr') #relative by omni_base
+    #nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
+    nav.go_abs(0, 0, 0, 0, 'pumas')#absolute by pumas
 
-    #i = 0
-    #while not rospy.is_shutdown():
-    #    nav.go_abs(0, 0, 0, 0, 'pumas')
-    #    rospy.sleep(0.5)
-    #    i += 1
-    #    print('num_try: move2originPoint ',i)
 
