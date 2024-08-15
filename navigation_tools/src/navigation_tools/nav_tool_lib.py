@@ -342,6 +342,8 @@ class NavModule:
         self.handle_robot_stop()
 
     def go_rel(self, x=0.0, y=0.0, yaw=0.0, timeout=0.0, type_nav=None):
+        #for simulator
+        #if rel mode is not moving, please set the map.yaml and map.pgm in the ~/.ros/maps/
 
         if type_nav == "pumas":
             rospy.loginfo("Call REL mode in pumas nav")
@@ -425,8 +427,8 @@ if __name__ == "__main__":
     nav = NavModule(select="pumas")
 
     # example usage
-    #nav.go_rel(1, 0, 0, 0, 'hsr') #relative by omni_base
+    nav.go_rel(2, 0, 0, 0, 'hsr') #relative by omni_base
     #nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
-    nav.go_abs(0, 0, 0, 0, 'pumas')#absolute by pumas
+    nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
 
 

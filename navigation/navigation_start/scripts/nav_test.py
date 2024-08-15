@@ -1,36 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
-import smach
-import smach_ros
-import tf2_ros
-import numpy as np
-from navigation_tools.nav_tool_lib import nav_module
 import dynamic_reconfigure.client as reconf_client
 
-#from nav_tool_lib import nav_module
-#omni_base=nav_module("pumas")
-
-import hsrb_interface
-
-robot = hsrb_interface.Robot()
-whole_body = robot.get("whole_body")
-# omni_base = robot.get("omni_base") #Standard initialisation (Toyota)
-omni_base = nav_module("hsr")  # New initalisation (Pumas)
-gripper = robot.get('gripper')
-collision = robot.get('global_collision_world')
-tf_buffer = robot._get_tf2_buffer()
+import sys
+import roslib
+sys.path.append(roslib.packages.get_pkg_dir("hma_env_manage") + "/script")
+from lib_manage_env import libManageEnv
+from geometry_msgs.msg import Pose2D
+lme = libManageEnv()
 
 reconf_base = reconf_client.Client('tmc_map_merger/inputs/base_scan/obstacle_circle')
 reconf_head = reconf_client.Client('tmc_map_merger/inputs/head_rgbd_sensor/obstacle_circle')
 reconf_depth_obstacle_enable = reconf_client.Client('/tmc_map_merger/inputs/head_rgbd_sensor')
 reconf_laser_obstacle_enable = reconf_client.Client('/tmc_map_merger/inputs/base_scan')
-##disable xtion obstacle avoidance
-reconf_depth_obstacle_enable.update_configuration({"enable":False})
+
+##disable/enable xtion and urg obstacle avoidance
+reconf_laser_obstacle_enable.update_configuration({"enable":True})
+reconf_depth_obstacle_enable.update_configuration({"enable":True})
 
 
-whole_body.move_to_go()
-#omni_base.go_rel(1.0, 0, 0, 300)
-reconf_laser_obstacle_enable.update_configuration({"enable":False})
-omni_base.go_abs(4.65,-0.36,0, 0, "pumas")
+goal = Pose2D(2.0, 0.0, 0.0)
+lme.run(goal = goal, pose = None, destination_name = None, first_rotate = False, nav_type = "hsr", nav_mode = "rel", nav_timeout = 0, goal_distance = 0)
 
