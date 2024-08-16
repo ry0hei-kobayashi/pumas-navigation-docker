@@ -55,6 +55,7 @@ tf::TransformListener* tf_listener;
 float global_goal_x = 999999;
 float global_goal_y = 999999; 
 
+
 Eigen::Affine3d get_transform_to_basefootprint(std::string link_name)
 {
     tf::StampedTransform tf;
@@ -131,11 +132,17 @@ bool check_collision_risk_with_cloud(sensor_msgs::PointCloud2::Ptr msg, double& 
     
     if(debug)
     {
-        cv::imshow("OBSTACLE DETECTOR", mask);
         if (rejection_force_y > 0)
             std::cout << "ObsDetector.cloud->rejection_force_x: " << rejection_force_x << "  rejection_force_y: " << rejection_force_y << std::endl;
-        cv::waitKey(30);
+
+        //cv::imshow("OBSTACLE DETECTOR BY MARCOSOFT", mask);
+        //cv::waitKey(30);
     }
+
+    //visualize mask image by obstacle detector
+    cv::imshow("OBSTACLE DETECTOR BY MARCOSOFT", mask);
+    cv::waitKey(30);
+
     return obstacle_count > cloud_threshold;
 }
 
@@ -477,6 +484,7 @@ int main(int argc, char** argv)
 	        pub_pot_fields.publish(pot_field_markers);
 
             }
+
             //if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
             //    std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
             //if(use_cloud  && no_data_cloud_counter++ > no_sensor_data_timeout*RATE)

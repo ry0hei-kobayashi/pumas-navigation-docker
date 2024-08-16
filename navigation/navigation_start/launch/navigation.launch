@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
 
+  <!--param name="/use_sim_time" value="true"/-->
+
   <remap from="/static_obstacle_map_ref" to="/static_map"/>
   <remap from="/static_map" to="/get_distance_map"/>
-  <remap from="/static_obstacle_map_ref" to="/get_distance_map"/>
   
   <remap from="/laser_2d_pose" to= "/global_pose"/>
   <remap from="/cmd_vel" to="/hsrb/command_velocity"/>
@@ -25,19 +26,24 @@
   <arg name="env_file_name" default="env_furniture_rc24.yaml"/>
   <arg name="add_static_obstacles" default="false"/>
 
+  <!--input topic-->
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
   <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
   <arg name="point_cloud_topic" default="/hma_pcl_reconst/depth_registered/points"/>
   <arg name="point_cloud_topic2" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
   <arg name="bumper_f_topic" default="hsrb/base_f_bumper_sensor"/>
     
+  <!--sensor fusion-->
   <arg name="use_lidar" default="True"/>
   <arg name="use_sonars" default="False"/>
   <arg name="use_point_cloud" default="True"/>
   <arg name="use_point_cloud2" value="False"/>
   <arg name="use_bumper" default="False"/>
+
+  <!--potential fields-->
   <arg name="use_pot_fields" default="True"/>
   
+  <!--sensor downsampling, detection threshold-->
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
   <arg name="cloud_points_threshold" default="100"/>
@@ -54,6 +60,7 @@
   <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.5"/>
 
+  <!--Hardware-->
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
@@ -75,15 +82,14 @@
   
   <!--SimpleMove-->
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
-    <!--param name="max_linear_speed" value="1.0"/>
-    <param name="max_angular_speed" value="1.25"/>
-    <param name="control_alpha" value="0.2"/>
-    <param name="control_beta" value="0.8"/-->
 
-    <param name="max_linear_speed" value="1.0"/>
-    <param name="max_angular_speed" value="1.15"/>
-    <param name="control_alpha" value="0.3"/>
-    <param name="control_beta" value="0.12"/>
+    <param name="max_linear_speed" value="1.00"/> 
+    <param name="max_angular_speed" value="1.25"/>
+    <param name="control_alpha" value="0.6548"/>
+    <param name="control_beta" value="0.2"/>
+
+    <!--param name="control_alpha" value="0.3"/>
+    <param name="control_beta" value="0.12"/-->
 
     <!--TODO angle_tolerance-->
     <!--param name="angle_tolerance" value="0.03"/-->
@@ -96,13 +102,13 @@
   <node name="obs_detector"  pkg="obstacle_detector"  type="obs_detect_node" output="screen" respawn="true">
     <param name="laser_scan_topic" value="$(arg laser_scan_topic)"/>
     <param name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
-    <!--param name="point_cloud_topic2" value="$(arg point_cloud_topic2)"/-->
+    <param name="point_cloud_topic2" value="$(arg point_cloud_topic2)"/>
     <param name="bumper_f_topic" value="$(arg bumper_f_topic)"/>
     
     <param name="use_lidar" value="$(arg use_lidar)"/>
     <param name="use_sonars" value="$(arg use_sonars)"/>
     <param name="use_point_cloud" value="$(arg use_point_cloud)"/>
-    <!--param name="use_point_cloud2" value="$(arg point_cloud_topic2)"/-->
+    <param name="use_point_cloud2" value="$(arg point_cloud_topic2)"/>
     <param name="use_bumper" value="$(arg use_bumper)"/>
     <param name="use_pot_fields" value="$(arg use_pot_fields)"/>
     
@@ -126,6 +132,7 @@
 
   
   <!--MapAugmenter-->
+  <!--TODO decay_factor-->
   <node name="map_augmenter"  pkg="map_augmenter"  type="map_augmenter_node"  output="screen">
     <param name="laser_scan_topic" value="$(arg laser_scan_topic)"/>
     <param name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
@@ -137,11 +144,14 @@
     <param name="use_point_cloud2" value="$(arg use_point_cloud2)"/>
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
-    
 
     <!--(black zone) inflation_radius-->
-    <param name="inflation_radius" value="0.17"/>
-    <param name="cost_radius" value="0.35"/>
+    <param name="inflation_radius" value="0.22"/>
+    <param name="cost_radius" value="0.1"/>
+
+    <!--rc24 param-->
+    <!--param name="inflation_radius" value="0.17"/>
+    <param name="cost_radius" value="0.35"/-->
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -162,8 +172,10 @@
 
   <!--MapEnhancer-->
   <node name="map_enhancer" pkg="augment_gridmap_online" type="augment_gridmap_online_node" output="screen">
+
     <remap from="point_obstacle" to="/clicked_point"/>
     <param name="obstacle_radius" value="0.05" type="double"/>
+
     <param name="input_map" value="/fixed_prohibition_layer_map"/>
     <remap from="/grid_map/get_augmented_map" to="/prohibition_map"/>
     <remap from="/grid_map/augmented_map" to="/prohibition_layer_map"/>
@@ -190,10 +202,11 @@
     <param name="odom_model_type" value="omni-corrected"/>
   </node>
 
+  <!--To enable obstacle detector node-->
   <arg name="topic_name" default="/navigation/obs_detector/enable" />
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
 
-  <!--for changing pot_fields dynamically, using for follow me-->
+  <!--changing pot_fields dynamically, using for follow me-->
   <node name="pot_fields_updator_node"  pkg="navigation_tools"  type="pot_fields_updator.py" output="screen" respawn="true"/>
   
 </launch>

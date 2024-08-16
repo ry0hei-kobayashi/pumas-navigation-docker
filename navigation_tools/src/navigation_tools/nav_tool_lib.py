@@ -95,19 +95,25 @@ class NavModule:
             if msg.text == 'Waiting for temporal obstacles to move':
                 rospy.loginfo('NavigationStatus -> Waiting for temporal obstacle to move')
 
-                #if len(self.points) == 0:
-                #self.recovery_from_cost()
+                #TODO temporal obstacles
+                #self.go_rel(x=0.2, y=0.0, yaw=0.0, timeout=0.0, type_nav="hsr")
+                #self.go_rel(x=-0.2, y=0.0, yaw=0.0, timeout=0.0, type_nav="hsr")
+                self.recovery_from_cost()
 
-                if not self.points:
-                   self.replan_safe_point()
-                   self.distance_from_cost += 0.2
-                else:
-                   self.publish_next_point()
+                
+                ##if len(self.points) == 0:
+                #if not self.points:
+                #   self.replan_safe_point()
+                #   self.distance_from_cost += 0.2
+                #else:
+                #   self.publish_next_point()
 
         elif msg.status == GoalStatus.ABORTED:
+            #TODO start incollision
             if msg.text == 'Cannot calculate path from start to goal point':
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
 
+                #state is goal incollision
                 if not self.points:
                     self.replan_safe_point()
                     self.distance_from_cost += 0.2
@@ -259,7 +265,7 @@ class NavModule:
         #print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
         #self.pub_global_goal_xyz.publish(goal)
         self.send_goal(goal)
-        rospy.sleep(5.0)
+        rospy.sleep(1.0)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             if goal_distance:
@@ -311,7 +317,7 @@ class NavModule:
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
         self.pub_dist_angle.publish(goal)
-        rospy.sleep(5.0)
+        rospy.sleep(1.0)
 
         while not self.goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             attempts -= 1
@@ -333,7 +339,7 @@ class NavModule:
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
     
         self.pub_move_rel.publish(goal)
-        rospy.sleep(5.0)
+        rospy.sleep(1.0)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             attempts -= 1
@@ -379,8 +385,8 @@ class NavModule:
         if not self.global_goal_reached:
             msg_stop = Empty()
             self.pub_robot_stop.publish(msg_stop)
-            rospy.sleep(5.0)
-        rospy.sleep(2.5)
+            rospy.sleep(1.0)
+        rospy.sleep(1.0)
 
     #########################################
     ##   HSR Functions bypass with hsrif   ##
@@ -427,7 +433,7 @@ if __name__ == "__main__":
     nav = NavModule(select="pumas")
 
     # example usage
-    nav.go_rel(2, 0, 0, 0, 'hsr') #relative by omni_base
+    nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
     #nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
     nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
 

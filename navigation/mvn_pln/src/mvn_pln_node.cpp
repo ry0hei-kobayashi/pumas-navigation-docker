@@ -111,7 +111,7 @@ int publish_status(int status, int id, std::string text, ros::Publisher& pub)
 
 int main(int argc, char** argv)
 {
-    std::cout << "INITIALIZING MVN_PLN NODE BY MARCO NEGRETE..." << std::endl;
+    std::cout << "INITIALIZING MOVING PLANNER NODE BY MARCO NEGRETE..." << std::endl;
     ros::init(argc, argv, "mvn_pln");
     ros::NodeHandle n;
     tf::TransformListener listener;
@@ -327,7 +327,7 @@ int main(int argc, char** argv)
 
 
             //if(error < proximity_criterion && !near_goal_sent && error > 0.001)
-            if(error < proximity_criterion && !near_goal_sent && error > 0.03)
+            if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
             {
                 near_goal_sent = true;
                 std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
