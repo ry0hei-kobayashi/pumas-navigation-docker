@@ -3,6 +3,7 @@
 
   <!--param name="/use_sim_time" value="true"/-->
 
+  <!--topic remapping-->
   <remap from="/static_obstacle_map_ref" to="/static_map"/>
   <remap from="/static_map" to="/get_distance_map"/>
   
@@ -65,7 +66,7 @@
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
 
-    <!--navigation中のアームの姿勢を変更する-->
+    <!--navigationするときのアームの姿勢を変更する-->
     <node name="arm" pkg="arm" type="arm_node" output="screen">
       <!--arm_lift, meter-->
       <rosparam param="torso_goal_pose">0.0</rosparam> 
@@ -145,13 +146,13 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
 
-    <!--(black zone) inflation_radius-->
-    <param name="inflation_radius" value="0.22"/>
-    <param name="cost_radius" value="0.1"/>
+    <!--inflation_radius (black zone's inflation) -->
+    <!--param name="inflation_radius" value="0.22"/>
+    <param name="cost_radius" value="0.1"/-->
 
     <!--rc24 param-->
-    <!--param name="inflation_radius" value="0.17"/>
-    <param name="cost_radius" value="0.35"/-->
+    <param name="inflation_radius" value="0.17"/>
+    <param name="cost_radius" value="0.35"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
