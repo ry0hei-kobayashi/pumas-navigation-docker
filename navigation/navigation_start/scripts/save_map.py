@@ -14,7 +14,7 @@ class SaveMap:
         pkg_dir_path = rospack.get_path("navigation_start")
         self.maps_dir_path = os.path.join(pkg_dir_path, "maps", "maps")
         self.prohibition_maps_dir_path = os.path.join(pkg_dir_path, "maps", "prohibition_maps")
-        self.ros_maps_dir_path = os.path.expanduser("~/.ros/map")
+        #self.ros_maps_dir_path = os.path.expanduser("~/.ros/map")
         
         self.p_map_name = rospy.get_param("~map_name", None)
         
@@ -46,21 +46,21 @@ class SaveMap:
             sys.exit(1)
         
         # Check if the ~/.ros/map directory exists, if not, create it
-        if not os.path.exists(self.ros_maps_dir_path):
-            os.makedirs(self.ros_maps_dir_path, exist_ok=True)
+        #if not os.path.exists(self.ros_maps_dir_path):
+        #    os.makedirs(self.ros_maps_dir_path, exist_ok=True)
 
         # Copy the map files directly to ~/.ros/map/ (overwrite if exists)
-        shutil.copy(os.path.join(self.maps_dir_path, self.p_map_name, "map.yaml"), os.path.join(self.ros_maps_dir_path, "map.yaml"))
-        shutil.copy(os.path.join(self.maps_dir_path, self.p_map_name, "map.pgm"), os.path.join(self.ros_maps_dir_path, "map.pgm"))
+        #shutil.copy(os.path.join(self.maps_dir_path, self.p_map_name, "map.yaml"), os.path.join(self.ros_maps_dir_path, "map.yaml"))
+        #shutil.copy(os.path.join(self.maps_dir_path, self.p_map_name, "map.pgm"), os.path.join(self.ros_maps_dir_path, "map.pgm"))
         
         # Verify the files in both the prohibition maps directory and ~/.ros/map
         if os.path.exists(os.path.join(self.prohibition_maps_dir_path, self.p_map_name, "map.yaml")) and os.path.exists(os.path.join(self.prohibition_maps_dir_path, self.p_map_name, "map.pgm")):
-            if os.path.exists(os.path.join(self.ros_maps_dir_path, "map.yaml")) and os.path.exists(os.path.join(self.ros_maps_dir_path, "map.pgm")):
-                print("\033[34m" + "Successfully saved the map!!" + "\033[0m")
-                sys.exit(0)
-            else:
-                print("\033[31m" + "Failed to copy map.yaml and map.pgm to ~/.ros/map" + "\033[0m")
-                sys.exit(1)
+            #if os.path.exists(os.path.join(self.ros_maps_dir_path, "map.yaml")) and os.path.exists(os.path.join(self.ros_maps_dir_path, "map.pgm")):
+            #    print("\033[34m" + "Successfully saved the map!!" + "\033[0m")
+            #    sys.exit(0)
+            #else:
+            #    print("\033[31m" + "Failed to copy map.yaml and map.pgm to ~/.ros/map" + "\033[0m")
+            #    sys.exit(1)
         else:
             print("\033[31m" + "Failed to copy map.yaml and map.pgm to the prohibition maps directory" + "\033[0m")
             sys.exit(1)
