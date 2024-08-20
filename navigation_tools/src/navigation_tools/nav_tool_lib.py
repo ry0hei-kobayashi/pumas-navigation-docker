@@ -8,6 +8,7 @@ from typing import Union # go_nav function
 import rospy
 
 from hsrlib.hsrif import HSRInterfaces
+from hsrlib.rosif import ROSInterfaces
 
 import tf
 
@@ -42,6 +43,7 @@ class NavModule:
         self.robot_stop = False
 
         self.hsrif = HSRInterfaces()
+        self.rosif = ROSInterfaces()
         
         # 8 diagonal safe point detection
         self.distance_from_cost = 0.1
@@ -385,6 +387,21 @@ class NavModule:
             rospy.sleep(1.0)
         rospy.sleep(1.0)
 
+    def rotate_yaw(self, goal_theta):
+
+        import numpy as np
+        current_pose = self.pose_stamped2pose_2d(self.global_pose)
+        x, y, theta = current_pose.x, current_pose.y, current_pose.theta
+
+        if (abs(theta) > np.pi/2) and (abs(goal_theta) > np.pi/2):
+            if theta > np.pi/2:
+                theta -=  np.pi
+            else:
+                theta +=  np.pi
+        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal.theta - theta, 1.0)
+
+
+
     #########################################
     ##   HSR Functions bypass with hsrif   ##
     #########################################
@@ -411,6 +428,7 @@ class NavModule:
         self.hsrif.omni_base.go(x, y, yaw, timeout, relative)
 
     def go_pose(self, pose=Pose(Vector3(x=0.0, y=0.0, z=0.0), Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)), timeout=0.0, ref_frame_id=None):
+        
         self.hsrif.omni_base.go_pose(pose, timeout, ref_frame_id)
 
     def is_moving(self):
@@ -444,6 +462,8 @@ class NavModule:
          else:
              self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance)
 
+         # navigation後にYAWを変更する         
+         #self.rotate_yaw(goal)
 
 
 
