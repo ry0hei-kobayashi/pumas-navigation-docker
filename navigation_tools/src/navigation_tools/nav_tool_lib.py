@@ -3,6 +3,7 @@
 
 import copy
 import math
+from typing import Union # go_nav function
 
 import rospy
 
@@ -46,10 +47,6 @@ class NavModule:
         self.distance_from_cost = 0.1
         self.marker_num = 0
         self.points = []
-
-        #self.global_pose = PoseStamped()
-        #self.global_goal_xyz = PoseStamped()
-        # self.global_goal_xyz = None
 
         self.global_pose = None
         self.marker = Marker()
@@ -279,7 +276,7 @@ class NavModule:
 
         self.handle_robot_stop()
 
-    def go_abs(self, x, y, theta, timeout=0.0, type_nav=None, goal_distance=None):
+    def go_abs(self, x, y, theta, timeout=0, type_nav=None, goal_distance=None):
         if type_nav == "pumas":
             rospy.loginfo("Call ABS mode in pumas nav")
             self.get_close(x, y, theta, timeout, goal_distance)
@@ -428,13 +425,37 @@ class NavModule:
     def pose(self):
         return self.hsrif.omni_base.get_pose
 
+    #######################
+    ##   call function   ##
+    #######################
+    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0):
+         """ _NavModulePumas_
+         Args:
+         goal (Pose2D): Final Position given by x,y,yaw
+         Pose (Dict): Final Pose <<<<<< under construction >>>>>>>
+         nav_type(pumas_nav) (str): pumas_nav -> "pumas"(default) , toyota_nav -> "hsr"
+         nav_mode(pumas_nav) (str): "abs" or "rel", default -> abs
+         nav_timeout(pumas_nav) (Float):50.0 -> 50s, 0 -> infinity
+         goal_distance(pumas_nav, only abs mode) (Float): goal position - goal_distance
+         """
+         # rospy.logerr(goal)
+         if nav_mode == "rel":
+             self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
+         else:
+             self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance)
+
+
+
+
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
     nav = NavModule(select="pumas")
 
     # example usage
-    nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
-    #nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
-    nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
+    #nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
+    ##nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
+    #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
+    goal = Pose2D(2.0, 3.0, 0.0)
+    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0)
 
 
