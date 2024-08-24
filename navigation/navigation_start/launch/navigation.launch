@@ -155,8 +155,13 @@
     <!--param name="inflation_radius" value="0.17"/-->
 
     <!--rc24 param-->
-    <param name="inflation_radius" value="0.22"/>
+    <!--param name="inflation_radius" value="0.22"/>
+    <param name="cost_radius" value="0.35"/-->
+
+    <param name="inflation_radius" value="0.15"/>
     <param name="cost_radius" value="0.35"/>
+
+    <!--param name="decay_factor" value="10"/-->
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -199,16 +204,16 @@
     <param if="$(arg simulator)" name="move_error_threshold" value="0.001"/>
     <param unless="$(arg simulator)" name="move_error_threshold" value="0.03"/>
   </node>
-  
+
   <!--AMCL-->
   <node name="amcl" pkg="amcl" type="amcl" output="screen" args="scan:=$(arg laser_scan_topic) static_map:=/get_distance_map">
-    <!--param name="odom_alpha1" value="0.01"/>
+    <param name="odom_alpha1" value="0.01"/>
     <param name="odom_alpha2" value="0.01"/>
     <param name="odom_alpha3" value="0.01"/>
     <param name="odom_alpha4" value="0.01"/>
-    <param name="odom_alpha5" value="0.01"/-->
+    <param name="odom_alpha5" value="0.01"/>
     <param name="update_min_a" value="0.1"/>
-    <param name="laser_min_range" value="0.3"/>
+    <param name="laser_min_range" value="0.15"/>
     <param name="odom_model_type" value="omni-corrected"/>
   </node>
 

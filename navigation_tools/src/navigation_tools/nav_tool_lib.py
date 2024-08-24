@@ -5,6 +5,7 @@ import copy
 import math
 import numpy as np
 from typing import Union # go_nav function
+from fractions import Fraction
 
 import rospy
 
@@ -389,17 +390,27 @@ class NavModule:
             rospy.sleep(1.0)
         rospy.sleep(1.0)
 
-    def rotate_yaw(self, goal_theta):
+    def rotate_yaw(self, goal_pose):
 
-        current_pose = self.pose_stamped2pose_2d(self.global_pose)
+        pi = 3.1415926535
+
+        #current_pose = self.pose_stamped2pose_2d(self.global_pose) #TODO 小数点レベルで誤差あり
+        current_pose = self.pose()
         x, y, theta = current_pose.x, current_pose.y, current_pose.theta
 
-        if (abs(theta) > np.pi/2) and (abs(goal_theta) > np.pi/2):
-            if theta > np.pi/2:
-                theta -=  np.pi
+        if (abs(theta) > pi/2.000) and (abs(goal_pose.theta) > pi/2.000):
+
+            if theta > pi/2.000:
+                theta -=  pi
             else:
-                theta +=  np.pi
-        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal.theta - theta, 1.0)
+                theta +=  pi
+
+            if goal.theta > pi/2.000:
+                goal.theta -=  pi
+            else:
+                goal.theta +=  pi
+
+        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal.theta - theta , 1.0)
 
 
     def use_obstacle_detection(self, status):
@@ -451,7 +462,7 @@ class NavModule:
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=False, obstacle_detection=False):
+    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
@@ -489,7 +500,8 @@ if __name__ == "__main__":
     ##nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
     goal = Pose2D(.0, .0, 0.0)
-    goal = Pose2D(2.0, 3.0, 0.0)
+    goal = Pose2D(2.0, 3.0, -1.57)
+    goal = Pose2D(1.65, -0.20, -1.57)
     nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=True)
 
 

@@ -1,0 +1,6 @@
+[submodule "third_party/emcl2"]
+	path = third_party/emcl2
+	url = https://github.com/ryuichiueda/emcl2.git
+[submodule "emcl2"]
+	path = emcl2
+	url = https://github.com/ryuichiueda/emcl2.git
