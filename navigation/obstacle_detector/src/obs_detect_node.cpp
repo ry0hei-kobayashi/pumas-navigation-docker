@@ -135,13 +135,10 @@ bool check_collision_risk_with_cloud(sensor_msgs::PointCloud2::Ptr msg, double& 
         if (rejection_force_y > 0)
             std::cout << "ObsDetector.cloud->rejection_force_x: " << rejection_force_x << "  rejection_force_y: " << rejection_force_y << std::endl;
 
-        //cv::imshow("OBSTACLE DETECTOR BY MARCOSOFT", mask);
-        //cv::waitKey(30);
+        cv::imshow("OBSTACLE DETECTOR BY MARCOSOFT", mask);
+        cv::waitKey(30);
     }
 
-    //visualize mask image by obstacle detector
-    cv::imshow("OBSTACLE DETECTOR BY MARCOSOFT", mask);
-    cv::waitKey(30);
 
     return obstacle_count > cloud_threshold;
 }
@@ -196,11 +193,17 @@ void callback_point_cloud(sensor_msgs::PointCloud2::Ptr msg)
 
 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
 {
-    //if (!msg->poses.empty()){
-    global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
-    global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
-    //}
-    //TODO MvnPln sending near goal status
+    //MvnPln sending near goal status
+    if (!msg->poses.empty()){
+        global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
+        global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+    }
+    //TODO ObsDetector is not killed this state, but mvnPln's move error can not converging
+    else{
+        ROS_ERROR("ObsDetector.->Received an empty path. No goal was set. >>> Recovery");
+        global_goal_x = std::numeric_limits<float>::max();
+        global_goal_y = std::numeric_limits<float>::max();	
+    }
 }
 
 void callbackEnable(const std_msgs::Bool::ConstPtr& msg)
@@ -380,6 +383,7 @@ int main(int argc, char** argv)
     tf_listener = new tf::TransformListener();
     nh = &n;
 
+
     float no_sensor_data_timeout = 0.5;
     ros::param::param<bool >("~debug", debug, false);
     ros::param::param<bool >("~use_pot_fields", use_pot_fields, false);
@@ -458,6 +462,22 @@ int main(int argc, char** argv)
         
     while(ros::ok())
     {
+	// ROSパラメータを確認し、use_cloudの状態を取得
+        bool current_cloud_status;
+        ros::param::get("~use_point_cloud", current_cloud_status);
+
+        // 状態が変わったら購読を切り替え
+        if (use_cloud != current_cloud_status)
+        {
+            use_cloud = current_cloud_status;
+            if (use_cloud) {
+                sub_cloud = nh->subscribe(point_cloud_topic, 1, callback_point_cloud);
+                std::cout << "ObsDetector.->Point cloud subscription enabled." << std::endl;
+            } else {
+                sub_cloud.shutdown();
+                std::cout << "ObsDetector.->Point cloud subscription disabled." << std::endl;
+            }
+        }
 
         if(enable)
         {

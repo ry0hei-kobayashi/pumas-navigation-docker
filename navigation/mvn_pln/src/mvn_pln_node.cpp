@@ -117,26 +117,32 @@ int main(int argc, char** argv)
     tf::TransformListener listener;
     
     float proximity_criterion = 2.0;
+    float move_error_threshold = 0.03;
+
     if(ros::param::has("~patience"))
         ros::param::get("~patience", patience);
     if(ros::param::has("~proximity_criterion"))
         ros::param::get("~proximity_criterion", proximity_criterion);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
+    if(ros::param::has("~move_error_threshold"))
+        ros::param::get("~move_error_threshold", move_error_threshold);
+
 
     std::cout << "MvnPln.->Patience: " << (patience?"True":"False") << "  Proximity criterion: " << proximity_criterion;
     std::cout << "  base link name: " << base_link_name << std::endl;
+    std::cout << "  move error threshold: " << move_error_threshold << std::endl;
     std::cout << "MvnPln.->Waiting for localization transform..." << std::endl;
-    listener.waitForTransform("map", base_link_name, ros::Time(0), ros::Duration(1000.0));
+    listener.waitForTransform("map", base_link_name, ros::Time(0), ros::Duration(10.0));
     std::cout << "MvnPln.->Localization transform is ready ..." << std::endl;
     std::cout << "MvnPln.->Waiting for path planner to be ready..." << std::endl;
-    ros::service::waitForService("/path_planner/plan_path_with_static"   , ros::Duration(1000));
-    ros::service::waitForService("/path_planner/plan_path_with_augmented", ros::Duration(10000));
+    ros::service::waitForService("/path_planner/plan_path_with_static"   , ros::Duration(10));
+    ros::service::waitForService("/path_planner/plan_path_with_augmented", ros::Duration(10));
     std::cout << "MvnPln.->Path planner is ready." << std::endl;
     std::cout << "mvnPln.->Waiting for map augmenter to be ready..." << std::endl;
-    ros::service::waitForService("/map_augmenter/get_augmented_map"     , ros::Duration(1000));
-    ros::service::waitForService("/map_augmenter/get_augmented_cost_map", ros::Duration(1000));
-    ros::service::waitForService("/map_augmenter/are_there_obstacles"   , ros::Duration(1000));
+    ros::service::waitForService("/map_augmenter/get_augmented_map"     , ros::Duration(10));
+    ros::service::waitForService("/map_augmenter/get_augmented_cost_map", ros::Duration(10));
+    ros::service::waitForService("/map_augmenter/are_there_obstacles"   , ros::Duration(10));
     std::cout << "MvnPln.->Map Augmenter is ready..." << std::endl;
     
     ros::Subscriber sub_generalStop        = n.subscribe("/stop", 10, callback_general_stop);
@@ -325,14 +331,15 @@ int main(int argc, char** argv)
             error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
 	    ROS_WARN("MvnPln. -> will move error: %f", error);
 
-
-            //if(error < proximity_criterion && !near_goal_sent && error > 0.001)
-            if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
+            if(error < proximity_criterion && !near_goal_sent && error > move_error_threshold)
+            //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
+            //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
             {
                 near_goal_sent = true;
                 std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
                 publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
             }
+
             if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == simple_move_sequencer)
             {
                 simple_move_goal_status.status = 0;

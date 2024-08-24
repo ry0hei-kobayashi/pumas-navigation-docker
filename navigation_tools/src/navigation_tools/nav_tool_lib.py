@@ -3,6 +3,7 @@
 
 import copy
 import math
+import numpy as np
 from typing import Union # go_nav function
 
 import rospy
@@ -66,6 +67,8 @@ class NavModule:
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
         rospy.Subscriber("/stop", Empty, self.callback_stop)
         rospy.Subscriber("/global_pose", PoseStamped, self.global_pose_callback)
+
+        rospy.get_param('/obs_detector/use_point_cloud')
 
         self.is_inside_obstacles = rospy.ServiceProxy('/map_augmenter/is_inside_obstacles', Trigger)
         self.are_there_obstacles = rospy.ServiceProxy('/map_augmenter/are_there_obstacles', Trigger)
@@ -264,7 +267,7 @@ class NavModule:
         #print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
         #self.pub_global_goal_xyz.publish(goal)
         self.send_goal(goal)
-        rospy.sleep(1.0)
+        #rospy.sleep(1.0)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             if goal_distance:
@@ -347,8 +350,7 @@ class NavModule:
         self.handle_robot_stop()
 
     def go_rel(self, x=0.0, y=0.0, yaw=0.0, timeout=0.0, type_nav=None):
-        #for simulator
-        #if rel mode is not moving, please set the map.yaml and map.pgm in the ~/.ros/maps/
+        #in the tmc simulator, if rel mode is not moving, please set the map.yaml and map.pgm in the ~/.ros/maps/
 
         if type_nav == "pumas":
             rospy.loginfo("Call REL mode in pumas nav")
@@ -389,7 +391,6 @@ class NavModule:
 
     def rotate_yaw(self, goal_theta):
 
-        import numpy as np
         current_pose = self.pose_stamped2pose_2d(self.global_pose)
         x, y, theta = current_pose.x, current_pose.y, current_pose.theta
 
@@ -400,6 +401,10 @@ class NavModule:
                 theta +=  np.pi
         self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal.theta - theta, 1.0)
 
+
+    def use_obstacle_detection(self, status):
+        rospy.set_param('/obs_detector/use_point_cloud', status)
+        rospy.logwarn(f"NavModule.-> obstacle_detection status >>  {status}")
 
 
     #########################################
@@ -441,12 +446,12 @@ class NavModule:
         self.hsrif.omni_base.move(pose, timeout, ref_frame_id)
 
     def pose(self):
-        return self.hsrif.omni_base.get_pose
+        return self.hsrif.omni_base.get_pose()
 
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0):
+    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=False, obstacle_detection=False):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
@@ -456,14 +461,22 @@ class NavModule:
          nav_timeout(pumas_nav) (Float):50.0 -> 50s, 0 -> infinity
          goal_distance(pumas_nav, only abs mode) (Float): goal position - goal_distance
          """
-         # rospy.logerr(goal)
+         rospy.logerr(goal)
+
+         if obstacle_detection:
+             self.use_obstacle_detection(status=True)
+         else:
+             self.use_obstacle_detection(status=False)
+
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
          else:
              self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance)
 
-         # navigation後にYAWを変更する         
-         #self.rotate_yaw(goal)
+         if angle_correction is True:
+             self.rotate_yaw(goal)
+         else:
+             pass
 
 
 
@@ -475,7 +488,8 @@ if __name__ == "__main__":
     #nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
     ##nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
+    goal = Pose2D(.0, .0, 0.0)
     goal = Pose2D(2.0, 3.0, 0.0)
-    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0)
+    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=True)
 
 
