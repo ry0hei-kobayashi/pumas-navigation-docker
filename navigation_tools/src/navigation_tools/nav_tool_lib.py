@@ -499,9 +499,15 @@ if __name__ == "__main__":
     #nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
     ##nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
-    goal = Pose2D(.0, .0, 0.0)
+    goal = Pose2D(1.0, 1.3, 1.57)
     goal = Pose2D(2.0, 3.0, -1.57)
-    goal = Pose2D(1.65, -0.20, -1.57)
-    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=True)
+    goal = Pose2D(.0, .0, 0.0)
+    goal = Pose2D(2.74, -0.17, -1.57) #unknown box
+    goal = Pose2D(2.34, -0.17, -1.57) #task box
+    goal = Pose2D(0.1, 0.2, -1.57) #drawer right
+    goal = Pose2D(1.60, -0.20, -1.57) #tray
+    goal = Pose2D(0.25, 0.2, -1.57) #drawer left
+    goal = Pose2D(1.0, -0.20, -1.57) #kitchen
+    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
 
