@@ -62,7 +62,7 @@
   <!-- simulatorがfalseのときにmin_zを0.05に設定 -->
   <arg unless="$(arg simulator)" name="min_z" default="0.05"/>
   <!--arg name="min_z" default="0.05"/-->
-  <arg name="max_z" default="1.5"/>
+  <arg name="max_z" default="1.2"/>
 
   <!--Hardware-->
   <group ns="hardware">
@@ -213,7 +213,7 @@
     <param name="odom_alpha4" value="0.01"/>
     <param name="odom_alpha5" value="0.01"/>
     <param name="update_min_a" value="0.1"/>
-    <param name="laser_min_range" value="0.15"/>
+    <param name="laser_min_range" value="0.3"/>
     <param name="odom_model_type" value="omni-corrected"/>
   </node>
 
