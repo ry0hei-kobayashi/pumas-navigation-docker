@@ -462,11 +462,26 @@ int main(int argc, char** argv)
         
     while(ros::ok())
     {
-	// ROSパラメータを確認し、use_cloudの状態を取得
-        bool current_cloud_status;
-        ros::param::get("~use_point_cloud", current_cloud_status);
 
-        // 状態が変わったら購読を切り替え
+	// add by rk 2024/8/25 obstacle detectionをon offする 
+        bool current_cloud_status;
+        bool current_lidar_status;
+        ros::param::get("~use_point_cloud", current_cloud_status);
+        ros::param::get("~use_lidar", current_lidar_status);
+
+	//lidar
+        if (use_lidar != current_lidar_status)
+        {
+            use_lidar = current_lidar_status;
+            if (use_lidar) {
+                sub_lidar = nh->subscribe(laser_scan_topic, 1, callback_lidar);
+                ROS_WARN("ObsDetector.->Lidar subscription enabled.");
+            } else {
+                sub_lidar.shutdown();
+                ROS_WARN("ObsDetector.->Lidar subscription disabled.");
+            }
+        }
+	//point cloud
         if (use_cloud != current_cloud_status)
         {
             use_cloud = current_cloud_status;
@@ -479,6 +494,8 @@ int main(int argc, char** argv)
             }
         }
 
+
+	//obstacle detectionがenableの時，障害物を回避する, pumas original
         if(enable)
         {
             msg_collision_risk.data = collision_risk_lidar || collision_risk_cloud;

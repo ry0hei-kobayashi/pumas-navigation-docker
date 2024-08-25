@@ -69,6 +69,8 @@ class NavModule:
         rospy.Subscriber("/stop", Empty, self.callback_stop)
         rospy.Subscriber("/global_pose", PoseStamped, self.global_pose_callback)
 
+        # for obstacle detection on/off
+        rospy.get_param('/obs_detector/use_lidar')
         rospy.get_param('/obs_detector/use_point_cloud')
 
         self.is_inside_obstacles = rospy.ServiceProxy('/map_augmenter/is_inside_obstacles', Trigger)
@@ -89,7 +91,6 @@ class NavModule:
         else:
             rospy.loginfo("NavModule -> pathplan fail")
 
-        #print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
         self.global_goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
             self.global_goal_reached = True
@@ -144,8 +145,6 @@ class NavModule:
             rospy.logerr("Invalid navigation mode")
         rospy.loginfo(f"USING {self.navigation_setter.upper()} NAVIGATION BY DEFAULT")
 
-    #def get_navigation_type(self):
-    #    return self.navigation_setter
 
     def global_pose_callback(self, msg):
         self.global_pose = msg
@@ -414,8 +413,11 @@ class NavModule:
 
 
     def use_obstacle_detection(self, status):
+
+        rospy.set_param('/obs_detector/use_lidar', status)
         rospy.set_param('/obs_detector/use_point_cloud', status)
-        rospy.logwarn(f"NavModule.-> obstacle_detection status >>  {status}")
+        rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
+        rospy.logwarn(f"NavModule.-> obstacle_detection use POINT CLOUD >>  {status}")
 
 
     #########################################
@@ -474,6 +476,7 @@ class NavModule:
          """
          rospy.logerr(goal)
 
+         # under constructoin: obstacle_detection (lidar and point_cloud) can set to only on/off. 
          if obstacle_detection:
              self.use_obstacle_detection(status=True)
          else:
@@ -501,13 +504,13 @@ if __name__ == "__main__":
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
     goal = Pose2D(1.0, 1.3, 1.57)
     goal = Pose2D(2.0, 3.0, -1.57)
-    goal = Pose2D(.0, .0, 0.0)
-    goal = Pose2D(2.74, -0.17, -1.57) #unknown box
     goal = Pose2D(2.34, -0.17, -1.57) #task box
     goal = Pose2D(0.1, 0.2, -1.57) #drawer right
     goal = Pose2D(1.60, -0.20, -1.57) #tray
-    goal = Pose2D(0.25, 0.2, -1.57) #drawer left
     goal = Pose2D(1.0, -0.20, -1.57) #kitchen
+    goal = Pose2D(.0, .0, 0.0)
+    goal = Pose2D(2.74, -0.17, -1.57) #unknown box
+    goal = Pose2D(0.25, 0.2, -1.57) #drawer left
     nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
 

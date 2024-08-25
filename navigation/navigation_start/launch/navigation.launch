@@ -58,7 +58,7 @@
   <arg name="min_y" default="-0.25"/>
   <arg name="max_y" default="0.25"/>
   <!--height-->
-  <arg if="$(arg simulator)" name="min_z" default="0.015"/>
+  <arg if="$(arg simulator)" name="min_z" default="0.02"/>
   <!-- simulatorがfalseのときにmin_zを0.05に設定 -->
   <arg unless="$(arg simulator)" name="min_z" default="0.05"/>
   <!--arg name="min_z" default="0.05"/-->
@@ -69,7 +69,7 @@
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
 
-    <!--navigationするときのアームの姿勢を変更する-->
+    <!--navigationするときのアームの初期姿勢を変更する-->
     <node name="arm" pkg="arm" type="arm_node" output="screen">
       <!--arm_lift, meter-->
       <rosparam param="torso_goal_pose">0.0</rosparam> 
@@ -207,12 +207,21 @@
 
   <!--AMCL-->
   <node name="amcl" pkg="amcl" type="amcl" output="screen" args="scan:=$(arg laser_scan_topic) static_map:=/get_distance_map">
-    <param name="odom_alpha1" value="0.01"/>
-    <param name="odom_alpha2" value="0.01"/>
-    <param name="odom_alpha3" value="0.01"/>
-    <param name="odom_alpha4" value="0.01"/>
-    <param name="odom_alpha5" value="0.01"/>
-    <param name="update_min_a" value="0.1"/>
+
+    <!--odomノイズパラメータ，正確でない場合に値を増やす-->
+    <!--param name="odom_alpha1" value="0.01"/-->
+    <param name="odom_alpha1" value="0.1"/>
+    <param name="odom_alpha2" value="0.1"/>
+    <param name="odom_alpha3" value="0.1"/>
+    <param name="odom_alpha4" value="0.1"/>
+    <param name="odom_alpha5" value="0.1"/>
+
+    <!--小さいほど回転する際に位置を更新する-->
+    <!--param name="update_min_a" value="0.1"/-->
+    <param name="update_min_a" value="0.05"/>
+    <!--小さいほど移動の際に位置を更新する-->
+    <param name="update_min_d" value="0.05"/>
+
     <param name="laser_min_range" value="0.3"/>
     <param name="odom_model_type" value="omni-corrected"/>
   </node>
