@@ -24,7 +24,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
 
     if(map.data[idx_goal] != 0)
     {
-        std::cout << "PathPlanner.->Goal point is inside non-free space!!!! >>>> RE-PLANNING" << std::endl;
+        ROS_ERROR("PathPlanner.->Goal point is inside non-free space!!!!");
 
 
 	//double new_goal_x = goal_pose.position.x - distance * sin(angle);
@@ -42,7 +42,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     }
     if(map.data[idx_start] != 0)
     {
-        std::cout << "PathPlanner.->Start point is inside non-free space!!!!" << std::endl;
+        ROS_ERROR("PathPlanner.->Start point is inside non-free space!!!!");
         return false;
     }
     
