@@ -405,11 +405,11 @@ class NavModule:
                 theta +=  pi
 
             if goal.theta > pi/2.000:
-                goal.theta -=  pi
+                goal_pose.theta -=  pi
             else:
-                goal.theta +=  pi
+                goal_pose.theta +=  pi
 
-        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal.theta - theta , 1.0)
+        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal_pose.theta - theta , 1.0)
 
 
     def use_obstacle_detection(self, status):
@@ -504,13 +504,18 @@ if __name__ == "__main__":
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
     goal = Pose2D(1.0, 1.3, 1.57)
     goal = Pose2D(2.0, 3.0, -1.57)
-    goal = Pose2D(2.34, -0.17, -1.57) #task box
-    goal = Pose2D(0.1, 0.2, -1.57) #drawer right
-    goal = Pose2D(1.60, -0.20, -1.57) #tray
-    goal = Pose2D(1.0, -0.20, -1.57) #kitchen
     goal = Pose2D(.0, .0, 0.0)
+    goal = Pose2D(2.30, -0.15, -1.57) #task box
     goal = Pose2D(2.74, -0.17, -1.57) #unknown box
-    goal = Pose2D(0.25, 0.2, -1.57) #drawer left
+
+    goal = Pose2D(0.14, 0.22, -1.57) #drawer left
+    goal = Pose2D(-0.14, 0.22, -1.57) #drawer left
+    goal = Pose2D(0.95, -0.23, -1.57) #kitchen
+    goal = Pose2D(1.65, -0.20, -1.57) #trayb
+    goal = Pose2D(1.53, -0.20, -1.57) #traya
+    goal = Pose2D(1.15, -0.20, -1.57) #orien
+    goal = Pose2D(-0.54, 0.90, 1.30) #search0
+
     nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
 
