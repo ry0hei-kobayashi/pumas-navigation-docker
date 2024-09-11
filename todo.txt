@@ -1,0 +1,38 @@
+
+1.mvn_pln
+329         case SM_WAIT_FOR_MOVE_FINISHED:
+330             get_robot_position(listener, robot_x, robot_y, robot_a);
+331             error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y -     robot_y, 2));
+332         ROS_WARN("MvnPln. -> will move error: %f", error);
+333
+334             if(error < proximity_criterion && !near_goal_sent && error > move_error_threshold)
+335             //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
+336             //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
+337             {
+338                 near_goal_sent = true;
+339                 std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal poi    nt status." << std::endl;
+340                 publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pu    b_status);
+341             }
+
+1.obs detect
+194 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
+195 {
+196     //MvnPln sending near goal status
+197     if (!msg->poses.empty()){
+198         global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
+199         global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+200     }
+201     //TODO ObsDetector is not killed this state, but mvnPln's move error can not converging
+202     else{
+203         ROS_ERROR("ObsDetector.->Received an empty path. No goal was set. >>> Recovery");
+204         global_goal_x = std::numeric_limits<float>::max();
+205         global_goal_y = std::numeric_limits<float>::max();
+206     }
+207 }
+
+
+
+
+2.yaw angle correction
+
+3.motion synth
