@@ -118,11 +118,11 @@ class NavModule:
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
 
                 #state is goal incollision
-                if not self.points:
-                    self.replan_safe_point()
-                    self.distance_from_cost += 0.2
-                else:
-                    self.publish_next_point()
+                #if not self.points:
+                #    self.replan_safe_point()
+                #    self.distance_from_cost += 0.2
+                #else:
+                #    self.publish_next_point()
 
             elif msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')
@@ -502,20 +502,22 @@ if __name__ == "__main__":
     #nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
     ##nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
-    goal = Pose2D(1.0, 1.3, 1.57)
-    goal = Pose2D(2.0, 3.0, -1.57)
-    goal = Pose2D(.0, .0, 0.0)
-    goal = Pose2D(2.30, -0.15, -1.57) #task box
-    goal = Pose2D(2.74, -0.17, -1.57) #unknown box
+    #goal = Pose2D(1.0, 1.3, 1.57)
+    #goal = Pose2D(2.0, 3.0, -1.57)
+    goal = Pose2D(0.0, 0.0, 0.0)
+    #goal = Pose2D(2.30, -0.15, -1.57) #task box
+    #goal = Pose2D(2.74, -0.17, -1.57) #unknown box
 
-    goal = Pose2D(0.14, 0.22, -1.57) #drawer left
-    goal = Pose2D(-0.14, 0.22, -1.57) #drawer left
-    goal = Pose2D(0.95, -0.23, -1.57) #kitchen
-    goal = Pose2D(1.65, -0.20, -1.57) #trayb
-    goal = Pose2D(1.53, -0.20, -1.57) #traya
-    goal = Pose2D(1.15, -0.20, -1.57) #orien
-    goal = Pose2D(-0.54, 0.90, 1.30) #search0
+    #goal = Pose2D(0.14, 0.22, -1.57) #drawer left
+    #goal = Pose2D(-0.14, 0.22, -1.57) #drawer left
+    #goal = Pose2D(0.95, -0.23, -1.57) #kitchen
+    #goal = Pose2D(1.65, -0.20, -1.57) #trayb
+    #goal = Pose2D(1.53, -0.20, -1.57) #traya
+    #goal = Pose2D(1.15, -0.20, -1.57) #orien
+    #goal = Pose2D(-0.54, 0.90, 1.30) #search0
 
+
+    goal = Pose2D(1.77, 2.0,1.57) 
     nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
 

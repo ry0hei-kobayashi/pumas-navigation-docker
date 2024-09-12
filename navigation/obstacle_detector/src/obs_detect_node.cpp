@@ -194,16 +194,27 @@ void callback_point_cloud(sensor_msgs::PointCloud2::Ptr msg)
 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
 {
     //MvnPln sending near goal status
-    if (!msg->poses.empty()){
+    try{
+    //if (!msg->poses.empty()){
         global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
         global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
     }
-    //TODO ObsDetector is not killed this state, but mvnPln's move error can not converging
-    else{
-        ROS_ERROR("ObsDetector.->Received an empty path. No goal was set. >>> Recovery");
-        global_goal_x = std::numeric_limits<float>::max();
+    catch(...){
+    //    global_goal_x = 0.0;
+    //    global_goal_y = 0.0;
+        global_goal_x = std::numeric_limits<float>::max(); //max->min
         global_goal_y = std::numeric_limits<float>::max();	
     }
+
+    //if (!msg->poses.empty()){
+    //    global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
+    //    global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+    //TODO ObsDetector is not killed this state, but mvnPln's move error can not converging
+    //else{
+    //    ROS_ERROR("ObsDetector.->Received an empty path. No goal was set. >>> Recovery");
+    //    global_goal_x = std::numeric_limits<float>::max(); //max->min
+    //    global_goal_y = std::numeric_limits<float>::max();	
+    //}
 }
 
 void callbackEnable(const std_msgs::Bool::ConstPtr& msg)

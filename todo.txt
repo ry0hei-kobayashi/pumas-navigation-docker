@@ -18,6 +18,7 @@
 194 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
 195 {
 196     //MvnPln sending near goal status
+        try: cache:
 197     if (!msg->poses.empty()){
 198         global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
 199         global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
@@ -35,4 +36,6 @@
 
 2.yaw angle correction
 
-3.motion synth
+3.path plan failed's recorvery
+
+4.motion synth

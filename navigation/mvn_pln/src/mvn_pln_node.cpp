@@ -320,9 +320,19 @@ int main(int argc, char** argv)
             collision_risk = false;
             simple_move_sequencer++;
             path.header.seq = simple_move_sequencer;
+            
+            //add 2024/09/12
+
+            if (path.poses.size() > 0){
             pub_goal_path.publish(path);
             simple_move_goal_status.status = 0;
             state = SM_WAIT_FOR_MOVE_FINISHED;
+            }
+            else{
+            state = SM_CORRECT_FINAL_ANGLE;
+            //state = SM_FINAL;
+            }
+
             break;
 
 
@@ -331,7 +341,7 @@ int main(int argc, char** argv)
             error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
 	    ROS_WARN("MvnPln. -> will move error: %f", error);
 
-            if(error < proximity_criterion && !near_goal_sent && error > move_error_threshold)
+            if(error < proximity_criterion && !near_goal_sent) //or error > move_error_threshold)
             //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
             //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
             {
