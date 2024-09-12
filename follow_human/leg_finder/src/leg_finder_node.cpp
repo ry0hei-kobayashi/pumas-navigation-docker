@@ -40,7 +40,8 @@
 //BUTTERWORTH FILTER A Ó B EN X O Y
 //cutoff frequency X: 0.7
 //                 Y: 0.2
-//lowpass filter
+
+//lowpass filter, average
 //#define BFA0X 1.0
 //#define BFA1X 1.161917483671732
 //#define BFA2X 0.695942755789651
@@ -49,6 +50,8 @@
 //#define BFB1X 1.123358077770478
 //#define BFB2X 1.123358077770478
 //#define BFB3X 0.374452692590159
+
+// particle filter
 #define BFA0X 1.0
 #define BFA1X -1.760041880343169
 #define BFA2X 1.182893262037831

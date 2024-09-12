@@ -3,7 +3,9 @@
 
 import copy
 import math
+import numpy as np
 from typing import Union # go_nav function
+from fractions import Fraction
 
 import rospy
 
@@ -67,6 +69,10 @@ class NavModule:
         rospy.Subscriber("/stop", Empty, self.callback_stop)
         rospy.Subscriber("/global_pose", PoseStamped, self.global_pose_callback)
 
+        # for obstacle detection on/off
+        rospy.get_param('/obs_detector/use_lidar')
+        rospy.get_param('/obs_detector/use_point_cloud')
+
         self.is_inside_obstacles = rospy.ServiceProxy('/map_augmenter/is_inside_obstacles', Trigger)
         self.are_there_obstacles = rospy.ServiceProxy('/map_augmenter/are_there_obstacles', Trigger)
 
@@ -85,7 +91,6 @@ class NavModule:
         else:
             rospy.loginfo("NavModule -> pathplan fail")
 
-        #print("callback navigation self.global_goal_xyz:", self.global_goal_xyz)
         self.global_goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
             self.global_goal_reached = True
@@ -113,11 +118,11 @@ class NavModule:
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
 
                 #state is goal incollision
-                if not self.points:
-                    self.replan_safe_point()
-                    self.distance_from_cost += 0.2
-                else:
-                    self.publish_next_point()
+                #if not self.points:
+                #    self.replan_safe_point()
+                #    self.distance_from_cost += 0.2
+                #else:
+                #    self.publish_next_point()
 
             elif msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')
@@ -140,8 +145,6 @@ class NavModule:
             rospy.logerr("Invalid navigation mode")
         rospy.loginfo(f"USING {self.navigation_setter.upper()} NAVIGATION BY DEFAULT")
 
-    #def get_navigation_type(self):
-    #    return self.navigation_setter
 
     def global_pose_callback(self, msg):
         self.global_pose = msg
@@ -264,7 +267,7 @@ class NavModule:
         #print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
         #self.pub_global_goal_xyz.publish(goal)
         self.send_goal(goal)
-        rospy.sleep(1.0)
+        #rospy.sleep(1.0)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             if goal_distance:
@@ -347,8 +350,7 @@ class NavModule:
         self.handle_robot_stop()
 
     def go_rel(self, x=0.0, y=0.0, yaw=0.0, timeout=0.0, type_nav=None):
-        #for simulator
-        #if rel mode is not moving, please set the map.yaml and map.pgm in the ~/.ros/maps/
+        #in the tmc simulator, if rel mode is not moving, please set the map.yaml and map.pgm in the ~/.ros/maps/
 
         if type_nav == "pumas":
             rospy.loginfo("Call REL mode in pumas nav")
@@ -387,19 +389,35 @@ class NavModule:
             rospy.sleep(1.0)
         rospy.sleep(1.0)
 
-    def rotate_yaw(self, goal_theta):
+    def rotate_yaw(self, goal_pose):
 
-        import numpy as np
-        current_pose = self.pose_stamped2pose_2d(self.global_pose)
+        pi = 3.1415926535
+
+        #current_pose = self.pose_stamped2pose_2d(self.global_pose) #TODO 小数点レベルで誤差あり
+        current_pose = self.pose()
         x, y, theta = current_pose.x, current_pose.y, current_pose.theta
 
-        if (abs(theta) > np.pi/2) and (abs(goal_theta) > np.pi/2):
-            if theta > np.pi/2:
-                theta -=  np.pi
-            else:
-                theta +=  np.pi
-        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal.theta - theta, 1.0)
+        if (abs(theta) > pi/2.000) and (abs(goal_pose.theta) > pi/2.000):
 
+            if theta > pi/2.000:
+                theta -=  pi
+            else:
+                theta +=  pi
+
+            if goal.theta > pi/2.000:
+                goal_pose.theta -=  pi
+            else:
+                goal_pose.theta +=  pi
+
+        self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal_pose.theta - theta , 1.0)
+
+
+    def use_obstacle_detection(self, status):
+
+        rospy.set_param('/obs_detector/use_lidar', status)
+        rospy.set_param('/obs_detector/use_point_cloud', status)
+        rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
+        rospy.logwarn(f"NavModule.-> obstacle_detection use POINT CLOUD >>  {status}")
 
 
     #########################################
@@ -441,12 +459,12 @@ class NavModule:
         self.hsrif.omni_base.move(pose, timeout, ref_frame_id)
 
     def pose(self):
-        return self.hsrif.omni_base.get_pose
+        return self.hsrif.omni_base.get_pose()
 
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0):
+    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
@@ -456,14 +474,23 @@ class NavModule:
          nav_timeout(pumas_nav) (Float):50.0 -> 50s, 0 -> infinity
          goal_distance(pumas_nav, only abs mode) (Float): goal position - goal_distance
          """
-         # rospy.logerr(goal)
+         rospy.logerr(goal)
+
+         # under constructoin: obstacle_detection (lidar and point_cloud) can set to only on/off. 
+         if obstacle_detection:
+             self.use_obstacle_detection(status=True)
+         else:
+             self.use_obstacle_detection(status=False)
+
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
          else:
              self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance)
 
-         # navigation後にYAWを変更する         
-         #self.rotate_yaw(goal)
+         if angle_correction is True:
+             self.rotate_yaw(goal)
+         else:
+             pass
 
 
 
@@ -475,7 +502,22 @@ if __name__ == "__main__":
     #nav.go_rel(1.0, 0, 0, 0, 'hsr') #relative by omni_base
     ##nav.go_abs(1, 1, 0, 0, 'hsr') #absolute by omni_base
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
-    goal = Pose2D(2.0, 3.0, 0.0)
-    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0)
+    #goal = Pose2D(1.0, 1.3, 1.57)
+    #goal = Pose2D(2.0, 3.0, -1.57)
+    goal = Pose2D(0.0, 0.0, 0.0)
+    #goal = Pose2D(2.30, -0.15, -1.57) #task box
+    #goal = Pose2D(2.74, -0.17, -1.57) #unknown box
+
+    #goal = Pose2D(0.14, 0.22, -1.57) #drawer left
+    #goal = Pose2D(-0.14, 0.22, -1.57) #drawer left
+    #goal = Pose2D(0.95, -0.23, -1.57) #kitchen
+    #goal = Pose2D(1.65, -0.20, -1.57) #trayb
+    #goal = Pose2D(1.53, -0.20, -1.57) #traya
+    #goal = Pose2D(1.15, -0.20, -1.57) #orien
+    #goal = Pose2D(-0.54, 0.90, 1.30) #search0
+
+
+    goal = Pose2D(1.77, 2.0,1.57) 
+    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
 
