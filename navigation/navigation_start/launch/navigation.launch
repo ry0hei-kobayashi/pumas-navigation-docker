@@ -137,7 +137,7 @@
 
   
   <!--MapAugmenter-->
-  <!--TODO decay_factor-->
+  <!--TODO decay_factor >> delete dynamic obstacle to move 10s-->
   <node name="map_augmenter"  pkg="map_augmenter"  type="map_augmenter_node"  output="screen">
     <param name="laser_scan_topic" value="$(arg laser_scan_topic)"/>
     <param name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
