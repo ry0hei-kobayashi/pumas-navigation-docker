@@ -32,7 +32,8 @@ RUN wget https://packages.osrfoundation.org/gazebo.key -O - |  apt-key add -
 RUN mkdir -p /etc/apt/auth.conf.d
 RUN echo -e "machine packages.hsr.io\nlogin hsr-user\npassword jD3k4G2e" >/etc/apt/auth.conf.d/auth.conf
 RUN apt-get update -y
-RUN apt-get install -y ros-noetic-tmc-desktop-full
+RUN apt-get install -y ros-noetic-tmc-desktop-full \
+                       ros-noetic-tf2-sensor-msgs
 
 
 RUN mkdir -p /catkin_ws/src

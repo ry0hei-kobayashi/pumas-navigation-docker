@@ -3,6 +3,7 @@
 #include "nav_msgs/Path.h"
 #include "nav_msgs/GetPlan.h"
 #include "nav_msgs/GetMap.h"
+#include "visualization_msgs/Marker.h"
 #include "std_srvs/Trigger.h"
 #include "PathPlanner.h"
 
@@ -10,6 +11,9 @@ ros::ServiceClient cltGetStaticMap       ;
 ros::ServiceClient cltGetStaticCostMap   ;
 ros::ServiceClient cltGetAugmentedMap    ;
 ros::ServiceClient cltGetAugmentedCostMap;
+
+ros::Publisher goal_marker_pub;
+
 float smooth_alpha   = 0.1;
 float smooth_beta    = 0.9;
 bool  diagonal_paths = false;
@@ -21,6 +25,29 @@ bool callback_path_plan_status(std_srvs::Trigger::Request& req, std_srvs::Trigge
     resp.success = path_plan_success;
     resp.message = path_plan_success ? "Path planning succeeded." : "Path planning failed.";
     return true;
+}
+
+//for visualize goal_point
+void visualizeGoal(const geometry_msgs::Pose& goal_pose, int id)
+{
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "goal_points";
+    marker.id = id;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose = goal_pose;
+    marker.scale.x = 0.1;
+    marker.scale.y = 0.1;
+    marker.scale.z = 0.1;
+    marker.color.r = 1.0f;
+    marker.color.g = 0.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 1.0;
+    marker.lifetime = ros::Duration();
+
+    goal_marker_pub.publish(marker);
 }
 
 bool callback_a_star_with_static_map(nav_msgs::GetPlan::Request& req, nav_msgs::GetPlan::Response& resp)
@@ -43,6 +70,8 @@ bool callback_a_star_with_static_map(nav_msgs::GetPlan::Request& req, nav_msgs::
     if(success){
         resp.plan = PathPlanner::SmoothPath(resp.plan, smooth_alpha, smooth_beta);
     	path_plan_success = true;
+
+	visualizeGoal(req.goal.pose, 0); //visualize
     }
     else
     {
@@ -73,6 +102,8 @@ bool callback_a_star_with_augmented_map(nav_msgs::GetPlan::Request& req, nav_msg
     {
         resp.plan = PathPlanner::SmoothPath(resp.plan, smooth_alpha, smooth_beta);
     	path_plan_success = true;
+
+	visualizeGoal(req.goal.pose, 0); //visualize
     }
     else
     {
@@ -115,6 +146,8 @@ int main(int argc, char** argv)
     ros::ServiceServer srvPathPlanStatus = n.advertiseService("/path_planner/path_plan_status", callback_path_plan_status);
     ros::ServiceServer srvGetPlanStatic   =n.advertiseService("/path_planner/plan_path_with_static"   , callback_a_star_with_static_map);
     ros::ServiceServer srvGetPlanAugmented=n.advertiseService("/path_planner/plan_path_with_augmented", callback_a_star_with_augmented_map);
+
+    goal_marker_pub = n.advertise<visualization_msgs::Marker>("/path_planner/estimate_goal_marker", 1);
 
     while(ros::ok())
     {

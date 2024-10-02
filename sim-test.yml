@@ -14,8 +14,8 @@ services:
     environment:
       DISPLAY: $DISPLAY
       XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR
-      ROS_MASTER_URI: http://172.30.21.49:11311
-      ROS_IP: 172.30.21.49
+      ROS_MASTER_URI: http://10.65.5.126:11311
+      ROS_IP: 10.65.5.126
     working_dir: /catkin_ws
     network_mode: host
       #deploy:
@@ -26,4 +26,5 @@ services:
       #          count: 1
       #          capabilities: [gpu]
 
-    command: roslaunch navigation_start navigation.launch
+    command: roslaunch navigation_start navigation.launch map_name:=wrs2020
+

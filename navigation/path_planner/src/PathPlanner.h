@@ -4,6 +4,7 @@
 #include "geometry_msgs/Pose.h"
 #include "nav_msgs/Path.h"
 #include "nav_msgs/OccupancyGrid.h"
+#include "visualization_msgs/Marker.h"
 
 class PathPlanner
 {

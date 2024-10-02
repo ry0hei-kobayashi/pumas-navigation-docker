@@ -1,8 +1,3 @@
-#include "PathPlanner.h"
-#include <cmath>
-#include <cstdlib>
-
-
 bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map,
                       geometry_msgs::Pose& start_pose, geometry_msgs::Pose& goal_pose, bool diagonal_paths, nav_msgs::Path& result_path)
 {
@@ -21,8 +16,8 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     idx_goal_x  = (int)((goal_pose.position.x - map.info.origin.position.x) / map.info.resolution);
     int idx_goal  = idx_goal_y * map.info.width + idx_goal_x;
 
-    //flood fill
-    if (map.data[idx_goal] != 0)  //goal inside collision
+    // フラッドフィル法によるゴール位置の調整
+    if (map.data[idx_goal] != 0)  // ゴールが障害物にある場合
     {
         std::queue<std::pair<int, int>> search_queue;
         std::vector<std::vector<bool>> visited(map.info.height, std::vector<bool>(map.info.width, false));
@@ -30,9 +25,9 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
         search_queue.push(std::make_pair(idx_goal_x, idx_goal_y));
         visited[idx_goal_y][idx_goal_x] = true;
 
-	
-	// flood fill algorithm //free cell detection
-        std::vector<std::pair<int, int>> directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+        // 隣接するセルの探索に使用する方向（上下左右、および対角方向も考慮）
+        std::vector<std::pair<int, int>> directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                                                       {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
         bool found_free_cell = false;
         while (!search_queue.empty() && !found_free_cell)
@@ -40,12 +35,13 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
             auto [current_x, current_y] = search_queue.front();
             search_queue.pop();
 
+            // 隣接するセルをチェック
             for (auto& dir : directions)
             {
                 int next_x = current_x + dir.first;
                 int next_y = current_y + dir.second;
 
-                // reject points outside of map
+                // マップの範囲外を除外
                 if (next_x < 0 || next_x >= map.info.width || next_y < 0 || next_y >= map.info.height)
                     continue;
 
@@ -55,6 +51,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
                 visited[next_y][next_x] = true;
                 int next_idx = next_y * map.info.width + next_x;
 
+                // 自由なセルを見つけたら、その位置をゴールに設定
                 if (map.data[next_idx] == 0)
                 {
                     idx_goal_x = next_x;
@@ -64,11 +61,12 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
                     break;
                 }
 
-                // add queue for next search
+                // 次のセルを探索するためにキューに追加
                 search_queue.push(std::make_pair(next_x, next_y));
             }
         }
 
+        // 自由なセルが見つからない場合
         if (!found_free_cell)
         {
             ROS_ERROR("PathPlanner.->Unable to find free space near goal!!!!");
@@ -76,6 +74,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
         }
     }
 
+    // スタートが非自由空間にある場合のエラーハンドリング
     if (map.data[idx_start] != 0)
     {
         ROS_ERROR("PathPlanner.->Start point is inside non-free space!!!!");
@@ -106,6 +105,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
         open_list.pop();                   
         current_node->in_closed_list = true;
 
+        // 隣接ノードの計算
         node_neighbors[0] = current_node->index + map.info.width;
         node_neighbors[1] = current_node->index + 1;
         node_neighbors[2] = current_node->index - map.info.width;
@@ -118,9 +118,10 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
             node_neighbors[7] = current_node->index - map.info.width - 1;
         }
         
+        // 隣接ノードに対する処理
         for (size_t i = 0; i < node_neighbors.size(); i++)
         {
-	    //check boundory
+            // 境界チェックを追加
             if (node_neighbors[i] < 0 || node_neighbors[i] >= map.data.size() || map.data[node_neighbors[i]] != 0 || nodes[node_neighbors[i]].in_closed_list)
                 continue;
 
@@ -152,10 +153,11 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     }
     std::cout << "PathPlanner.->A* Algorithm ended after " << steps << " steps" << std::endl;
 
-    // could not reach to goal
+    // ゴールに到達できなかった場合
     if (current_node->index != idx_goal)
         return false;
     
+    // 結果のパスを生成
     result_path.header.frame_id = "map";
     result_path.poses.clear();
     geometry_msgs::PoseStamped p;
@@ -172,50 +174,3 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     return true;
 }
 
-
-
-nav_msgs::Path PathPlanner::SmoothPath(nav_msgs::Path& path, float weight_data, float weight_smooth, float tolerance)
-{
-    nav_msgs::Path newPath;
-    for(int i=0; i< path.poses.size(); i++)
-        newPath.poses.push_back(path.poses[i]);
-    newPath.header.frame_id = "map";   
-    if(path.poses.size() < 3)  return newPath;
-    int attempts = 0;
-    tolerance *= path.poses.size();
-    float change = tolerance + 1;
-
-    while(change >= tolerance && ++attempts < 1000)
-    {
-        change = 0;
-        for(int i=1; i< path.poses.size() - 1; i++)
-        {
-            geometry_msgs::Point old_p = path.poses[i].pose.position;
-            geometry_msgs::Point new_p = newPath.poses[i].pose.position;
-            geometry_msgs::Point new_p_next = newPath.poses[i+1].pose.position;
-            geometry_msgs::Point new_p_prev = newPath.poses[i-1].pose.position;
-            float last_x = newPath.poses[i].pose.position.x;
-            float last_y = newPath.poses[i].pose.position.y;
-            new_p.x += weight_data*(old_p.x - new_p.x) + weight_smooth*(new_p_next.x + new_p_prev.x - 2.0*new_p.x);
-            new_p.y += weight_data*(old_p.y - new_p.y) + weight_smooth*(new_p_next.y + new_p_prev.y - 2.0*new_p.y);
-            change += fabs(new_p.x - last_x) + fabs(new_p.y - last_y);
-            newPath.poses[i].pose.position = new_p;
-        }
-    }
-    std::cout << "PathCalculator.->Smoothing finished after " << attempts << " attempts" <<  std::endl;
-    return newPath;
-}
-
-Node::Node()
-{
-    this->index            = -1;
-    this->g_value          = INT_MAX;
-    this->f_value          = INT_MAX;
-    this->in_open_list     = false;
-    this->in_closed_list   = false;
-    this->parent           = NULL;  
-}
-
-Node::~Node()
-{
-}
