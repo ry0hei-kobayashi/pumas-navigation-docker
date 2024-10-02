@@ -2,7 +2,6 @@
 #include <cmath>
 #include <cstdlib>
 
-
 bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map,
                       geometry_msgs::Pose& start_pose, geometry_msgs::Pose& goal_pose, bool diagonal_paths, nav_msgs::Path& result_path)
 {
@@ -17,24 +16,26 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     idx_start_x = (int)((start_pose.position.x - map.info.origin.position.x) / map.info.resolution);
     int idx_start = idx_start_y * map.info.width + idx_start_x;
 
+    //add r.kobayashi 2024/10/03
     idx_goal_y  = (int)((goal_pose.position.y - map.info.origin.position.y) / map.info.resolution);
     idx_goal_x  = (int)((goal_pose.position.x - map.info.origin.position.x) / map.info.resolution);
     int idx_goal  = idx_goal_y * map.info.width + idx_goal_x;
 
     //flood fill
+    bool found_free_cell = false;
+    
     if (map.data[idx_goal] != 0)  //goal inside collision
     {
         std::queue<std::pair<int, int>> search_queue;
-        std::vector<std::vector<bool>> visited(map.info.height, std::vector<bool>(map.info.width, false));
+        std::vector<std::vector<bool>> marked(map.info.height, std::vector<bool>(map.info.width, false));
 
         search_queue.push(std::make_pair(idx_goal_x, idx_goal_y));
-        visited[idx_goal_y][idx_goal_x] = true;
+        marked[idx_goal_y][idx_goal_x] = true;
 
 	
-	// flood fill algorithm //free cell detection
+	// based on flood fill algorithm //free area detection
         std::vector<std::pair<int, int>> directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
-        bool found_free_cell = false;
         while (!search_queue.empty() && !found_free_cell)
         {
             auto [current_x, current_y] = search_queue.front();
@@ -49,10 +50,10 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
                 if (next_x < 0 || next_x >= map.info.width || next_y < 0 || next_y >= map.info.height)
                     continue;
 
-                if (visited[next_y][next_x])
+                if (marked[next_y][next_x])
                     continue;
 
-                visited[next_y][next_x] = true;
+                marked[next_y][next_x] = true;
                 int next_idx = next_y * map.info.width + next_x;
 
                 if (map.data[next_idx] == 0)
@@ -64,7 +65,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
                     break;
                 }
 
-                // add queue for next search
+                // add queue for next search area
                 search_queue.push(std::make_pair(next_x, next_y));
             }
         }
@@ -152,7 +153,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     }
     std::cout << "PathPlanner.->A* Algorithm ended after " << steps << " steps" << std::endl;
 
-    // could not reach to goal
+    // could not generate to path
     if (current_node->index != idx_goal)
         return false;
     
@@ -167,11 +168,17 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
         result_path.poses.insert(result_path.poses.begin(), p);
         current_node = current_node->parent;
     }
-    
+
+    //add by r.k, if goal_point found by found_free_cell, reduce path points. TODO: it's weird solution of avoid inf loop if obstacle detection true;
+    if (found_free_cell == true && result_path.poses.size() > 5){
+        result_path.poses.erase(result_path.poses.end() - 5, result_path.poses.end());
+	ROS_ERROR("PathCalculator.->Removed the last any points from the resulting path.");
+    }
+    found_free_cell = false;
+
     std::cout << "PathCalculator.->Resulting path by A* has " << result_path.poses.size() << " points." << std::endl;
     return true;
 }
-
 
 
 nav_msgs::Path PathPlanner::SmoothPath(nav_msgs::Path& path, float weight_data, float weight_smooth, float tolerance)

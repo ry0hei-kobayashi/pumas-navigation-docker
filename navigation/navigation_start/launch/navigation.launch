@@ -212,11 +212,16 @@
   <node name="amcl" pkg="amcl" type="amcl" output="screen" args="scan:=$(arg laser_scan_topic) static_map:=/get_distance_map">
 
     <!--odomノイズパラメータ，正確でない場合に値を増やす-->
-    <!--param name="odom_alpha1" value="0.01"/-->
-    <param name="odom_alpha1" value="0.1"/>
+
+    <!--ロボット旋回時のノイズ対策　値が大きいほど効きやすい-->
+    <param name="odom_alpha1" value="0.01"/>
+    <!--ロボット直線移動のノイズ対策　値が大きいほど効きやすい-->
     <param name="odom_alpha2" value="0.1"/>
+    <!--直進時にyawがずれる対策　値が大きいほど効きやすい-->
     <param name="odom_alpha3" value="0.1"/>
-    <param name="odom_alpha4" value="0.1"/>
+    <!--回転時にyawがずれる対策　値が大きいほど効きやすい-->
+    <param name="odom_alpha4" value="0.01"/>
+    <!--並進と回転が同時に行われたときにyawがずれる対策　値が大きいほど効きやすい-->
     <param name="odom_alpha5" value="0.1"/>
 
     <!--小さいほど回転する際に位置を更新する-->
