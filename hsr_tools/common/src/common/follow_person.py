@@ -267,7 +267,8 @@ class FollowPerson(smach.State, Logger):
 
                 if diff >= 5:
                     nav_pose = self.nav.pose()
-                    current_pose = Pose2D(nav_pose().x, nav_pose().y, nav_pose().theta)
+                    #current_pose = Pose2D(nav_pose().x, nav_pose().y, nav_pose().theta)
+                    current_pose = Pose2D(nav_pose.x, nav_pose.y, nav_pose.theta)
                     
                     if current_pose:
                         way_point_list.append(current_pose)
