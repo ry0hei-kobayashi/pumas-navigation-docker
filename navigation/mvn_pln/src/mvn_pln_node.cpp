@@ -9,6 +9,10 @@
 #include "actionlib_msgs/GoalStatus.h"
 #include "tf/transform_listener.h"
 
+#include "motion_synth/MotionSynthesisAction.h"
+#include "actionlib/client/simple_action_client.h"
+
+
 #define RATE 10
 
 #define SM_INIT 0
@@ -27,6 +31,7 @@
 #define SM_CORRECT_FINAL_ANGLE 6
 #define SM_WAIT_FOR_ANGLE_CORRECTED 7
 #define SM_FINAL    17
+#define SM_EXECUTE_MOTION_SYNTH 30
 
 bool stop = false;
 bool collision_risk = false;
@@ -160,7 +165,17 @@ int main(int argc, char** argv)
     ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented");
     ros::ServiceClient clt_are_there_obs   = n.serviceClient<std_srvs::Trigger>("/map_augmenter/are_there_obstacles");
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
-    
+
+    //
+    // for motion synth_action
+    typedef actionlib::SimpleActionClient<motion_synth::MotionSynthesisAction> MotionSynthActionClient;
+    MotionSynthActionClient* ms_ac;
+    ms_ac = new MotionSynthActionClient("/motion_synth", true);
+    ROS_INFO("mvn_pln -> Waiting for motion_synth action server");
+    ms_ac->waitForServer(ros::Duration(5.0));
+    ROS_INFO("mvn_pln -> Connected to motion_synth action server");
+    //
+
     ros::Rate loop(RATE);
     ros::Rate slow_loop(1);
 
@@ -206,7 +221,8 @@ int main(int argc, char** argv)
             if(new_global_goal)
             {
                 new_global_goal = false;
-                state = SM_CALCULATE_PATH;
+                state = SM_EXECUTE_MOTION_SYNTH; //motion synth
+
                 if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
                     current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
                 goal_id++;
@@ -215,7 +231,29 @@ int main(int argc, char** argv)
                 near_goal_sent = false;
             }
             break;
+        
+        case SM_EXECUTE_MOTION_SYNTH:
+            {
+                motion_synth::MotionSynthesisGoal motion_synth_goal;
+                motion_synth_goal.goal_location.x = global_goal.position.x;
+                motion_synth_goal.goal_location.y = global_goal.position.y;
+                motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
+                motion_synth_goal.apply_goal_pose = true;
 
+                motion_synth_goal.goal_pose.arm_lift_joint = 0.2;
+                motion_synth_goal.goal_pose.arm_flex_joint = -1.0;
+                motion_synth_goal.goal_pose.arm_roll_joint = 0.0;
+                motion_synth_goal.goal_pose.wrist_flex_joint = -0.5;
+                motion_synth_goal.goal_pose.wrist_roll_joint = 0.0;
+                motion_synth_goal.goal_pose.head_pan_joint = 0.0;
+                motion_synth_goal.goal_pose.head_tilt_joint = -0.5;
+
+                ms_ac->sendGoal(motion_synth_goal);
+                ROS_INFO("mvn_pln -> Arm motion goal sent");
+
+                state = SM_CALCULATE_PATH; //calc navigation path
+            }
+            break;
             
         case SM_CALCULATE_PATH:
             get_robot_position(listener, robot_x, robot_y, robot_a);
@@ -403,10 +441,30 @@ int main(int argc, char** argv)
             
                 
         case SM_FINAL:
+            if(ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+            {
+                ROS_INFO("mvn_pln -> Waiting for arm motion to finish...");
+                ms_ac->waitForResult(ros::Duration(5.0));
+            }
+            if(ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+            {
+                ROS_INFO("mvn_pln -> Arm motion finished successfully.");
+            }
+            else
+            {
+                ROS_WARN("mvn_pln -> Arm motion not completed.");
+                ms_ac->cancelGoal();
+            }
             std::cout << "MvnPln.->TASK FINISHED." << std::endl;
             current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
             state = SM_INIT;
             break;
+    
+        //case SM_FINAL:
+        //    std::cout << "MvnPln.->TASK FINISHED." << std::endl;
+        //    current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
+        //    state = SM_INIT;
+        //    break;
 
             
         default:
