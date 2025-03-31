@@ -39,6 +39,11 @@ bool  patience = true;
 actionlib_msgs::GoalStatus simple_move_goal_status;
 int simple_move_status_id = 0;
 bool new_global_goal = false;
+
+bool new_goal_received = false;
+bool arm_goal_reached = false;
+std::vector<float> arm_goal_pose;
+
 geometry_msgs::Pose global_goal;
 std::string base_link_name = "base_footprint";
 
@@ -240,14 +245,14 @@ int main(int argc, char** argv)
                 motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
                 motion_synth_goal.apply_goal_pose = true;
 
-                motion_synth_goal.goal_pose.arm_lift_joint = 0.2;
-                motion_synth_goal.goal_pose.arm_flex_joint = -1.0;
+                motion_synth_goal.goal_pose.arm_lift_joint = 0.3;
+                motion_synth_goal.goal_pose.arm_flex_joint = 0.7;
                 motion_synth_goal.goal_pose.arm_roll_joint = 0.0;
-                motion_synth_goal.goal_pose.wrist_flex_joint = -0.5;
+                motion_synth_goal.goal_pose.wrist_flex_joint = 0.0;
                 motion_synth_goal.goal_pose.wrist_roll_joint = 0.0;
-                motion_synth_goal.goal_pose.head_pan_joint = 0.0;
-                motion_synth_goal.goal_pose.head_tilt_joint = -0.5;
-
+//                motion_synth_goal.goal_pose.head_pan_joint = 0.0;
+//                motion_synth_goal.goal_pose.head_tilt_joint = -0.5;
+//
                 ms_ac->sendGoal(motion_synth_goal);
                 ROS_INFO("mvn_pln -> Arm motion goal sent");
 
