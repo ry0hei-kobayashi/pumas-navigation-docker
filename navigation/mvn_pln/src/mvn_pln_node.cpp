@@ -10,6 +10,7 @@
 #include "tf/transform_listener.h"
 
 #include "motion_synth/MotionSynthesisAction.h"
+#include "motion_synth/Joints.h"
 #include "actionlib/client/simple_action_client.h"
 
 
@@ -38,13 +39,15 @@ bool collision_risk = false;
 bool  patience = true;
 actionlib_msgs::GoalStatus simple_move_goal_status;
 int simple_move_status_id = 0;
-bool new_global_goal = false;
+bool nav_goal_received = false;
+bool waiting_for_task = false;
 
-bool new_goal_received = false;
+bool arm_goal_received = false;
 bool arm_goal_reached = false;
-std::vector<float> arm_goal_pose;
 
 geometry_msgs::Pose global_goal;
+motion_synth::Joints joint_goal;
+
 std::string base_link_name = "base_footprint";
 
 void callback_general_stop(const std_msgs::Empty::ConstPtr& msg)
@@ -62,7 +65,16 @@ void callback_navigation_stop(const std_msgs::Empty::ConstPtr& msg)
 void callback_simple_goal(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     global_goal = msg->pose;
-    new_global_goal = true;
+    nav_goal_received = true;
+}
+
+void callback_arm_goal(const motion_synth::Joints::ConstPtr& msg)
+{
+    joint_goal = *msg;
+    arm_goal_received = true;
+
+    ROS_ERROR("call back arm");
+    std::cout << joint_goal << std::endl;
 }
 
 void callback_collision_risk(const std_msgs::Bool::ConstPtr& msg){
@@ -158,6 +170,7 @@ int main(int argc, char** argv)
     ros::Subscriber sub_generalStop        = n.subscribe("/stop", 10, callback_general_stop);
     ros::Subscriber sub_navCtrlStop        = n.subscribe("/navigation/stop", 10, callback_navigation_stop);               
     ros::Subscriber sub_simple_goal        = n.subscribe("/nav_control/goal", 10, callback_simple_goal);
+    ros::Subscriber sub_arm_goal         = n.subscribe("/pumas_motion_synth/joint_pose", 10, callback_arm_goal);
     ros::Subscriber sub_collision_risk     = n.subscribe("/navigation/obs_detector/collision_risk", 10, callback_collision_risk);
     ros::Subscriber sub_move_goal_status   = n.subscribe("/simple_move/goal_reached", 10, callback_simple_move_goal_status);
     ros::Subscriber sub_set_patience       = n.subscribe("/navigation/set_patience", 10, callback_set_patience);
@@ -207,33 +220,51 @@ int main(int argc, char** argv)
             stop = false;
             state = SM_INIT;
             if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
-                current_status=publish_status(actionlib_msgs::GoalStatus::ABORTED,goal_id,"Stop signal received. Task cancelled",pub_status);
+                current_status=publish_status(actionlib_msgs::GoalStatus::ABORTED,goal_id,"Stop signal received. Task cancelled", pub_status);
         }
-        if(new_global_goal)
-            state = SM_WAITING_FOR_TASK;
-        
-        
+
+        //if (new_global_goal && new_arm_goal_received && state == SM_WAITING_FOR_TASK)
+        //if (nav_goal_received)
+        //{
+        //    //new_global_goal = false;
+        //    nav_goal_received = false;
+        //    state = SM_EXECUTE_MOTION_SYNTH;
+        //}
+
+
         switch(state)
         {
         case SM_INIT:
             //std::cout << "MvnPln.->MVN PLN READY. Waiting for new goal. " << std::endl;
-	    ROS_WARN("Pumas Navigation. -> Ready!!!!!!!!! ");
-	    ROS_WARN("MvnPln.->MVN PLN READY. Waiting for new goal.");
+	        ROS_WARN("Pumas Navigation. -> Ready!!!!!!!!! ");
+	        ROS_WARN("MvnPln.->MVN PLN READY. Waiting for new goal.");
             state = SM_WAITING_FOR_TASK;
             break;
 
         case SM_WAITING_FOR_TASK:
-            if(new_global_goal)
+            //if(nav_goal_received && arm_goal_received)
+            if(nav_goal_received)
             {
-                new_global_goal = false;
+                nav_goal_received = false;
                 state = SM_EXECUTE_MOTION_SYNTH; //motion synth
 
-                if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
-                    current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
+
+                current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new task", pub_status);
+                //if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
+                //    current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
                 goal_id++;
                 std::cout << "MvnPln.->New goal received. Current task goal_id: " << goal_id << std::endl;
                 current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
                 near_goal_sent = false;
+            }
+
+            if(arm_goal_received)
+            {
+                arm_goal_received = false;
+                state = SM_EXECUTE_MOTION_SYNTH; //motion synth
+                                                 //
+                current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new task", pub_status);
+
             }
             break;
         
@@ -244,15 +275,8 @@ int main(int argc, char** argv)
                 motion_synth_goal.goal_location.y = global_goal.position.y;
                 motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
                 motion_synth_goal.apply_goal_pose = true;
+                motion_synth_goal.goal_pose = joint_goal;
 
-                motion_synth_goal.goal_pose.arm_lift_joint = 0.3;
-                motion_synth_goal.goal_pose.arm_flex_joint = 0.7;
-                motion_synth_goal.goal_pose.arm_roll_joint = 0.0;
-                motion_synth_goal.goal_pose.wrist_flex_joint = 0.0;
-                motion_synth_goal.goal_pose.wrist_roll_joint = 0.0;
-//                motion_synth_goal.goal_pose.head_pan_joint = 0.0;
-//                motion_synth_goal.goal_pose.head_tilt_joint = -0.5;
-//
                 ms_ac->sendGoal(motion_synth_goal);
                 ROS_INFO("mvn_pln -> Arm motion goal sent");
 
@@ -446,6 +470,8 @@ int main(int argc, char** argv)
             
                 
         case SM_FINAL:
+
+            //motion synth
             if(ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
             {
                 ROS_INFO("mvn_pln -> Waiting for arm motion to finish...");
@@ -460,6 +486,7 @@ int main(int argc, char** argv)
                 ROS_WARN("mvn_pln -> Arm motion not completed.");
                 ms_ac->cancelGoal();
             }
+
             std::cout << "MvnPln.->TASK FINISHED." << std::endl;
             current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
             state = SM_INIT;
