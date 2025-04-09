@@ -32,7 +32,7 @@
 #define SM_CORRECT_FINAL_ANGLE 6
 #define SM_WAIT_FOR_ANGLE_CORRECTED 7
 #define SM_FINAL    17
-#define SM_EXECUTE_MOTION_SYNTH 30
+//#define SM_EXECUTE_MOTION_SYNTH 30
 
 bool stop = false;
 bool collision_risk = false;
@@ -73,8 +73,7 @@ void callback_arm_goal(const motion_synth::Joints::ConstPtr& msg)
     joint_goal = *msg;
     arm_goal_received = true;
 
-    ROS_ERROR("call back arm");
-    std::cout << joint_goal << std::endl;
+    ROS_ERROR("callback arm goal");
 }
 
 void callback_collision_risk(const std_msgs::Bool::ConstPtr& msg){
@@ -170,12 +169,12 @@ int main(int argc, char** argv)
     ros::Subscriber sub_generalStop        = n.subscribe("/stop", 10, callback_general_stop);
     ros::Subscriber sub_navCtrlStop        = n.subscribe("/navigation/stop", 10, callback_navigation_stop);               
     ros::Subscriber sub_simple_goal        = n.subscribe("/nav_control/goal", 10, callback_simple_goal);
-    ros::Subscriber sub_arm_goal         = n.subscribe("/pumas_motion_synth/joint_pose", 10, callback_arm_goal);
+    ros::Subscriber sub_arm_goal         = n.subscribe<motion_synth::Joints>("/pumas_motion_synth/joint_pose", 10, callback_arm_goal);
     ros::Subscriber sub_collision_risk     = n.subscribe("/navigation/obs_detector/collision_risk", 10, callback_collision_risk);
     ros::Subscriber sub_move_goal_status   = n.subscribe("/simple_move/goal_reached", 10, callback_simple_move_goal_status);
     ros::Subscriber sub_set_patience       = n.subscribe("/navigation/set_patience", 10, callback_set_patience);
-    ros::Publisher pub_obs_detector_enable = n.advertise<std_msgs::Bool   >("/navigation/obs_detector/enable", 1);
-    ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path   >("/simple_move/goal_path", 1);
+    ros::Publisher pub_obs_detector_enable = n.advertise<std_msgs::Bool>("/navigation/obs_detector/enable", 1);
+    ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1);
     ros::Publisher pub_goal_dist_angle     = n.advertise<std_msgs::Float32MultiArray>("/simple_move/goal_dist_angle", 1);
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
@@ -184,7 +183,6 @@ int main(int argc, char** argv)
     ros::ServiceClient clt_are_there_obs   = n.serviceClient<std_srvs::Trigger>("/map_augmenter/are_there_obstacles");
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
 
-    //
     // for motion synth_action
     typedef actionlib::SimpleActionClient<motion_synth::MotionSynthesisAction> MotionSynthActionClient;
     MotionSynthActionClient* ms_ac;
@@ -223,69 +221,67 @@ int main(int argc, char** argv)
                 current_status=publish_status(actionlib_msgs::GoalStatus::ABORTED,goal_id,"Stop signal received. Task cancelled", pub_status);
         }
 
-        //if (new_global_goal && new_arm_goal_received && state == SM_WAITING_FOR_TASK)
-        //if (nav_goal_received)
-        //{
-        //    //new_global_goal = false;
-        //    nav_goal_received = false;
-        //    state = SM_EXECUTE_MOTION_SYNTH;
-        //}
-
+        if(nav_goal_received)
+            state = SM_WAITING_FOR_TASK;
 
         switch(state)
         {
         case SM_INIT:
-            //std::cout << "MvnPln.->MVN PLN READY. Waiting for new goal. " << std::endl;
-	        ROS_WARN("Pumas Navigation. -> Ready!!!!!!!!! ");
-	        ROS_WARN("MvnPln.->MVN PLN READY. Waiting for new goal.");
+            ROS_WARN("Pumas Navigation. -> Ready!!!!!!!!! ");
+            ROS_WARN("MvnPln.-> MVN PLN READY. Waiting For New Goal.");
             state = SM_WAITING_FOR_TASK;
             break;
 
         case SM_WAITING_FOR_TASK:
-            //if(nav_goal_received && arm_goal_received)
-            if(nav_goal_received)
-            {
-                nav_goal_received = false;
-                state = SM_EXECUTE_MOTION_SYNTH; //motion synth
 
-
-                current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new task", pub_status);
-                //if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
-                //    current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
-                goal_id++;
-                std::cout << "MvnPln.->New goal received. Current task goal_id: " << goal_id << std::endl;
-                current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
-                near_goal_sent = false;
-            }
-
-            if(arm_goal_received)
+            //motion_synth
+            if (arm_goal_received)
             {
                 arm_goal_received = false;
-                state = SM_EXECUTE_MOTION_SYNTH; //motion synth
-                                                 //
-                current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new task", pub_status);
-
-            }
-            break;
-        
-        case SM_EXECUTE_MOTION_SYNTH:
-            {
                 motion_synth::MotionSynthesisGoal motion_synth_goal;
                 motion_synth_goal.goal_location.x = global_goal.position.x;
                 motion_synth_goal.goal_location.y = global_goal.position.y;
                 motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
                 motion_synth_goal.apply_goal_pose = true;
                 motion_synth_goal.goal_pose = joint_goal;
-
                 ms_ac->sendGoal(motion_synth_goal);
                 ROS_INFO("mvn_pln -> Arm motion goal sent");
+            }
 
-                state = SM_CALCULATE_PATH; //calc navigation path
+            if(nav_goal_received)
+            {
+                nav_goal_received = false;
+                state = SM_CALCULATE_PATH;
+                if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
+                    current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
+                goal_id++;
+                std::cout << "MvnPln.->New goal received. Current task goal_id: " << goal_id << std::endl;
+                current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
+                near_goal_sent = false;
             }
             break;
+        
+        /* case SM_EXECUTE_MOTION_SYNTH: */
+        /*     { */
+        /*         motion_synth::MotionSynthesisGoal motion_synth_goal; */
+        /*         motion_synth_goal.goal_location.x = global_goal.position.x; */
+        /*         motion_synth_goal.goal_location.y = global_goal.position.y; */
+        /*         motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2; */
+        /*         motion_synth_goal.apply_goal_pose = true; */
+        /*         motion_synth_goal.goal_pose = joint_goal; */
+        /**/
+        /*         ms_ac->sendGoal(motion_synth_goal); */
+        /*         ROS_INFO("mvn_pln -> Arm motion goal sent"); */
+        /**/
+        /*         state = SM_CALCULATE_PATH; //calc navigation path */
+        /*     } */
+        /*     break; */
             
         case SM_CALCULATE_PATH:
+
             get_robot_position(listener, robot_x, robot_y, robot_a);
+
+            
             if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
             {
                 std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
@@ -297,6 +293,21 @@ int main(int argc, char** argv)
             }
             else
                 state = SM_ENABLE_OBS_DETECT;
+
+            //motion_synth
+            /* if (arm_goal_received) */
+            /* { */
+            /*     arm_goal_received = false; */
+            /*     motion_synth::MotionSynthesisGoal motion_synth_goal; */
+            /*     motion_synth_goal.goal_location.x = global_goal.position.x; */
+            /*     motion_synth_goal.goal_location.y = global_goal.position.y; */
+            /*     motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2; */
+            /*     motion_synth_goal.apply_goal_pose = true; */
+            /*     motion_synth_goal.goal_pose = joint_goal; */
+            /*     ms_ac->sendGoal(motion_synth_goal); */
+            /*     ROS_INFO("mvn_pln -> Arm motion goal sent"); */
+            /* } */
+
             break;
 
         case SM_CHECK_IF_INSIDE_OBSTACLES:
@@ -305,7 +316,7 @@ int main(int argc, char** argv)
             if(srv_check_obstacles.response.success)
             {
                 std::cout << "MvnPln.->Robot is inside an obstacle. Moving backwards..." << std::endl;
-                msg_goal_dist_angle.data[0] = -0.25;
+                msg_goal_dist_angle.data[0] = -0.25; //TODO 
                 msg_goal_dist_angle.data[1] = 0;
                 pub_goal_dist_angle.publish(msg_goal_dist_angle);
                 state = SM_WAITING_FOR_MOVE_BACKWARDS;
@@ -389,15 +400,28 @@ int main(int argc, char** argv)
             path.header.seq = simple_move_sequencer;
             
             //add 2024/09/12
-
             if (path.poses.size() > 0){
-            pub_goal_path.publish(path);
-            simple_move_goal_status.status = 0;
-            state = SM_WAIT_FOR_MOVE_FINISHED;
+                pub_goal_path.publish(path);
+                simple_move_goal_status.status = 0;
+                state = SM_WAIT_FOR_MOVE_FINISHED;
             }
-            else{
-            state = SM_CORRECT_FINAL_ANGLE;
-            //state = SM_FINAL;
+            else
+            {
+                state = SM_CORRECT_FINAL_ANGLE;
+                //state = SM_FINAL;
+            }
+
+            if (arm_goal_received)
+            {
+                arm_goal_received = false;
+                motion_synth::MotionSynthesisGoal motion_synth_goal;
+                motion_synth_goal.goal_location.x = global_goal.position.x;
+                motion_synth_goal.goal_location.y = global_goal.position.y;
+                motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
+                motion_synth_goal.apply_goal_pose = true;
+                motion_synth_goal.goal_pose = joint_goal;
+                ms_ac->sendGoal(motion_synth_goal);
+                ROS_INFO("mvn_pln -> Arm motion goal sent in SM_FINAL");
             }
 
             break;
@@ -406,7 +430,7 @@ int main(int argc, char** argv)
         case SM_WAIT_FOR_MOVE_FINISHED:
             get_robot_position(listener, robot_x, robot_y, robot_a);
             error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
-	    ROS_WARN("MvnPln. -> will move error: %f", error);
+            ROS_WARN("MvnPln. -> will move error: %f", error);
 
             if(error < proximity_criterion && !near_goal_sent) //or error > move_error_threshold)
             //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
@@ -438,9 +462,8 @@ int main(int argc, char** argv)
                 state = SM_CALCULATE_PATH;
             }
             break;
-            
 
-        case SM_CORRECT_FINAL_ANGLE:
+        case SM_CORRECT_FINAL_ANGLE: //TODO 
             std::cout << "MvnPln.->Correcting final angle." << std::endl;
             get_robot_position(listener, robot_x, robot_y, robot_a);
             error = atan2(global_goal.orientation.z, global_goal.orientation.w)*2 - robot_a;
@@ -451,8 +474,8 @@ int main(int argc, char** argv)
             pub_goal_dist_angle.publish(msg_goal_dist_angle);
             state = SM_WAIT_FOR_ANGLE_CORRECTED;
             break;
-
                 
+
         case SM_WAIT_FOR_ANGLE_CORRECTED:
             if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == -1)
             {
@@ -472,19 +495,20 @@ int main(int argc, char** argv)
         case SM_FINAL:
 
             //motion synth
-            if(ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
-            {
-                ROS_INFO("mvn_pln -> Waiting for arm motion to finish...");
-                ms_ac->waitForResult(ros::Duration(5.0));
-            }
-            if(ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+
+            if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
             {
                 ROS_INFO("mvn_pln -> Arm motion finished successfully.");
             }
+            else if (ms_ac->getState() == actionlib::SimpleClientGoalState::PENDING ||
+                     ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+            {
+                ROS_WARN("mvn_pln -> Arm motion not completed. Cancelling...");
+                ms_ac->cancelGoal();
+            }
             else
             {
-                ROS_WARN("mvn_pln -> Arm motion not completed.");
-                ms_ac->cancelGoal();
+                ROS_WARN("mvn_pln -> Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
             }
 
             std::cout << "MvnPln.->TASK FINISHED." << std::endl;
@@ -492,13 +516,6 @@ int main(int argc, char** argv)
             state = SM_INIT;
             break;
     
-        //case SM_FINAL:
-        //    std::cout << "MvnPln.->TASK FINISHED." << std::endl;
-        //    current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
-        //    state = SM_INIT;
-        //    break;
-
-            
         default:
             std::cout<<"MvnPln.->A VERY STUPID PERSON PROGRAMMED THIS SHIT. APOLOGIES FOR THE INCONVINIENCE. Please contact your dealer."<<std::endl;
             
