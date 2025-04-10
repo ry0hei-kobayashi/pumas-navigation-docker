@@ -8,20 +8,17 @@ from typing import Union # go_nav function
 from fractions import Fraction
 
 import rospy
+import tf
 
 from hsrlib.hsrif import HSRInterfaces
 from hsrlib.rosif import ROSInterfaces
 
-import tf
-
 from std_msgs.msg import Float32MultiArray, Bool, Empty
 from nav_msgs.msg import Path
-
 from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist
 from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
 from std_srvs.srv import Trigger
-
 from motion_synth.msg import Joints
 
 class NavModule:
@@ -66,7 +63,8 @@ class NavModule:
 
         # for motion synth
         self.motion_synth_pose = None
-        self.pub_move_joint_pose = rospy.Publisher('/pumas_motion_synth/joint_pose', Joints, queue_size=1)
+        self.pub_move_joint_start_pose = rospy.Publisher('/pumas_motion_synth/joint_start_pose', Joints, queue_size=1)
+        self.pub_move_joint_end_pose = rospy.Publisher('/pumas_motion_synth/joint_end_pose', Joints, queue_size=1)
 
         rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
@@ -298,10 +296,10 @@ class NavModule:
                 self.hsrif.omni_base.go_abs(x, y, theta, timeout)
 
     def send_goal(self, goal):
-        rospy.logwarn('NavModule -> sending new goal')
+        rospy.logwarn('NavModule -> Sending New Goal')
 
-        if self.motion_synth_pose is not None:
-            joint_poses = self.motion_synth_pose
+        if self.motion_synth_start_pose is not None:
+            joint_poses = self.motion_synth_start_pose
 
             joints = Joints()
 
@@ -312,9 +310,25 @@ class NavModule:
             joints.wrist_roll_joint = joint_poses["wrist_roll_joint"]
             joints.head_pan_joint = joint_poses["head_pan_joint"]
             joints.head_tilt_joint = joint_poses["head_tilt_joint"]
-            rospy.logwarn('NavModule -> Publish Arm Joints')
+            rospy.logwarn('NavModule -> Sending Arm Pose')
 
-            self.pub_move_joint_pose.publish(joints)
+            self.pub_move_joint_start_pose.publish(joints)
+
+        if self.motion_synth_end_pose is not None:
+            joint_poses = self.motion_synth_end_pose
+
+            joints = Joints()
+
+            joints.arm_lift_joint = joint_poses["arm_lift_joint"]
+            joints.arm_flex_joint = joint_poses["arm_flex_joint"]
+            joints.arm_roll_joint = joint_poses["arm_roll_joint"]
+            joints.wrist_flex_joint = joint_poses["wrist_flex_joint"]
+            joints.wrist_roll_joint = joint_poses["wrist_roll_joint"]
+            joints.head_pan_joint = joint_poses["head_pan_joint"]
+            joints.head_tilt_joint = joint_poses["head_tilt_joint"]
+            rospy.logwarn('NavModule -> Sending Arm Pose')
+
+            self.pub_move_joint_end_pose.publish(joints)
 
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
@@ -474,7 +488,7 @@ class NavModule:
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
+    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_start_pose=None, motion_synth_end_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
@@ -487,10 +501,16 @@ class NavModule:
          rospy.loginfo(goal)
 
 
-         if motion_synth_pose is not None:
-             rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav")
+         if motion_synth_start_pose is not None:
+             rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. Start Pose")
              self.use_obstacle_detection(status=False) #TODO
-             self.motion_synth_pose = motion_synth_pose
+             self.motion_synth_start_pose = motion_synth_start_pose
+
+         if motion_synth_end_pose is not None:
+             rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. End Pose")
+             self.use_obstacle_detection(status=False) #TODO
+             self.motion_synth_end_pose = motion_synth_end_pose
+
 
          # under constructoin: obstacle_detection (lidar and point_cloud) can set to only on/off. 
          if obstacle_detection:
@@ -557,6 +577,5 @@ if __name__ == "__main__":
     }
 
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="rel", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
-    nav.nav_goal(goal, motion_synth_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
-
+    nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
 
