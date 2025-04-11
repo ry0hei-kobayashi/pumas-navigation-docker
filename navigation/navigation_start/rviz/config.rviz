@@ -1,6 +1,6 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 70
+    Help Height: 138
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -19,7 +19,7 @@ Panels:
         - /Marker4
         - /Image3
       Splitter Ratio: 0.3583333194255829
-    Tree Height: 205
+    Tree Height: 340
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -124,6 +124,16 @@ Visualization Manager:
           Value: false
         base_roll_link:
           Value: false
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
         hand_camera_frame:
           Value: false
         hand_camera_gazebo_frame:
@@ -199,6 +209,13 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        camera_link:
+          camera_color_frame:
+            camera_color_optical_frame:
+              {}
+          camera_depth_frame:
+            camera_depth_optical_frame:
+              {}
         map:
           odom:
             base_footprint:
@@ -285,7 +302,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /show_image/data
+      Image Topic: /camera/color/image_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -882,7 +899,7 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /show_image/data
       Max Value: 1
       Median window: 5
@@ -892,7 +909,7 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -949,7 +966,7 @@ Window Geometry:
   Hide Right Dock: true
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000010000000000000640000005aafc0200000008fb0000000a0049006d006100670065010000003b0000016a0000001600fffffffb0000000a0049006d00610067006501000001ab000000520000001600fffffffb000000100044006900730070006c00610079007301000002030000014e000000c700fffffffb0000001200530065006c0065006300740069006f006e01000003570000005c0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007301000003b90000005c0000005c00fffffffb0000000a00560069006500770073010000041b000000bb000000a000fffffffb0000000800540069006d006501000004dc000000460000003800fffffffb0000000a0049006d0061006700650100000528000000bd0000001600ffffff000003ba000005aa00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000006400000056efc0200000008fb0000000a0049006d0061006700650000000069000000740000002100fffffffb0000000a0049006d0061006700650100000069000002c90000002100fffffffb000000100044006900730070006c006100790073010000033e000002420000017800fffffffb0000001200530065006c0065006300740069006f006e0000000310000000c6000000ab00fffffffb0000001e0054006f006f006c002000500072006f0070006500720074006900650073000000036d000000ab000000ab00fffffffb0000000a00560069006500770073000000038a000001900000012300fffffffb0000000800540069006d006500000004de000000ac0000005700fffffffb0000000a0049006d006100670065010000058c0000004b0000002100ffffff000003b40000056e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -959,5 +976,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 2560
-  X: 0
-  Y: 27
+  X: 148
+  Y: 54
