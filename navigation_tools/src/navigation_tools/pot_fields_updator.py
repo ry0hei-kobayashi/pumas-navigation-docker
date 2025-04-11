@@ -3,9 +3,6 @@
 import rospy
 from std_msgs.msg import Bool
 
-#class PotfieldsUpdator():
-
-        
 def param_updator():
 
     pot_fields_d0 = '/obs_detector/pot_fields_d0'

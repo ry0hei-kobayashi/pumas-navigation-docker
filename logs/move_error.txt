@@ -1,0 +1,49 @@
+[ WARN] [1724562431.337139900, 10.787000000]: Pumas Navigation. -> Ready!!!!!!!!!
+[ WARN] [1724562431.337164557, 10.787000000]: MvnPln.->MVN PLN READY. Waiting for new goal.
+ObsDetector.->Starting detection using: lidar point_cloud
+SimpleMove.->Low level control ready. Waiting for new goal.
+[ WARN] [1724562453.943099807, 32.094000000]: ObsDetector.->Lidar subscription disabled.
+ObsDetector.->Point cloud subscription disabled.
+MvnPln.->New goal received. Current task goal_id: 0
+Failed changing led color
+PathPlanner.-> Received path planning request usign augmented map...
+MapAugmenter.->Augmenting map using: lidar point_cloud
+MapAugmenter.->Trying to get laser scan from topic: /hsrb/base_scan
+MapAugmenter.->Trying to get point cloud from topic: /hma_pcl_reconst/depth_registered/points
+PathCalculator.-> Calculating by A* from 0.0130951  -0.00203356  to 0  0
+PathPlanner.->A* Algorithm ended after 0 steps
+PathCalculator.->Resulting path by A* has 0 points.
+MvnPln.->Obstacle detector enable flag sent. Waiting for obs detector to be enabled...
+ObsDetector.->Starting detection using:
+MvnPln.->Obstacle detector is now available.
+MvnPln. Starting path following
+[ERROR] [1724562455.496283922, 33.559000000]: ObsDetector.->Received an empty path. No goal was set. >>> Recovery
+SimpleMove.->New path received with 0 points with id=0
+[ WARN] [1724562455.591627649, 33.654000000]: MvnPln. -> will move error: 0.013286
+MvnPln.->Error less than proximity criterion. Sending near goal point status.
+Failed changing led color
+[ WARN] [1724562455.693947352, 33.753000000]: MvnPln. -> will move error: 0.013292
+[ WARN] [1724562455.826536578, 33.853000000]: MvnPln. -> will move error: 0.013290
+[ WARN] [1724562455.926398457, 33.953000000]: MvnPln. -> will move error: 0.013294
+[ WARN] [1724562456.029864615, 34.053000000]: MvnPln. -> will move error: 0.013296
+[ WARN] [1724562456.155174239, 34.153000000]: MvnPln. -> will move error: 0.013300
+[ WARN] [1724562456.257153716, 34.253000000]: MvnPln. -> will move error: 0.013299
+[ WARN] [1724562456.360068399, 34.353000000]: MvnPln. -> will move error: 0.013301
+[ WARN] [1724562456.466744293, 34.455000000]: MvnPln. -> will move error: 0.013308
+[ WARN] [1724562456.567789372, 34.553000000]: MvnPln. -> will move error: 0.013306
+[ WARN] [1724562456.669984436, 34.653000000]: MvnPln. -> will move error: 0.013309
+[ WARN] [1724562456.773575610, 34.753000000]: MvnPln. -> will move error: 0.013312
+[ WARN] [1724562456.877532838, 34.853000000]: MvnPln. -> will move error: 0.013314
+[ WARN] [1724562456.980907452, 34.953000000]: MvnPln. -> will move error: 0.013317
+[ WARN] [1724562457.088577980, 35.053000000]: MvnPln. -> will move error: 0.013321
+[ WARN] [1724562457.191873275, 35.153000000]: MvnPln. -> will move error: 0.013323
+[ WARN] [1724562457.293957150, 35.253000000]: MvnPln. -> will move error: 0.013324
+[ WARN] [1724562457.396094826, 35.353000000]: MvnPln. -> will move error: 0.013327
+[ WARN] [1724562457.504551314, 35.453000000]: MvnPln. -> will move error: 0.013326
+[ WARN] [1724562457.604838304, 35.553000000]: MvnPln. -> will move error: 0.013329
+[ WARN] [1724562457.706899925, 35.653000000]: MvnPln. -> will move error: 0.013333
+[ WARN] [1724562457.815705777, 35.754000000]: MvnPln. -> will move error: 0.013334
+[ WARN] [1724562457.917956391, 35.853000000]: MvnPln. -> will move error: 0.013335
+[ WARN] [1724562458.019958231, 35.953000000]: MvnPln. -> will move error: 0.013336
+
+

@@ -55,6 +55,7 @@ tf::TransformListener* tf_listener;
 float global_goal_x = 999999;
 float global_goal_y = 999999; 
 
+
 Eigen::Affine3d get_transform_to_basefootprint(std::string link_name)
 {
     tf::StampedTransform tf;
@@ -131,11 +132,14 @@ bool check_collision_risk_with_cloud(sensor_msgs::PointCloud2::Ptr msg, double& 
     
     if(debug)
     {
-        cv::imshow("OBSTACLE DETECTOR", mask);
         if (rejection_force_y > 0)
             std::cout << "ObsDetector.cloud->rejection_force_x: " << rejection_force_x << "  rejection_force_y: " << rejection_force_y << std::endl;
+
+        cv::imshow("OBSTACLE DETECTOR BY MARCOSOFT", mask);
         cv::waitKey(30);
     }
+
+
     return obstacle_count > cloud_threshold;
 }
 
@@ -189,11 +193,28 @@ void callback_point_cloud(sensor_msgs::PointCloud2::Ptr msg)
 
 void callback_goal_path(const nav_msgs::Path::ConstPtr& msg)
 {
+    //MvnPln sending near goal status
+    try{
     //if (!msg->poses.empty()){
-    global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
-    global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+        global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
+        global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+    }
+    catch(...){
+    //    global_goal_x = 0.0;
+    //    global_goal_y = 0.0;
+        global_goal_x = std::numeric_limits<float>::max(); //max->min
+        global_goal_y = std::numeric_limits<float>::max();	
+    }
+
+    //if (!msg->poses.empty()){
+    //    global_goal_x = msg->poses[msg->poses.size() - 1].pose.position.x;
+    //    global_goal_y = msg->poses[msg->poses.size() - 1].pose.position.y;
+    //TODO ObsDetector is not killed this state, but mvnPln's move error can not converging
+    //else{
+    //    ROS_ERROR("ObsDetector.->Received an empty path. No goal was set. >>> Recovery");
+    //    global_goal_x = std::numeric_limits<float>::max(); //max->min
+    //    global_goal_y = std::numeric_limits<float>::max();	
     //}
-    //TODO MvnPln sending near goal status
 }
 
 void callbackEnable(const std_msgs::Bool::ConstPtr& msg)
@@ -373,6 +394,7 @@ int main(int argc, char** argv)
     tf_listener = new tf::TransformListener();
     nh = &n;
 
+
     float no_sensor_data_timeout = 0.5;
     ros::param::param<bool >("~debug", debug, false);
     ros::param::param<bool >("~use_pot_fields", use_pot_fields, false);
@@ -452,6 +474,39 @@ int main(int argc, char** argv)
     while(ros::ok())
     {
 
+	// add by rk 2024/8/25 obstacle detectionをon offする 
+        bool current_cloud_status;
+        bool current_lidar_status;
+        ros::param::get("~use_point_cloud", current_cloud_status);
+        ros::param::get("~use_lidar", current_lidar_status);
+
+	//lidar
+        if (use_lidar != current_lidar_status)
+        {
+            use_lidar = current_lidar_status;
+            if (use_lidar) {
+                sub_lidar = nh->subscribe(laser_scan_topic, 1, callback_lidar);
+                ROS_WARN("ObsDetector.->Lidar subscription enabled.");
+            } else {
+                sub_lidar.shutdown();
+                ROS_WARN("ObsDetector.->Lidar subscription disabled.");
+            }
+        }
+	//point cloud
+        if (use_cloud != current_cloud_status)
+        {
+            use_cloud = current_cloud_status;
+            if (use_cloud) {
+                sub_cloud = nh->subscribe(point_cloud_topic, 1, callback_point_cloud);
+                std::cout << "ObsDetector.->Point cloud subscription enabled." << std::endl;
+            } else {
+                sub_cloud.shutdown();
+                std::cout << "ObsDetector.->Point cloud subscription disabled." << std::endl;
+            }
+        }
+
+
+	//obstacle detectionがenableの時，障害物を回避する, pumas original
         if(enable)
         {
             msg_collision_risk.data = collision_risk_lidar || collision_risk_cloud;
@@ -477,6 +532,7 @@ int main(int argc, char** argv)
 	        pub_pot_fields.publish(pot_field_markers);
 
             }
+
             //if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)
             //    std::cout << "ObsDetector.->WARNING!!! No lidar data received from topic: " << laser_scan_topic << std::endl;
             //if(use_cloud  && no_data_cloud_counter++ > no_sensor_data_timeout*RATE)
