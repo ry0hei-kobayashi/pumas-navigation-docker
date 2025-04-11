@@ -1,6 +1,6 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 70
+    Help Height: 138
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -19,7 +19,11 @@ Panels:
         - /Marker4
         - /Image3
       Splitter Ratio: 0.3583333194255829
+<<<<<<< HEAD
+    Tree Height: 340
+=======
     Tree Height: 409
+>>>>>>> 1ca994cbf1bcfd8c8eec4b45be452d2ae4f8ba48
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -124,6 +128,16 @@ Visualization Manager:
           Value: false
         base_roll_link:
           Value: false
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
         hand_camera_frame:
           Value: false
         hand_camera_gazebo_frame:
@@ -203,6 +217,13 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        camera_link:
+          camera_color_frame:
+            camera_color_optical_frame:
+              {}
+          camera_depth_frame:
+            camera_depth_optical_frame:
+              {}
         map:
           odom:
             base_footprint:
@@ -293,8 +314,13 @@ Visualization Manager:
       Use Timestamp: false
       Value: true
     - Class: rviz/Image
+<<<<<<< HEAD
+      Enabled: true
+      Image Topic: /camera/color/image_raw
+=======
       Enabled: false
       Image Topic: /show_image/data
+>>>>>>> 1ca994cbf1bcfd8c8eec4b45be452d2ae4f8ba48
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -902,6 +928,8 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: false
+<<<<<<< HEAD
+=======
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /bounding_box_marker
@@ -938,6 +966,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
+>>>>>>> 1ca994cbf1bcfd8c8eec4b45be452d2ae4f8ba48
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -994,7 +1023,11 @@ Window Geometry:
   Hide Right Dock: true
   Image:
     collapsed: false
+<<<<<<< HEAD
+  QMainWindow State: 000000ff00000000fd0000000100000000000006400000056efc0200000008fb0000000a0049006d0061006700650000000069000000740000002100fffffffb0000000a0049006d0061006700650100000069000002c90000002100fffffffb000000100044006900730070006c006100790073010000033e000002420000017800fffffffb0000001200530065006c0065006300740069006f006e0000000310000000c6000000ab00fffffffb0000001e0054006f006f006c002000500072006f0070006500720074006900650073000000036d000000ab000000ab00fffffffb0000000a00560069006500770073000000038a000001900000012300fffffffb0000000800540069006d006500000004de000000ac0000005700fffffffb0000000a0049006d006100670065010000058c0000004b0000002100ffffff000003b40000056e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+=======
   QMainWindow State: 000000ff00000000fd000000010000000000000640000003b9fc0200000008fb0000000a0049006d006100670065000000003d000000ae0000001600fffffffb0000000a0049006d006100670065000000003d000000320000001600fffffffb000000100044006900730070006c006100790073010000003d0000021c000000c900fffffffb0000001200530065006c0065006300740069006f006e00000001ec000000c20000005c00fffffffb0000001e0054006f006f006c002000500072006f0070006500720074006900650073010000025f000000f70000005c00fffffffb0000000a00560069006500770073000000029d000000fb000000a400fffffffb0000000800540069006d0065010000035c0000009a0000003900fffffffb0000000a0049006d006100670065000000037e000000780000001600ffffff000003ba000003b900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+>>>>>>> 1ca994cbf1bcfd8c8eec4b45be452d2ae4f8ba48
   Selection:
     collapsed: false
   Time:
@@ -1004,5 +1037,10 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 2560
+<<<<<<< HEAD
+  X: 148
+  Y: 54
+=======
   X: 0
   Y: 0
+>>>>>>> 1ca994cbf1bcfd8c8eec4b45be452d2ae4f8ba48

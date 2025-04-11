@@ -14,6 +14,12 @@
   <!--GlobalPoseIntegrator-->
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
+  
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
+  
+  <!--for demo_mayor-->
+  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/demo_3330/map.yaml"/>
+  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/demo_3330/map.yaml"/>
 
   <!--RVIS-->
   <node name="pumasviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
@@ -23,9 +29,9 @@
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/$(arg map_name)/map.yaml"/>
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/$(arg map_name)/map.yaml"/>
 
-  <!--for adding environment obstacle to map-->
-  <arg name="env_file_name" default="env_furniture_rc24.yaml"/>
-  <arg name="add_static_obstacles" default="false"/>
+  <!--for env objs to map-->
+  <arg name="env_file_name" default="env_furniture_demo_3330.yaml"/>
+  <arg name="add_static_obstacles" default="true"/>
 
   <!--input topic-->
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
@@ -87,10 +93,17 @@
   <!--SimpleMove-->
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
 
-    <param name="max_linear_speed" value="1.00"/> 
+    <param name="max_linear_speed" value="1.0"/>
     <param name="max_angular_speed" value="1.25"/>
-    <param name="control_alpha" value="0.6548"/>
-    <param name="control_beta" value="0.2"/>
+    <param name="control_alpha" value="0.3"/>
+    <param name="control_beta" value="0.12"/>
+
+    <!--TODO angle_tolerance-->
+    <!--param name="angle_tolerance" value="0.025"/-->
+    <!--param name="max_linear_speed" value="1.00"/--> 
+    <!--param name="max_angular_speed" value="1.25"/-->
+    <!--param name="control_alpha" value="0.6548"/-->
+    <!--param name="control_beta" value="0.2"/-->
 
     <!--rc24-->
     <!--param name="control_alpha" value="0.3"/>
