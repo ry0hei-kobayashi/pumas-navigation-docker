@@ -14,12 +14,6 @@
   <!--GlobalPoseIntegrator-->
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
-  
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
-  
-  <!--for demo_mayor-->
-  <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/demo_3330/map.yaml"/>
-  <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/demo_3330/map.yaml"/>
 
   <!--RVIS-->
   <node name="pumasviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
@@ -173,7 +167,7 @@
     <param name="cost_radius" value="0.35"/-->
 
     <param name="inflation_radius" value="0.15"/>
-    <param name="cost_radius" value="0.35"/>
+    <param name="cost_radius" value="0.20"/>
 
     <!--param name="decay_factor" value="10"/-->
     
