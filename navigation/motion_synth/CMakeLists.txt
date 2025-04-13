@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   Joints.msg
+  StartAndEndJoints.msg
 )
 
 add_action_files(

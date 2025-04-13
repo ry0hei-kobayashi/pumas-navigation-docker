@@ -9,9 +9,10 @@
 #include "actionlib_msgs/GoalStatus.h"
 #include "tf/transform_listener.h"
 
-#include "motion_synth/MotionSynthesisAction.h"
-#include "motion_synth/Joints.h"
 #include "actionlib/client/simple_action_client.h"
+#include "motion_synth/Joints.h"
+#include "motion_synth/StartAndEndJoints.h"
+#include "motion_synth/MotionSynthesisAction.h"
 
 
 #define RATE 10
@@ -41,16 +42,15 @@ int simple_move_status_id = 0;
 bool nav_goal_received = false;
 bool waiting_for_task = false;
 
-bool arm_start_goal_received = false;
-bool arm_end_goal_received = false;
-bool arm_goal_reached = false;
-
 geometry_msgs::Pose global_goal;
-motion_synth::Joints start_joint_goal;
-motion_synth::Joints end_joint_goal;
+
+bool arm_goal_reached = false;
+bool arm_goal_received = false;
+bool has_arm_start_pose = false;
+bool has_arm_end_pose = false;
+motion_synth::StartAndEndJoints target_arm_pose;
 
 std::string base_link_name = "base_footprint";
-
 void callback_general_stop(const std_msgs::Empty::ConstPtr& msg)
 {
     std::cout << "MvnPln.->General Stop signal received" << std::endl;
@@ -69,16 +69,10 @@ void callback_simple_goal(const geometry_msgs::PoseStamped::ConstPtr& msg)
     nav_goal_received = true;
 }
 
-void callback_arm_start_goal(const motion_synth::Joints::ConstPtr& msg)
+void callback_arm_joints(const motion_synth::StartAndEndJoints::ConstPtr& msg)
 {
-    start_joint_goal = *msg;
-    arm_start_goal_received = true;
-}
-
-void callback_arm_end_goal(const motion_synth::Joints::ConstPtr& msg)
-{
-    end_joint_goal = *msg;
-    arm_end_goal_received = true;
+    target_arm_pose = *msg;
+    arm_goal_received = true;
 }
 
 void callback_collision_risk(const std_msgs::Bool::ConstPtr& msg){
@@ -114,12 +108,17 @@ bool plan_path_from_augmented_map(float robot_x, float robot_y, float goal_x, fl
 
 void get_robot_position(tf::TransformListener& listener, float& robot_x, float& robot_y, float& robot_a){
     tf::StampedTransform tf;
-    tf::Quaternion q;
     listener.lookupTransform("map", base_link_name, ros::Time(0), tf);
     robot_x = tf.getOrigin().x();
     robot_y = tf.getOrigin().y();
-    q = tf.getRotation();
-    robot_a = atan2((float)q.z(), (float)q.w()) * 2;
+
+    tf::Quaternion q = tf.getRotation();
+    double roll, pitch, yaw;
+    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    robot_a = yaw;
+
+    //q = tf.getRotation();
+    //robot_a = atan2((float)q.z(), (float)q.w()) * 2;
 }
 
 int publish_status(int status, int id, std::string text, ros::Publisher& pub)
@@ -173,8 +172,7 @@ int main(int argc, char** argv)
     ros::Subscriber sub_generalStop        = n.subscribe("/stop", 10, callback_general_stop);
     ros::Subscriber sub_navCtrlStop        = n.subscribe("/navigation/stop", 10, callback_navigation_stop);               
     ros::Subscriber sub_simple_goal        = n.subscribe("/nav_control/goal", 10, callback_simple_goal);
-    ros::Subscriber sub_arm_start_goal     = n.subscribe<motion_synth::Joints>("/pumas_motion_synth/joint_start_pose", 10, callback_arm_start_goal);
-    ros::Subscriber sub_arm_end_goal       = n.subscribe<motion_synth::Joints>("/pumas_motion_synth/joint_end_pose", 10, callback_arm_end_goal);
+    ros::Subscriber sub_arm_goal     = n.subscribe<motion_synth::StartAndEndJoints>("/pumas_motion_synth/joint_pose", 10, callback_arm_joints);
     ros::Subscriber sub_collision_risk     = n.subscribe("/navigation/obs_detector/collision_risk", 10, callback_collision_risk);
     ros::Subscriber sub_move_goal_status   = n.subscribe("/simple_move/goal_reached", 10, callback_simple_move_goal_status);
     ros::Subscriber sub_set_patience       = n.subscribe("/navigation/set_patience", 10, callback_set_patience);
@@ -210,6 +208,7 @@ int main(int argc, char** argv)
     int  goal_id = -1;
     int  current_status = 0;
     bool near_goal_sent = false;
+    int near_goal_counter = 0;
     std_msgs::Bool msg_bool;
     std_srvs::Trigger srv_check_obstacles;
     nav_msgs::Path path;
@@ -245,26 +244,26 @@ int main(int argc, char** argv)
             case SM_WAITING_FOR_TASK:
                 
                 //motion synth add by r.k 2025/04/10
-                if (arm_start_goal_received || arm_end_goal_received)
+                if (arm_goal_received)
                 {
                     motion_synth::MotionSynthesisGoal motion_synth_goal;
                     motion_synth_goal.goal_location.x = global_goal.position.x;
                     motion_synth_goal.goal_location.y = global_goal.position.y;
                     motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
     
-                    if (arm_start_goal_received)
+                    std::cout << target_arm_pose.has_arm_start_pose << std::endl;
+                    if (target_arm_pose.has_arm_start_pose == true)
                     {
-                        arm_start_goal_received = false;
                         motion_synth_goal.apply_start_pose = true;
-                        motion_synth_goal.start_pose = start_joint_goal;
+                        motion_synth_goal.start_pose = target_arm_pose.start_pose;
                     } 
-                    if (arm_end_goal_received)
+                    if (target_arm_pose.has_arm_end_pose == true)
                     {
-                        arm_end_goal_received = false;
                         motion_synth_goal.apply_goal_pose = true;
-                        motion_synth_goal.goal_pose = end_joint_goal;
+                        motion_synth_goal.goal_pose = target_arm_pose.end_pose;
                     }
 
+                    arm_goal_received = false;
                     ms_ac->sendGoal(motion_synth_goal);
                     ROS_INFO("MvnPln.->Arm motion goal sent");
                 }
@@ -431,13 +430,26 @@ int main(int argc, char** argv)
                 ROS_WARN_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
 
                 //navigation goal
-                if(error < proximity_criterion && !near_goal_sent) //or error > move_error_threshold)
+                //if(error < proximity_criterion && !near_goal_sent)
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
+                
+                if (error < proximity_criterion)
                 {
-                    near_goal_sent = true;
+                    near_goal_counter++;
+                    std::cout << near_goal_counter << std::endl;
+
+                    if (!near_goal_sent)
+                    {
+                        near_goal_sent = true;
+                        publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
+                    }
+                    if (near_goal_counter > 30) //if rate is 10, 3s
+                    {
+                        ROS_ERROR("MvnPln.->Goal too close for long time. Forcing final angle correction.");
+                        state = SM_CORRECT_FINAL_ANGLE;
+                    }
                     std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
-                    publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
                 }
                 if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == simple_move_sequencer)
                 {
@@ -491,7 +503,6 @@ int main(int argc, char** argv)
                         global_goal.orientation.w
                     );
                     float goal_a = tf::getYaw(q);
-                    std::cout << goal_a << std::endl;
                     error = goal_a - robot_a;
 
                     if(error  >  M_PI) error -= 2*M_PI;
@@ -519,6 +530,17 @@ int main(int argc, char** argv)
                 break;
                 
             case SM_FINAL:
+                
+                // motion_synth forcing cancel
+                if (arm_goal_received &&
+                    ms_ac->getState() != actionlib::SimpleClientGoalState::SUCCEEDED &&
+                    ms_ac->getState() != actionlib::SimpleClientGoalState::ABORTED &&
+                    ms_ac->getState() != actionlib::SimpleClientGoalState::PREEMPTED)
+                {
+                    ROS_ERROR("MvnPln.->Navigation Finished. But arm motion still running, forcing cancel.");
+                    ms_ac->cancelGoal();
+                }
+
                 std::cout << "MvnPln.->TASK FINISHED." << std::endl;
                 current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
                 state = SM_INIT;
