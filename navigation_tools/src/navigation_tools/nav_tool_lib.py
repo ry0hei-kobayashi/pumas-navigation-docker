@@ -483,12 +483,11 @@ class NavModule:
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_start_pose=None, motion_synth_end_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
+    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, motion_synth_end_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
-         motion_synth_start_pose (Dict): Start Pose
-         motion_synth_end_pose (Dict): Final Pose
+         ms_config (Dict): {"start_pose": start_pose, "goal_pose": goal_pose}
          nav_type(pumas_nav) (str): pumas_nav -> "pumas"(default) , toyota_nav -> "hsr"
          nav_mode(pumas_nav) (str): "abs" or "rel", default -> abs
          nav_timeout(pumas_nav) (Float):50.0 -> 50s, 0 -> infinity
@@ -503,15 +502,19 @@ class NavModule:
              self.use_obstacle_detection(status=False)
 
          #motion_synth
-         if motion_synth_start_pose is not None:
-             rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. Start Pose")
+         if motion_synth_pose is not None:
+             start_pose = motion_synth_pose.get("start_pose")
+             rospy.logerr(start_pose)
+             end_pose = motion_synth_pose.get("goal_pose")
+             rospy.logerr(end_pose)
              self.use_obstacle_detection(status=False) #TODO
-             self.motion_synth_start_pose = motion_synth_start_pose
 
-         if motion_synth_end_pose is not None:
-             rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. End Pose")
-             self.use_obstacle_detection(status=False) #TODO
-             self.motion_synth_end_pose = motion_synth_end_pose
+             if start_pose:
+                rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. Start Pose")
+                self.motion_synth_start_pose = start_pose
+             if end_pose:
+                rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. End Pose")
+                self.motion_synth_end_pose = end_pose
 
          if angle_correction is True:
              self.rotate_yaw(goal)
@@ -550,14 +553,24 @@ if __name__ == "__main__":
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
     #while True:
-    goal = Pose2D(0.8, 1.32, 0.0)
-    goal = Pose2D(0.5, 3.8, 0.0)
     #goal = Pose2D(0.8, 1.32, 0.0)
+    goal = Pose2D(0.5, 3.8, 0.0)
+    goal = Pose2D(0.8, 1.32, 0.0)
 
     #goal = Pose2D(.0, .0, 0.0)
     #goal = Pose2D(3.0, 0.8, 0.0)
     #goal = Pose2D(5.3, 4.4, 0.0)
-    arm_end_pose = {
+    
+    start_pose = {
+        "arm_lift_joint": 0.0,
+        "arm_flex_joint": np.deg2rad(0.0),
+        "arm_roll_joint": np.deg2rad(0.0),
+        "wrist_flex_joint": np.deg2rad(-90.0),
+        "wrist_roll_joint": 0.0,
+        "head_pan_joint": 0.0,
+        "head_tilt_joint": np.deg2rad(0.0),
+    }
+    goal_pose = {
         "arm_lift_joint": 0.4,
         "arm_flex_joint": np.deg2rad(-90.0),
         "arm_roll_joint": np.deg2rad(0.0),
@@ -567,18 +580,11 @@ if __name__ == "__main__":
         "head_tilt_joint": np.deg2rad(0.0),
     }
     
-    arm_start_pose = {
-        "arm_lift_joint": 0.0,
-        "arm_flex_joint": np.deg2rad(0.0),
-        "arm_roll_joint": np.deg2rad(0.0),
-        "wrist_flex_joint": np.deg2rad(-90.0),
-        "wrist_roll_joint": 0.0,
-        "head_pan_joint": 0.0,
-        "head_tilt_joint": np.deg2rad(0.0),
-    }
+    #ms_config = {"start_pose": "auto", "goal_pose": goal_pose}
+    ms_config = {"start_pose": start_pose, "goal_pose": goal_pose}
     
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="rel", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
     #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
     #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
-    nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
+    nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
     
