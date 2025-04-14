@@ -529,6 +529,7 @@ int main(int argc, char** argv)
             case SM_FINAL:
                 
                 // motion_synth forcing cancel
+                /*
                 if (arm_goal_received &&
                     ms_ac->getState() != actionlib::SimpleClientGoalState::SUCCEEDED &&
                     ms_ac->getState() != actionlib::SimpleClientGoalState::ABORTED &&
@@ -536,6 +537,24 @@ int main(int argc, char** argv)
                 {
                     ROS_ERROR("MvnPln.->Navigation Finished. But arm motion still running, forcing cancel.");
                     ms_ac->cancelGoal();
+                }
+                */
+
+                if (target_arm_pose.has_arm_end_pose)
+                {
+                    if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+                    {
+                        ROS_INFO("MvnPln.->Arm motion completed successfully.");
+                    }
+                    else if(ms_ac->getState().isDone())
+                    {
+                        ROS_WARN("MvnPln.->Arm motion completed with state: %s", ms_ac->getState().toString().c_str());
+                    }
+                    else
+                    {
+                        ROS_INFO_THROTTLE(1.0, "MvnPln.->Waiting for arm motion to complete");
+                        break;
+                    }
                 }
 
                 std::cout << "MvnPln.->TASK FINISHED." << std::endl;

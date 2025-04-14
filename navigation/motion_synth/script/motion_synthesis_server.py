@@ -154,7 +154,7 @@ class MotionSynthesisServer:
         rospy.logwarn(f"motion_synth -> motion_start_timing point is {arm_start_position}")
 
         #timeout = rospy.Time.now() + rospy.Duration(20.0) #TODO adjust time
-        timeout = rospy.Time.now() + rospy.Duration(10000.0)
+        #timeout = rospy.Time.now() + rospy.Duration(10000.0)
         rate = rospy.Rate(10)
 
         if goal.apply_start_pose: 
@@ -206,13 +206,19 @@ class MotionSynthesisServer:
                         final_pose_sent = True
                         self.global_nav_goal_reached = False
 
-            if rospy.Time.now() > timeout:
-                rospy.logerr("motion_synth -> Timeout")
-                self.server.set_aborted(MotionSynthesisResult(result=False), "Timeout")
-                self.global_nav_goal_reached = False
-                self.temporary_pose_sent = False
-                self.final_pose_sent = False
-                return
+            if triggered and final_pose_sent:
+                if self.joint_goal_reached(goal.goal_pose):
+                    rospy.loginfo("motion_synth -> Final Arm Pose Reached")
+                    self.server.set_succeeded(MotionSynthesisResult(result=True))
+                    return
+
+            # if rospy.Time.now() > timeout:
+            #     rospy.logerr("motion_synth -> Timeout")
+            #     self.server.set_aborted(MotionSynthesisResult(result=False), "Timeout")
+            #     self.global_nav_goal_reached = False
+            #     self.temporary_pose_sent = False
+            #     self.final_pose_sent = False
+            #     return
 
             self.server.publish_feedback(feedback)
             rate.sleep()
