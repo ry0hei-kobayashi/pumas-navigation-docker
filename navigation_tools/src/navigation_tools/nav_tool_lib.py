@@ -62,7 +62,6 @@ class NavModule:
         self.pub_marker = rospy.Publisher('/nav_goal_marker', Marker, queue_size=10)
 
         # for motion synth
-        #self.motion_synth_pose = None
         self.motion_synth_start_pose = None
         self.motion_synth_end_pose = None
         self.pub_move_joint_pose = rospy.Publisher('/pumas_motion_synth/joint_pose', StartAndEndJoints, queue_size=1)
@@ -361,7 +360,6 @@ class NavModule:
         goal = self.create_goal_pose(x, y, yaw, "base_link")
 
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
-
     
         self.pub_move_rel.publish(goal)
         rospy.sleep(0.1)
@@ -486,7 +484,7 @@ class NavModule:
     ##   call function   ##
     #######################
     def nav_goal(self, goal: Union[Pose2D, str], motion_synth_start_pose=None, motion_synth_end_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
-         """ _NavModulePumas
+         """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
          motion_synth_start_pose (Dict): Start Pose
@@ -552,8 +550,8 @@ if __name__ == "__main__":
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
     #while True:
+    goal = Pose2D(0.8, 1.32, 0.0)
     goal = Pose2D(0.5, 3.8, 0.0)
-    #goal = Pose2D(0.8, 1.32, 0.0)
     arm_end_pose = {
         "arm_lift_joint": 0.4,
         "arm_flex_joint": np.deg2rad(-90.0),
@@ -576,5 +574,6 @@ if __name__ == "__main__":
     
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="rel", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
     #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
+    #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
     nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
     

@@ -250,8 +250,7 @@ int main(int argc, char** argv)
                     motion_synth_goal.goal_location.x = global_goal.position.x;
                     motion_synth_goal.goal_location.y = global_goal.position.y;
                     motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
-    
-                    std::cout << target_arm_pose.has_arm_start_pose << std::endl;
+                    //std::cout << target_arm_pose.has_arm_start_pose << std::endl;
                     if (target_arm_pose.has_arm_start_pose == true)
                     {
                         motion_synth_goal.apply_start_pose = true;
@@ -262,7 +261,6 @@ int main(int argc, char** argv)
                         motion_synth_goal.apply_goal_pose = true;
                         motion_synth_goal.goal_pose = target_arm_pose.end_pose;
                     }
-
                     arm_goal_received = false;
                     ms_ac->sendGoal(motion_synth_goal);
                     ROS_INFO("MvnPln.->Arm motion goal sent");
@@ -433,7 +431,6 @@ int main(int argc, char** argv)
                 //if(error < proximity_criterion && !near_goal_sent)
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
-                
                 if (error < proximity_criterion)
                 {
                     near_goal_counter++;
@@ -490,7 +487,7 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            case SM_CORRECT_FINAL_ANGLE: //TODO 
+            case SM_CORRECT_FINAL_ANGLE: //TODO? angle error
                 {
                     std::cout << "MvnPln.->Correcting final angle." << std::endl;
                     get_robot_position(listener, robot_x, robot_y, robot_a);
@@ -552,5 +549,6 @@ int main(int argc, char** argv)
 
         ros::spinOnce();
         loop.sleep();
+
     }
 }

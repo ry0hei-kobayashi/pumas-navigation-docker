@@ -129,14 +129,14 @@ class MotionSynthesisServer:
     def check_self_collision_risk(self, goal_pose):
 
         if goal_pose.arm_flex_joint < -1.0:
-            rospy.logerr("self collision")
+            #rospy.logerr("self collision")
             return True
         
         rospy.logerr("no self collision")
         return False
 
     def create_temporary_pose(self, goal_pose):
-        #if end_pose is danger
+        #if end_pose is in collision
         temporary_pose = copy.deepcopy(goal_pose)
 
         if goal_pose.arm_flex_joint < -1.0:
@@ -153,7 +153,8 @@ class MotionSynthesisServer:
         arm_start_position = int(self.path_len * 0.75)
         rospy.logwarn(f"motion_synth -> motion_start_timing point is {arm_start_position}")
 
-        timeout = rospy.Time.now() + rospy.Duration(20.0) #TODO
+        #timeout = rospy.Time.now() + rospy.Duration(20.0) #TODO adjust time
+        timeout = rospy.Time.now() + rospy.Duration(10000.0)
         rate = rospy.Rate(10)
 
         if goal.apply_start_pose: 
@@ -193,14 +194,12 @@ class MotionSynthesisServer:
                         rospy.sleep(1)
                     triggered = True
 
-            #print(self.global_nav_goal_reached)
             if triggered:
-
                 if temporary_pose_sent and not final_pose_sent:
                     yaw_error = abs(self.current_pose[2] - goal.goal_location.theta)
                     if yaw_error > np.pi:
                         yaw_error = 2 * np.pi - yaw_error
-                    if yaw_error < 0.1 or self.global_nav_goal_reached:
+                    if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO adjust yaw
                         rospy.logwarn("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
                         rospy.sleep(1)
@@ -208,7 +207,7 @@ class MotionSynthesisServer:
                         self.global_nav_goal_reached = False
 
             if rospy.Time.now() > timeout:
-                rospy.logwarn("motion_synth -> Timeout")
+                rospy.logerr("motion_synth -> Timeout")
                 self.server.set_aborted(MotionSynthesisResult(result=False), "Timeout")
                 self.global_nav_goal_reached = False
                 self.temporary_pose_sent = False
