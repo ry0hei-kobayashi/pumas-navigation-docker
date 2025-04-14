@@ -24,7 +24,7 @@
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/$(arg map_name)/map.yaml"/>
 
   <!--for env objs to map-->
-  <arg name="env_file_name" default="env_furniture_demo_3330.yaml"/>
+  <arg name="env_file_name" default="env_furniture_rcj25_3330_0412.yaml"/>
   <arg name="add_static_obstacles" default="true"/>
 
   <!--input topic-->
