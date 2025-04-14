@@ -553,7 +553,7 @@ if __name__ == "__main__":
 
     #while True:
     goal = Pose2D(0.5, 3.8, 0.0)
-    goal = Pose2D(0.8, 1.32, 0.0)
+    #goal = Pose2D(0.8, 1.32, 0.0)
     arm_end_pose = {
         "arm_lift_joint": 0.4,
         "arm_flex_joint": np.deg2rad(-90.0),

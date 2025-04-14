@@ -3,6 +3,7 @@ import rospy
 import copy
 import numpy as np
 import actionlib
+from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped
 from motion_synth.msg import MotionSynthesisAction, MotionSynthesisResult, MotionSynthesisFeedback
 from std_msgs.msg import Float32MultiArray, Float32
@@ -29,10 +30,13 @@ class MotionSynthesisServer:
         self.head_pub = rospy.Publisher("/hardware/head/goal_pose", Float32MultiArray, queue_size=1)
 
         self.joint_states = {}
-        self.joints_cb = rospy.Subscriber("/hsrb/joint_states", JointState, self.joint_state_cb)
+        self.joints_cb = rospy.Subscriber("/hsrb/joint_states", JointState, self.joint_state_callback)
 
         self.current_pose = None
         self.global_pose = rospy.Subscriber("/global_pose", PoseStamped, self.global_pose_callback)
+
+        self.global_nav_goal_reached = False
+        self.nav_status_sub = rospy.Subscriber("/navigation/status", GoalStatus, self.nav_status_callback)
 
     def wait_for_get_path(self):
         rospy.loginfo("motion_synth -> Waiting for get path")
@@ -60,7 +64,16 @@ class MotionSynthesisServer:
         self.path_points = path_points
         rospy.loginfo(f"motion_synth -> Got Path Length: {self.path_len}")
 
-    def joint_state_cb(self, msg):
+    def nav_status_callback(self, msg):
+        text = msg.text
+        status = msg.status
+        if status==3:
+            if text==("Global goal point reached"):
+                rospy.loginfo("motion_synth -> Global Nav Goal Reached")
+                self.global_nav_goal_reached = True
+                
+
+    def joint_state_callback(self, msg):
         for name, pos in zip(msg.name, msg.position):
             self.joint_states[name] = pos
 
@@ -112,12 +125,14 @@ class MotionSynthesisServer:
         self.arm_pub.publish(arm_msg)
         self.head_pub.publish(head_msg)
 
-    #TODO
+    #TODO add another rule
     def check_self_collision_risk(self, goal_pose):
 
         if goal_pose.arm_flex_joint < -1.0:
+            rospy.logerr("self collision")
             return True
         
+        rospy.logerr("no self collision")
         return False
 
     def create_temporary_pose(self, goal_pose):
@@ -131,6 +146,7 @@ class MotionSynthesisServer:
 
 
     def execute_cb(self, goal):
+        self.global_nav_goal_reached = False
         self.wait_for_get_path()
         feedback = MotionSynthesisFeedback()
         triggered = False
@@ -144,6 +160,7 @@ class MotionSynthesisServer:
             self.send_pose(goal.start_pose)
             rospy.sleep(1.0)
 
+        temporary_pose = None
         chk_self_collision = self.check_self_collision_risk(goal.goal_pose)
         if chk_self_collision:
             rospy.logerr("motion_synth -> Detect Self Collision Pose, Using TMP Arm Pose")
@@ -165,7 +182,7 @@ class MotionSynthesisServer:
                 dist = np.linalg.norm([cx - tx, cy - ty])
 
                 if dist < 1.0:
-                    rospy.loginfo("motion_synth -> Reached 3/4 of path & Triggering end pose")
+                    rospy.loginfo("motion_synth -> Reached 3/4 of path & Triggering Motion Synth")
                     if chk_self_collision:
                         self.send_pose(temporary_pose)
                         temporary_pose_sent = True
@@ -176,35 +193,26 @@ class MotionSynthesisServer:
                         rospy.sleep(1)
                     triggered = True
 
-            if triggered: #and self.joint_goal_reached(goal.goal_pose):
+            #print(self.global_nav_goal_reached)
+            if triggered:
 
                 if temporary_pose_sent and not final_pose_sent:
                     yaw_error = abs(self.current_pose[2] - goal.goal_location.theta)
                     if yaw_error > np.pi:
                         yaw_error = 2 * np.pi - yaw_error
-                    if yaw_error < 0.2:
-                        rospy.logwarn("motion_synth -> Reached navigation yaw, sending final pose")
+                    if yaw_error < 0.1 or self.global_nav_goal_reached:
+                        rospy.logwarn("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
                         rospy.sleep(1)
                         final_pose_sent = True
-
-                target_pose = goal.goal_pose if final_pose_sent else temporary_pose
-                if self.joint_goal_reached(target_pose):
-
-                    if temporary_pose_sent and not final_pose_sent:
-                        rospy.logwarn("motion_synth -> TEMP Arm Goal Reached")
-                        self.send_pose(goal.goal_pose)
-                        rospy.sleep(1)
-                        final_pose_sent = True
-
-                    elif final_pose_sent:
-                        rospy.logwarn("motion_synth -> Final Arm Goal Reached")
-                        self.server.set_succeeded(MotionSynthesisResult(result=True))
-                        return
+                        self.global_nav_goal_reached = False
 
             if rospy.Time.now() > timeout:
                 rospy.logwarn("motion_synth -> Timeout")
                 self.server.set_aborted(MotionSynthesisResult(result=False), "Timeout")
+                self.global_nav_goal_reached = False
+                self.temporary_pose_sent = False
+                self.final_pose_sent = False
                 return
 
             self.server.publish_feedback(feedback)
