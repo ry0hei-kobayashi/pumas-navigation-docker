@@ -84,54 +84,53 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     
     while(!open_list.empty() && current_node->index != idx_goal)
     {
-        
-            current_node = open_list.top();  
-            open_list.pop();                   
-            current_node->in_closed_list = true;
+    
+        current_node = open_list.top();  
+        open_list.pop();                   
+        current_node->in_closed_list = true;
 
-            node_neighbors[0] = current_node->index + map.info.width;
-            node_neighbors[1] = current_node->index + 1;
-            node_neighbors[2] = current_node->index - map.info.width;
-            node_neighbors[3] = current_node->index - 1;
+        node_neighbors[0] = current_node->index + map.info.width;
+        node_neighbors[1] = current_node->index + 1;
+        node_neighbors[2] = current_node->index - map.info.width;
+        node_neighbors[3] = current_node->index - 1;
+        if(diagonal_paths)
+        {
+            node_neighbors[4] = current_node->index + map.info.width + 1;
+            node_neighbors[5] = current_node->index + map.info.width - 1;
+            node_neighbors[6] = current_node->index - map.info.width + 1;
+            node_neighbors[7] = current_node->index - map.info.width - 1;
+        }
+       
+        for(size_t i=0; i < node_neighbors.size(); i++)
+        {
+            if(map.data[node_neighbors[i]] != 0 || nodes[node_neighbors[i]].in_closed_list)
+                continue;
+       
+            Node* neighbor = &nodes[node_neighbors[i]];
+            float delta_g = i < 4 ? 1.0 : 1.414213562;
+            float g_value = current_node->g_value + (i < 4 ? 1.0 : 1.414213562) + cost_map.data[node_neighbors[i]];
+            float h_value;
+            int   h_value_x = node_neighbors[i]%map.info.width - idx_goal_x;
+            int   h_value_y = node_neighbors[i]/map.info.width - idx_goal_y;
             if(diagonal_paths)
+                h_value = sqrt(h_value_x*h_value_x + h_value_y*h_value_y);
+            else
+                h_value = fabs(h_value_x) + fabs(h_value_y);
+            
+            if(g_value < neighbor->g_value)
             {
-                node_neighbors[4] = current_node->index + map.info.width + 1;
-                node_neighbors[5] = current_node->index + map.info.width - 1;
-                node_neighbors[6] = current_node->index - map.info.width + 1;
-                node_neighbors[7] = current_node->index - map.info.width - 1;
+                neighbor->g_value = g_value;
+                neighbor->f_value = g_value + h_value;
+                neighbor->parent  = current_node;
             }
-           
-            for(size_t i=0; i < node_neighbors.size(); i++)
-            {
-                if(map.data[node_neighbors[i]] != 0 || nodes[node_neighbors[i]].in_closed_list)
-                    continue;
-           
-                Node* neighbor = &nodes[node_neighbors[i]];
-                float delta_g = i < 4 ? 1.0 : 1.414213562;
-                float g_value = current_node->g_value + (i < 4 ? 1.0 : 1.414213562) + cost_map.data[node_neighbors[i]];
-                float h_value;
-                int   h_value_x = node_neighbors[i]%map.info.width - idx_goal_x;
-                int   h_value_y = node_neighbors[i]/map.info.width - idx_goal_y;
-                if(diagonal_paths)
-                    h_value = sqrt(h_value_x*h_value_x + h_value_y*h_value_y);
-                else
-                    h_value = fabs(h_value_x) + fabs(h_value_y);
-                
-                if(g_value < neighbor->g_value)
-                {
-                    neighbor->g_value = g_value;
-                    neighbor->f_value = g_value + h_value;
-                    neighbor->parent  = current_node;
-                }
 
-                if(!neighbor->in_open_list)
-                {
-                    neighbor->in_open_list = true;
-                    open_list.push(neighbor);
-                }
+            if(!neighbor->in_open_list)
+            {
+                neighbor->in_open_list = true;
+                open_list.push(neighbor);
             }
-            steps++;
-        
+        }
+        steps++;
     }
     std::cout << "PathPlanner.->A* Algorithm ended after " << steps << " steps" << std::endl;
 
