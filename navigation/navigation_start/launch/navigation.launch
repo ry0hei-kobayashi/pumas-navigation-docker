@@ -201,6 +201,9 @@
     <param name="env_file_name" value="$(arg env_file_name)"/>
     <param name="add_static_obstacles" value="$(arg add_static_obstacles)"/>
   </node>
+
+  <!--motion synth node-->
+  <node name="motion_synth"  pkg="motion_synth"  type="motion_synthesis_server.py" output="screen" respawn="true"/>
   
   <!--MVN_PLN-->
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
