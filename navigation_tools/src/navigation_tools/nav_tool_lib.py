@@ -483,7 +483,7 @@ class NavModule:
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, motion_synth_end_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
+    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=False, obstacle_detection=True):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
@@ -516,15 +516,16 @@ class NavModule:
                 rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. End Pose")
                 self.motion_synth_end_pose = end_pose
 
-         if angle_correction is True:
-             self.rotate_yaw(goal)
-         else:
-             pass
 
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
          else:
              self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance)
+
+         if angle_correction is True:
+             self.rotate_yaw(goal)
+         else:
+             pass
 
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
