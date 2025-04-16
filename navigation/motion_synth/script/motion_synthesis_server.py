@@ -140,7 +140,8 @@ class MotionSynthesisServer:
         temporary_pose = copy.deepcopy(goal_pose)
 
         if goal_pose.arm_flex_joint < -1.0:
-            temporary_pose.arm_flex_joint = -0.3
+            temporary_pose.arm_flex_joint = -0.6
+            #temporary_pose.arm_flex_joint = -0.3 #hsrb
 
         return temporary_pose
 
