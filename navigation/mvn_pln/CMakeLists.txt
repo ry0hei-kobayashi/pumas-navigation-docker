@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   std_srvs
   tf
+  motion_synth
 )
 
 ## System dependencies are found with CMake's conventions

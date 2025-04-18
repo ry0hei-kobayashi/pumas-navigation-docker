@@ -8,21 +8,18 @@ from typing import Union # go_nav function
 from fractions import Fraction
 
 import rospy
+import tf
 
 from hsrlib.hsrif import HSRInterfaces
 from hsrlib.rosif import ROSInterfaces
 
-import tf
-
 from std_msgs.msg import Float32MultiArray, Bool, Empty
 from nav_msgs.msg import Path
-
 from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist
 from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
 from std_srvs.srv import Trigger
-
-
+from motion_synth.msg import Joints, StartAndEndJoints
 
 class NavModule:
     """Navigation Module for the robot"""
@@ -48,9 +45,9 @@ class NavModule:
         self.rosif = ROSInterfaces()
         
         # 8 diagonal safe point detection
-        self.distance_from_cost = 0.1
+        # self.distance_from_cost = 0.1
         self.marker_num = 0
-        self.points = []
+        # self.points = []
 
         self.global_pose = None
         self.marker = Marker()
@@ -63,6 +60,11 @@ class NavModule:
 
         self.pub_cmd_vel = rospy.Publisher('/hsrb/command_velocity', Twist, queue_size=10)
         self.pub_marker = rospy.Publisher('/nav_goal_marker', Marker, queue_size=10)
+
+        # for motion synth
+        self.motion_synth_start_pose = None
+        self.motion_synth_end_pose = None
+        self.pub_move_joint_pose = rospy.Publisher('/pumas_motion_synth/joint_pose', StartAndEndJoints, queue_size=1)
 
         rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
@@ -77,7 +79,6 @@ class NavModule:
         self.are_there_obstacles = rospy.ServiceProxy('/map_augmenter/are_there_obstacles', Trigger)
 
         rospy.sleep(1.0)
-
         self.set_navigation_type(select)
 
     def callback_global_goal_reached(self, msg):
@@ -85,9 +86,8 @@ class NavModule:
         path_plan_success = self.path_plan_client()
         if path_plan_success.success:
             rospy.loginfo("NavModule -> pathplan success")
-            self.points = []
-            self.distance_from_cost = 0.1
-            #rospy.logerr(self.points)
+            #self.points = []
+            #self.distance_from_cost = 0.1
         else:
             rospy.loginfo("NavModule -> pathplan fail")
 
@@ -103,7 +103,6 @@ class NavModule:
                 #self.go_rel(x=0.2, y=0.0, yaw=0.0, timeout=0.0, type_nav="hsr")
                 #self.go_rel(x=-0.2, y=0.0, yaw=0.0, timeout=0.0, type_nav="hsr")
                 self.recovery_from_cost()
-
                 
                 ##if len(self.points) == 0:
                 #if not self.points:
@@ -116,14 +115,12 @@ class NavModule:
             #TODO start incollision
             if msg.text == 'Cannot calculate path from start to goal point':
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
-
                 #state is goal incollision
                 #if not self.points:
                 #    self.replan_safe_point()
                 #    self.distance_from_cost += 0.2
                 #else:
                 #    self.publish_next_point()
-
             elif msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')
 
@@ -131,11 +128,11 @@ class NavModule:
         self.goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
             self.goal_reached = True
-            self.distance_from_cost = 0.1
+            #self.distance_from_cost = 0.1
 
     def callback_stop(self, msg):
         self.robot_stop = True
-        self.distance_from_cost = 0.1
+        #self.distance_from_cost = 0.1
 
     def set_navigation_type(self, type_nav):
         valid_types = ["hsr", "pumas"]
@@ -158,6 +155,7 @@ class NavModule:
         pose2d.theta = euler[2]
         return pose2d
 
+    """
     def replan_safe_point(self):
         rospy.loginfo('called replan_safe_point')
         try:
@@ -212,6 +210,7 @@ class NavModule:
             points.append(Pose2D(x, y, angle))
 
         return points
+    """
 
     def marker_plot(self, goal):
         
@@ -234,7 +233,7 @@ class NavModule:
 
     def recovery_from_cost(self):
 
-        rospy.loginfo('NavigationStatus. -> Recovery From Cost -> Rotation')
+        rospy.loginfo('NavigationStatus. -> Recovery From Dynamic Cost -> Rotation')
         #self.hsrif.tts.say('Obstacle detected.', language='en')
 
         current_orientation = self.global_pose.pose.orientation
@@ -264,10 +263,7 @@ class NavModule:
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
         self.global_goal_xyz = copy.deepcopy(goal)
-        #print("get_close self.global_goal_xyz: ", self.global_goal_xyz)
-        #self.pub_global_goal_xyz.publish(goal)
         self.send_goal(goal)
-        #rospy.sleep(1.0)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             if goal_distance:
@@ -299,14 +295,39 @@ class NavModule:
                 rospy.loginfo("Call ABS mode in hsr nav")
                 self.hsrif.omni_base.go_abs(x, y, theta, timeout)
 
-    
+    def create_arm_joint_goal(self, joint_poses):
+        joints = Joints()
+        joints.arm_lift_joint = joint_poses["arm_lift_joint"]
+        joints.arm_flex_joint = joint_poses["arm_flex_joint"]
+        joints.arm_roll_joint = joint_poses["arm_roll_joint"]
+        joints.wrist_flex_joint = joint_poses["wrist_flex_joint"]
+        joints.wrist_roll_joint = joint_poses["wrist_roll_joint"]
+        joints.head_pan_joint = joint_poses["head_pan_joint"]
+        joints.head_tilt_joint = joint_poses["head_tilt_joint"]
+        return joints
 
     def send_goal(self, goal):
-        rospy.logwarn('NavModule -> sending new goal')
-        #rospy.logwarn(goal)
+        rospy.logwarn('NavModule -> Sending New Goal')
+
+        # TODO bad code
+        if self.motion_synth_start_pose is not None or self.motion_synth_end_pose is not None:
+
+            start_and_end_joints = StartAndEndJoints()
+            start_and_end_joints.has_arm_start_pose = False
+            start_and_end_joints.has_arm_end_pose = False
+
+            if self.motion_synth_start_pose is not None:
+                start_and_end_joints.has_arm_start_pose = True
+                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+
+            if self.motion_synth_end_pose is not None:
+                start_and_end_joints.has_arm_end_pose = True
+                start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
+            self.pub_move_joint_pose.publish(start_and_end_joints)
+            rospy.logwarn('NavModule -> Sending Arm Pose')
+
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
-
 
     def move_dist_angle(self, x, yaw, timeout):
         rate = rospy.Rate(10)
@@ -319,7 +340,7 @@ class NavModule:
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
         self.pub_dist_angle.publish(goal)
-        rospy.sleep(1.0)
+        rospy.sleep(0.1)
 
         while not self.goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             attempts -= 1
@@ -341,7 +362,7 @@ class NavModule:
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
     
         self.pub_move_rel.publish(goal)
-        rospy.sleep(1.0)
+        rospy.sleep(0.1)
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             attempts -= 1
@@ -386,8 +407,8 @@ class NavModule:
         if not self.global_goal_reached:
             msg_stop = Empty()
             self.pub_robot_stop.publish(msg_stop)
-            rospy.sleep(1.0)
-        rospy.sleep(1.0)
+            rospy.sleep(0.1)
+        rospy.sleep(0.1)
 
     def rotate_yaw(self, goal_pose):
 
@@ -414,16 +435,15 @@ class NavModule:
 
     def use_obstacle_detection(self, status):
 
-        rospy.set_param('/obs_detector/use_lidar', status)
+        #rospy.set_param('/obs_detector/use_lidar', status)
         rospy.set_param('/obs_detector/use_point_cloud', status)
-        rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
+        #rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
         rospy.logwarn(f"NavModule.-> obstacle_detection use POINT CLOUD >>  {status}")
 
 
     #########################################
     ##   HSR Functions bypass with hsrif   ##
     #########################################
-
     def cancel_goal(self):
         self.hsrif.omni_base.cancel_goal()
 
@@ -446,7 +466,6 @@ class NavModule:
         self.hsrif.omni_base.go(x, y, yaw, timeout, relative)
 
     def go_pose(self, pose=Pose(Vector3(x=0.0, y=0.0, z=0.0), Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)), timeout=0.0, ref_frame_id=None):
-        
         self.hsrif.omni_base.go_pose(pose, timeout, ref_frame_id)
 
     def is_moving(self):
@@ -464,23 +483,39 @@ class NavModule:
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], pose = None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=True, obstacle_detection=True):
+    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=False, obstacle_detection=True):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
-         Pose (Dict): Final Pose <<<<<< under construction >>>>>>>
+         ms_config (Dict): {"start_pose": start_pose, "goal_pose": goal_pose}
          nav_type(pumas_nav) (str): pumas_nav -> "pumas"(default) , toyota_nav -> "hsr"
          nav_mode(pumas_nav) (str): "abs" or "rel", default -> abs
          nav_timeout(pumas_nav) (Float):50.0 -> 50s, 0 -> infinity
          goal_distance(pumas_nav, only abs mode) (Float): goal position - goal_distance
          """
-         rospy.logerr(goal)
+         rospy.loginfo(goal)
 
          # under constructoin: obstacle_detection (lidar and point_cloud) can set to only on/off. 
          if obstacle_detection:
              self.use_obstacle_detection(status=True)
          else:
              self.use_obstacle_detection(status=False)
+
+         #motion_synth
+         if motion_synth_pose is not None:
+             start_pose = motion_synth_pose.get("start_pose")
+             rospy.logerr(start_pose)
+             end_pose = motion_synth_pose.get("goal_pose")
+             rospy.logerr(end_pose)
+             self.use_obstacle_detection(status=False) #TODO
+
+             if start_pose:
+                rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. Start Pose")
+                self.motion_synth_start_pose = start_pose
+             if end_pose:
+                rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. End Pose")
+                self.motion_synth_end_pose = end_pose
+
 
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
@@ -492,8 +527,6 @@ class NavModule:
          else:
              pass
 
-
-
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
     nav = NavModule(select="pumas")
@@ -504,7 +537,6 @@ if __name__ == "__main__":
     #nav.go_abs(2.0, 0, 0, 0, 'pumas')#absolute by pumas
     #goal = Pose2D(1.0, 1.3, 1.57)
     #goal = Pose2D(2.0, 3.0, -1.57)
-    goal = Pose2D(0.0, 0.0, 0.0)
     #goal = Pose2D(2.30, -0.15, -1.57) #task box
     #goal = Pose2D(2.74, -0.17, -1.57) #unknown box
 
@@ -512,12 +544,48 @@ if __name__ == "__main__":
     #goal = Pose2D(-0.14, 0.22, -1.57) #drawer left
     #goal = Pose2D(0.95, -0.23, -1.57) #kitchen
     #goal = Pose2D(1.65, -0.20, -1.57) #trayb
-    #goal = Pose2D(1.53, -0.20, -1.57) #traya
-    #goal = Pose2D(1.15, -0.20, -1.57) #orien
+    #goal = Pose2D(1.53, -0.20, -1.57) #traya #goal = Pose2D(1.15, -0.20, -1.57) #orien
     #goal = Pose2D(-0.54, 0.90, 1.30) #search0
 
 
-    goal = Pose2D(1.77, 2.0,1.57) 
-    nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
+    #goal = Pose2D(0.0, 0.0, 0.0)
+    #goal = Pose2D(2.0, -1.5, 1.57) 
+    #nav.nav_goal(goal, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
+    #nav.nav_goal(goal, nav_type="hsr", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
+    #while True:
+    #goal = Pose2D(0.8, 1.32, 0.0)
+    goal = Pose2D(0.5, 3.8, 0.0)
+    goal = Pose2D(0.8, 1.32, 0.0)
 
+    #goal = Pose2D(.0, .0, 0.0)
+    #goal = Pose2D(3.0, 0.8, 0.0)
+    #goal = Pose2D(5.3, 4.4, 0.0)
+    
+    start_pose = {
+        "arm_lift_joint": 0.0,
+        "arm_flex_joint": np.deg2rad(0.0),
+        "arm_roll_joint": np.deg2rad(0.0),
+        "wrist_flex_joint": np.deg2rad(-90.0),
+        "wrist_roll_joint": 0.0,
+        "head_pan_joint": 0.0,
+        "head_tilt_joint": np.deg2rad(0.0),
+    }
+    goal_pose = {
+        "arm_lift_joint": 0.4,
+        "arm_flex_joint": np.deg2rad(-90.0),
+        "arm_roll_joint": np.deg2rad(0.0),
+        "wrist_flex_joint": np.deg2rad(-90.0),
+        "wrist_roll_joint": 0.0,
+        "head_pan_joint": 0.0,
+        "head_tilt_joint": np.deg2rad(0.0),
+    }
+    
+    #ms_config = {"start_pose": "auto", "goal_pose": goal_pose}
+    ms_config = {"start_pose": start_pose, "goal_pose": goal_pose}
+    
+    #nav.nav_goal(goal, nav_type="hsr", nav_mode="rel", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
+    #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
+    #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
+    nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
+    

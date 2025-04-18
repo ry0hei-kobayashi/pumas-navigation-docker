@@ -3,7 +3,7 @@
 #include <controller_manager_msgs/ListControllers.h>
 #include <control_msgs/JointTrajectoryControllerState.h>
 #include <trajectory_msgs/JointTrajectory.h>
-#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <ros/ros.h>
 #include "actionlib_msgs/GoalStatus.h"
 
@@ -12,9 +12,9 @@ float goalPan;
 
 bool isNewData;
 
-std_msgs::Float64MultiArray msg_hd_cp;
+std_msgs::Float32MultiArray msg_hd_cp;
 
-void headGoalPoseCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
+void headGoalPoseCallback(const std_msgs::Float32MultiArray::ConstPtr& msg)
 {
   isNewData = true;
         goalPan = msg->data[0];
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
         ros::Rate loop(30);
 
         pub_hsr_head_gp = n.advertise<trajectory_msgs::JointTrajectory>("/hsrb/head_trajectory_controller/command", 10);
-        pub_pumas_head_cp = n.advertise<std_msgs::Float64MultiArray>("/hardware/head/current_pose", 10);
+        pub_pumas_head_cp = n.advertise<std_msgs::Float32MultiArray>("/hardware/head/current_pose", 10);
 
         sub_pumas_head_gp = n.subscribe("/hardware/head/goal_pose", 10, headGoalPoseCallback);
         sub_hsr_head_cp = n.subscribe("/hsrb/head_trajectory_controller/state", 10, headCurrentPoseCallback);
