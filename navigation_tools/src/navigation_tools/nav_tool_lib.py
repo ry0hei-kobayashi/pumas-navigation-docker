@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 # -*- coding: utf-8 -*-
 
 import copy
@@ -554,11 +554,10 @@ if __name__ == "__main__":
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=True, obstacle_detection=False)
 
     #while True:
-    #goal = Pose2D(0.8, 1.32, 0.0)
     goal = Pose2D(0.5, 3.8, 0.0)
-    goal = Pose2D(0.8, 1.32, 0.0)
+    #goal = Pose2D(0.8, 1.32, 0.0)
 
-    #goal = Pose2D(.0, .0, 0.0)
+    goal = Pose2D(.0, .0, 0.0)
     #goal = Pose2D(3.0, 0.8, 0.0)
     #goal = Pose2D(5.3, 4.4, 0.0)
     
