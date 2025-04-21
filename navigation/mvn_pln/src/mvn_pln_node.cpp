@@ -423,14 +423,23 @@ int main(int argc, char** argv)
                 break;
 
             case SM_WAIT_FOR_MOVE_FINISHED:
-                get_robot_position(listener, robot_x, robot_y, robot_a);
-                error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
-                ROS_WARN_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
+                //motion synth add by r.k 2025/04/10
+                if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+                {
+                    ROS_WARN_THROTTLE(1.0, "MvnPln.->Arm motion finished successfully.");
+                }
+                else
+                {
+                    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
+                }
 
                 //navigation goal
                 //if(error < proximity_criterion && !near_goal_sent)
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
+                get_robot_position(listener, robot_x, robot_y, robot_a);
+                error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
+                ROS_WARN_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
                 if (error < proximity_criterion)
                 {
                     near_goal_counter++;
@@ -444,6 +453,9 @@ int main(int argc, char** argv)
                     if (near_goal_counter > 30) //if rate is 10, 3s
                     {
                         ROS_ERROR("MvnPln.->Goal too close for long time. Forcing final angle correction.");
+
+                        //motion_synth_cancel
+
                         state = SM_CORRECT_FINAL_ANGLE;
                     }
                     std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
@@ -476,15 +488,6 @@ int main(int argc, char** argv)
                     state = SM_CALCULATE_PATH;
                 }
 
-                //motion synth add by r.k 2025/04/10
-                if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-                {
-                    ROS_WARN_THROTTLE(1.0, "MvnPln.->Arm motion finished successfully.");
-                }
-                else
-                {
-                    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
-                }
                 break;
 
             case SM_CORRECT_FINAL_ANGLE: //TODO? angle error
@@ -540,22 +543,22 @@ int main(int argc, char** argv)
                 }
                 */
 
-                if (target_arm_pose.has_arm_end_pose)
-                {
-                    if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-                    {
-                        ROS_INFO("MvnPln.->Arm motion completed successfully.");
-                    }
-                    else if(ms_ac->getState().isDone())
-                    {
-                        ROS_WARN("MvnPln.->Arm motion completed with state: %s", ms_ac->getState().toString().c_str());
-                    }
-                    else
-                    {
-                        ROS_INFO_THROTTLE(1.0, "MvnPln.->Waiting for arm motion to complete");
-                        break;
-                    }
-                }
+                /* if (target_arm_pose.has_arm_end_pose) */
+                /* { */
+                /*     if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED) */
+                /*     { */
+                /*         ROS_INFO("MvnPln.->Arm motion completed successfully."); */
+                /*     } */
+                /*     else if(ms_ac->getState().isDone()) */
+                /*     { */
+                /*         ROS_WARN("MvnPln.->Arm motion completed with state: %s", ms_ac->getState().toString().c_str()); */
+                /*     } */
+                /*     else */
+                /*     { */
+                /*         ROS_INFO_THROTTLE(1.0, "MvnPln.->Waiting for arm motion to complete"); */
+                /*         break; */
+                /*     } */
+                /* } */
 
                 std::cout << "MvnPln.->TASK FINISHED." << std::endl;
                 current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);

@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-import rospy
 import copy
 import numpy as np
-import actionlib
-from actionlib_msgs.msg import GoalStatus
-from geometry_msgs.msg import PoseStamped
-from motion_synth.msg import MotionSynthesisAction, MotionSynthesisResult, MotionSynthesisFeedback
-from std_msgs.msg import Float32MultiArray, Float32
-from nav_msgs.msg import Path
+
+import rospy
 import tf
+import actionlib
 
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float32MultiArray, Float32
+from nav_msgs.msg import Path
+from actionlib_msgs.msg import GoalStatus
+from motion_synth.msg import MotionSynthesisAction, MotionSynthesisResult, MotionSynthesisFeedback
+
 
 class MotionSynthesisServer:
     def __init__(self):
@@ -37,6 +39,8 @@ class MotionSynthesisServer:
 
         self.global_nav_goal_reached = False
         self.nav_status_sub = rospy.Subscriber("/navigation/status", GoalStatus, self.nav_status_callback)
+
+        #rospy.get_param("/simple_move/move_head")
 
     def wait_for_get_path(self):
         rospy.loginfo("motion_synth -> Waiting for get path")
@@ -102,7 +106,11 @@ class MotionSynthesisServer:
         self.current_pose = [position.x, position.y, yaw]
 
     def send_pose(self, joints):
+
         rospy.loginfo("motion_synth -> Moving Arm State")
+
+        #disable move_head
+        rospy.set_param("/simple_move/move_head", False)
 
         lift_msg = Float32()
         lift_msg.data = joints.arm_lift_joint
@@ -124,6 +132,10 @@ class MotionSynthesisServer:
         self.lift_pub.publish(lift_msg)
         self.arm_pub.publish(arm_msg)
         self.head_pub.publish(head_msg)
+
+        #disable move_head
+        rospy.sleep(2.0) #TODO
+        rospy.set_param("/simple_move/move_head", True)
 
     #TODO add another rule
     def check_self_collision_risk(self, goal_pose):
@@ -160,7 +172,6 @@ class MotionSynthesisServer:
 
         if goal.apply_start_pose: 
             self.send_pose(goal.start_pose)
-            rospy.sleep(1.0)
 
         temporary_pose = None
         chk_self_collision = self.check_self_collision_risk(goal.goal_pose)
@@ -188,11 +199,11 @@ class MotionSynthesisServer:
                     if chk_self_collision:
                         self.send_pose(temporary_pose)
                         temporary_pose_sent = True
-                        rospy.sleep(1)
+                        #rospy.sleep(1)
                     else:
                         self.send_pose(goal.goal_pose)
                         final_pose_sent = True
-                        rospy.sleep(1)
+                        #rospy.sleep(1)
                     triggered = True
 
             if triggered:
@@ -203,7 +214,7 @@ class MotionSynthesisServer:
                     if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO adjust yaw
                         rospy.logwarn("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
-                        rospy.sleep(1)
+                        #rospy.sleep(1)
                         final_pose_sent = True
                         self.global_nav_goal_reached = False
 

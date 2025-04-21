@@ -106,6 +106,7 @@
     <!--TODO angle_tolerance-->
     <!--param name="angle_tolerance" value="0.03"/-->
 
+    <param name="move_head" value="true"/>
     <param name="use_pot_fields" value="$(arg use_pot_fields)"/>
     <param name="cmd_vel_name" value="$(arg cmd_vel_name)"/>
   </node>
