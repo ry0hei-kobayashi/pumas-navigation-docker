@@ -3,7 +3,7 @@
 #include <controller_manager_msgs/ListControllers.h>
 #include <control_msgs/JointTrajectoryControllerState.h>
 #include <trajectory_msgs/JointTrajectory.h>
-#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <ros/ros.h>
 #include "actionlib_msgs/GoalStatus.h"
 
@@ -12,9 +12,9 @@ float goalPan;
 
 bool isNewData;
 
-std_msgs::Float64MultiArray msg_hd_cp;
+std_msgs::Float32MultiArray msg_hd_cp;
 
-void headGoalPoseCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
+void headGoalPoseCallback(const std_msgs::Float32MultiArray::ConstPtr& msg)
 {
   isNewData = true;
         goalPan = msg->data[0];
@@ -35,10 +35,6 @@ void headGoalPoseCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
 
 void headCurrentPoseCallback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg)
 {
-        // std::cout << "current pose: [  pan,         tilt  ]" << std::endl
-        //      << "            " << msg->actual.positions[1]
-        //      << " " << msg->actual.positions[0] << std::endl;
-
         msg_hd_cp.data.resize(2);
         msg_hd_cp.data[0] = msg->actual.positions[1]; // Current pan pose
         msg_hd_cp.data[1] = msg->actual.positions[0]; // current tilt pose
@@ -57,7 +53,6 @@ void nav_msg_Callback(const actionlib_msgs::GoalStatus::ConstPtr& msg)
   }
 }
 
-
 int main(int argc, char **argv)
 {
         std::cout << std::endl << "--------------------->" << std::endl;
@@ -66,7 +61,6 @@ int main(int argc, char **argv)
 
         trajectory_msgs::JointTrajectory traj;
         controller_manager_msgs::ListControllers list_controllers;
-
 
         // initalize ROS publisher
         ros::NodeHandle n;
@@ -80,8 +74,7 @@ int main(int argc, char **argv)
         ros::Rate loop(30);
 
         pub_hsr_head_gp = n.advertise<trajectory_msgs::JointTrajectory>("/hsrb/head_trajectory_controller/command", 10);
-        pub_pumas_head_cp = n.advertise<std_msgs::Float64MultiArray>("/hardware/head/current_pose", 10);
-
+        pub_pumas_head_cp = n.advertise<std_msgs::Float32MultiArray>("/hardware/head/current_pose", 10);
 
         sub_pumas_head_gp = n.subscribe("/hardware/head/goal_pose", 10, headGoalPoseCallback);
         sub_hsr_head_cp = n.subscribe("/hsrb/head_trajectory_controller/state", 10, headCurrentPoseCallback);
@@ -90,12 +83,10 @@ int main(int argc, char **argv)
         // make sure the controller is running
         client = n.serviceClient<controller_manager_msgs::ListControllers>("/hsrb/controller_manager/list_controllers");
 
-
         // wait to establish connection between the controller
         while (pub_hsr_head_gp.getNumSubscribers() == 0) {
                 ros::Duration(0.1).sleep();
         }
-
 
         bool running = false;
         while (running == false) {
@@ -109,7 +100,6 @@ int main(int argc, char **argv)
                         }
                 }
         }
-
 
         traj.joint_names.push_back("head_pan_joint");
         traj.joint_names.push_back("head_tilt_joint");
@@ -133,19 +123,15 @@ int main(int argc, char **argv)
 
                 // publish ROS message
                 if(pub_hsr_head_gp.getNumSubscribers() > 0 && isNewData)
-		{
-		  pub_hsr_head_gp.publish(traj);
-		  isNewData = false;
-		}
-
+        {
+          pub_hsr_head_gp.publish(traj);
+          isNewData = false;
+        }
                 if(pub_pumas_head_cp.getNumSubscribers() > 0)
                         pub_pumas_head_cp.publish(msg_hd_cp);
-
-		
                 loop.sleep();
                 ros::spinOnce();
         }
-
 
         return 0;
 }
