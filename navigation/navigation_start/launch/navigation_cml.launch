@@ -65,10 +65,11 @@
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
     <node name="arm" pkg="arm" type="arm_node" output="screen">
-      <rosparam param="torso_goal_pose">0.35</rosparam> <!--arm_lift, meter-->
+      <rosparam param="torso_goal_pose">0.32</rosparam> <!--arm_lift, meter-->
       <!--rosparam param="torso_goal_pose">0.35</rosparam--> <!--arm_lift, meter-->
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
-      <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
+      <!--rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam-->
+      <rosparam param="arm_goal_pose">[-0.25, 2.37, -1.56, -0.03]</rosparam>
     </node>
 
   </group>
@@ -176,4 +177,6 @@
   <!--call twice-->
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node2" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
   
+  <!--head pose tmp cancel dynamically, using for motion_synth-->
+  <node name="tmp_head_pose_cancel_node"  pkg="navigation_tools"  type="tmp_head_pose_canceller.py" output="screen" respawn="true"/>
 </launch>

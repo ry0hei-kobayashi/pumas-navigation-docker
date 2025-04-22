@@ -2,6 +2,7 @@
 import copy
 import numpy as np
 
+from std_msgs.msg import Empty
 import rospy
 import tf
 import actionlib
@@ -13,10 +14,8 @@ from nav_msgs.msg import Path
 from actionlib_msgs.msg import GoalStatus
 from motion_synth.msg import MotionSynthesisAction, MotionSynthesisResult, MotionSynthesisFeedback
 
-
 class MotionSynthesisServer:
     def __init__(self):
-        rospy.init_node("motion_synth_server_for_pumas")
 
         self.server = actionlib.SimpleActionServer(
             "/motion_synth",
@@ -30,6 +29,7 @@ class MotionSynthesisServer:
         self.arm_pub = rospy.Publisher("/hardware/arm/goal_pose", Float32MultiArray, queue_size=1)
         self.lift_pub = rospy.Publisher("/hardware/torso/goal_pose", Float32, queue_size=1)
         self.head_pub = rospy.Publisher("/hardware/head/goal_pose", Float32MultiArray, queue_size=1)
+        self.tmp_head_pose_canceller = rospy.Publisher("/navigation/tmp_head_pose_cancel", Empty, queue_size=1)
 
         self.joint_states = {}
         self.joints_cb = rospy.Subscriber("/hsrb/joint_states", JointState, self.joint_state_callback)
@@ -39,8 +39,6 @@ class MotionSynthesisServer:
 
         self.global_nav_goal_reached = False
         self.nav_status_sub = rospy.Subscriber("/navigation/status", GoalStatus, self.nav_status_callback)
-
-        #rospy.get_param("/simple_move/move_head")
 
     def wait_for_get_path(self):
         rospy.loginfo("motion_synth -> Waiting for get path")
@@ -110,7 +108,10 @@ class MotionSynthesisServer:
         rospy.loginfo("motion_synth -> Moving Arm State")
 
         #disable move_head
-        rospy.set_param("/simple_move/move_head", False)
+        #rospy.set_param("/simple_move/move_head", False)
+
+        #TODO disable move_head
+        #self.tmp_head_pose_canceller.publish(Empty())
 
         lift_msg = Float32()
         lift_msg.data = joints.arm_lift_joint
@@ -133,9 +134,9 @@ class MotionSynthesisServer:
         self.arm_pub.publish(arm_msg)
         self.head_pub.publish(head_msg)
 
-        #disable move_head
-        rospy.sleep(2.0) #TODO
-        rospy.set_param("/simple_move/move_head", True)
+        #enable move_head
+        #rospy.sleep(2.0) #TODO
+        #rospy.set_param("/simple_move/move_head", True)
 
     #TODO add another rule
     def check_self_collision_risk(self, goal_pose):
@@ -152,7 +153,7 @@ class MotionSynthesisServer:
         temporary_pose = copy.deepcopy(goal_pose)
 
         if goal_pose.arm_flex_joint < -1.0:
-            temporary_pose.arm_flex_joint = -0.6
+            temporary_pose.arm_flex_joint = -0.6 #hsrc
             #temporary_pose.arm_flex_joint = -0.3 #hsrb
 
         return temporary_pose
@@ -199,11 +200,9 @@ class MotionSynthesisServer:
                     if chk_self_collision:
                         self.send_pose(temporary_pose)
                         temporary_pose_sent = True
-                        #rospy.sleep(1)
                     else:
                         self.send_pose(goal.goal_pose)
                         final_pose_sent = True
-                        #rospy.sleep(1)
                     triggered = True
 
             if triggered:
@@ -214,7 +213,6 @@ class MotionSynthesisServer:
                     if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO adjust yaw
                         rospy.logwarn("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
-                        #rospy.sleep(1)
                         final_pose_sent = True
                         self.global_nav_goal_reached = False
 
@@ -236,6 +234,7 @@ class MotionSynthesisServer:
             rate.sleep()
 
 if __name__ == "__main__":
+    rospy.init_node("motion_synth_server_for_pumas")
     MotionSynthesisServer()
     rospy.spin()
 
