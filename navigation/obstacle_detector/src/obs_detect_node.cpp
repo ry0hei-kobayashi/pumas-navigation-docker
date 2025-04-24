@@ -263,7 +263,6 @@ bool callback_obstacle_in_front(std_srvs::Trigger::Request& req, std_srvs::Trigg
 }
 
 
-
 visualization_msgs::MarkerArray get_force_arrow_markers(geometry_msgs::Vector3& f1, geometry_msgs::Vector3& f2)
 {
     visualization_msgs::MarkerArray markers;
@@ -394,7 +393,6 @@ int main(int argc, char** argv)
     tf_listener = new tf::TransformListener();
     nh = &n;
 
-
     float no_sensor_data_timeout = 0.5;
     ros::param::param<bool >("~debug", debug, false);
     ros::param::param<bool >("~use_pot_fields", use_pot_fields, false);
@@ -430,10 +428,6 @@ int main(int argc, char** argv)
     std::cout << (use_cloud ? point_cloud_topic : "" ) << " " << (use_lidar ? laser_scan_topic : "") << std::endl;
     boost::shared_ptr<sensor_msgs::PointCloud2 const> ptr_cloud_temp; 
     boost::shared_ptr<sensor_msgs::LaserScan const>   ptr_lidar_temp;
-    //if(use_cloud) ptr_cloud_temp = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic,ros::Duration(10.0));
-    //if(use_lidar) ptr_lidar_temp = ros::topic::waitForMessage<sensor_msgs::LaserScan>  (laser_scan_topic, ros::Duration(10.0));
-    //if(use_cloud && ptr_cloud_temp == NULL) return -1;
-    //if(use_lidar && ptr_lidar_temp == NULL) return -1;
     
     for(int i=0; i<10 && use_cloud && ptr_cloud_temp==NULL; i++)
         ptr_cloud_temp = ros::topic::waitForMessage<sensor_msgs::PointCloud2>(point_cloud_topic,ros::Duration(1.0));
@@ -473,14 +467,13 @@ int main(int argc, char** argv)
         
     while(ros::ok())
     {
-
-	// add by rk 2024/8/25 obstacle detectionをon offする 
+        // add by rk 2024/8/25 obstacle detectionをon offする 
         bool current_cloud_status;
         bool current_lidar_status;
         ros::param::get("~use_point_cloud", current_cloud_status);
         ros::param::get("~use_lidar", current_lidar_status);
-
-	//lidar
+    
+        //lidar
         if (use_lidar != current_lidar_status)
         {
             use_lidar = current_lidar_status;
@@ -492,7 +485,7 @@ int main(int argc, char** argv)
                 ROS_WARN("ObsDetector.->Lidar subscription disabled.");
             }
         }
-	//point cloud
+        //point cloud
         if (use_cloud != current_cloud_status)
         {
             use_cloud = current_cloud_status;
@@ -505,8 +498,7 @@ int main(int argc, char** argv)
             }
         }
 
-
-	//obstacle detectionがenableの時，障害物を回避する, pumas original
+        //obstacle detectionがenableの時，障害物を回避する, pumas original
         if(enable)
         {
             msg_collision_risk.data = collision_risk_lidar || collision_risk_cloud;
@@ -523,14 +515,13 @@ int main(int argc, char** argv)
 
                 pub_pot_fields_rej.publish(msg_rejection_force);
                 pub_pot_fields_mrk.publish(get_force_arrow_markers(rejection_force_lidar, rejection_force_cloud));
-
-		//for visualize bbox
-		visualization_msgs::Marker bounding_box_marker = createBoundingBoxMarker();
+            
+                //for visualize bbox
+                visualization_msgs::Marker bounding_box_marker = createBoundingBoxMarker();
                 pub_bounding_box.publish(bounding_box_marker);
-		//for visualize pot fields
-      	        visualization_msgs::MarkerArray pot_field_markers = createPotFieldMarkers(rejection_force_lidar, rejection_force_cloud);
-	        pub_pot_fields.publish(pot_field_markers);
-
+                //for visualize pot fields
+                visualization_msgs::MarkerArray pot_field_markers = createPotFieldMarkers(rejection_force_lidar, rejection_force_cloud);
+                pub_pot_fields.publish(pot_field_markers);
             }
 
             //if(use_lidar  && no_data_lidar_counter++ > no_sensor_data_timeout*RATE)

@@ -92,7 +92,6 @@ class MotionSynthesisServer:
             #abs(goal_joints.head_pan_joint - self.get_joint_positions("head_pan_joint")),
             #abs(goal_joints.head_tilt_joint - self.get_joint_positions("head_tilt_joint")),
         ]
-        #print("joint_pose_diff", diffs)
         return all(d < threshold for d in diffs)
 
     def global_pose_callback(self, msg):
@@ -142,14 +141,12 @@ class MotionSynthesisServer:
     def check_self_collision_risk(self, goal_pose):
 
         if goal_pose.arm_flex_joint < -1.0:
-            #rospy.logerr("self collision")
             return True
         
-        rospy.logerr("no self collision")
         return False
 
     def create_temporary_pose(self, goal_pose):
-        #if end_pose is in collision
+        # if end_pose is in collision
         temporary_pose = copy.deepcopy(goal_pose)
 
         if goal_pose.arm_flex_joint < -1.0:
@@ -165,10 +162,8 @@ class MotionSynthesisServer:
         feedback = MotionSynthesisFeedback()
         triggered = False
         arm_start_position = int(self.path_len * 0.75)
-        rospy.logwarn(f"motion_synth -> motion_start_timing point is {arm_start_position}")
+        rospy.loginfo(f"motion_synth -> motion_start_timing point is {arm_start_position}")
 
-        #timeout = rospy.Time.now() + rospy.Duration(20.0) #TODO adjust time
-        #timeout = rospy.Time.now() + rospy.Duration(10000.0)
         rate = rospy.Rate(10)
 
         if goal.apply_start_pose: 
@@ -177,7 +172,7 @@ class MotionSynthesisServer:
         temporary_pose = None
         chk_self_collision = self.check_self_collision_risk(goal.goal_pose)
         if chk_self_collision:
-            rospy.logerr("motion_synth -> Detect Self Collision Pose, Using TMP Arm Pose")
+            rospy.logwarn("motion_synth -> Detect Self Collision Pose, Using TMP Arm Pose")
             temporary_pose = self.create_temporary_pose(goal.goal_pose)
 
         temporary_pose_sent = False
@@ -207,11 +202,11 @@ class MotionSynthesisServer:
 
             if triggered:
                 if temporary_pose_sent and not final_pose_sent:
-                    yaw_error = abs(self.current_pose[2] - goal.goal_location.theta)
+                    yaw_error = abs(self.current_pose[2] - goal.goal_location.theta) #yawがgoalに近づいたら最終ポーズを送信
                     if yaw_error > np.pi:
                         yaw_error = 2 * np.pi - yaw_error
                     if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO adjust yaw
-                        rospy.logwarn("motion_synth -> Reached Global Nav Goal, sending final pose")
+                        rospy.loginfo("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
                         final_pose_sent = True
                         self.global_nav_goal_reached = False
@@ -221,14 +216,6 @@ class MotionSynthesisServer:
                     rospy.loginfo("motion_synth -> Final Arm Pose Reached")
                     self.server.set_succeeded(MotionSynthesisResult(result=True))
                     return
-
-            # if rospy.Time.now() > timeout:
-            #     rospy.logerr("motion_synth -> Timeout")
-            #     self.server.set_aborted(MotionSynthesisResult(result=False), "Timeout")
-            #     self.global_nav_goal_reached = False
-            #     self.temporary_pose_sent = False
-            #     self.final_pose_sent = False
-            #     return
 
             self.server.publish_feedback(feedback)
             rate.sleep()

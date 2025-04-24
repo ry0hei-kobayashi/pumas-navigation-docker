@@ -333,7 +333,7 @@ int main(int argc, char** argv)
     float global_error = 0;
     while(ros::ok())
     {
-        //update dinamically
+        //update dynamically
         ros::param::get("~move_head", move_head);
 
         if(stop)
