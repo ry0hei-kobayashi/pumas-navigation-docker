@@ -6,7 +6,7 @@ from std_msgs.msg import Empty
 class HeadPoseCanceller:
     def __init__(self):
         rospy.Subscriber("/navigation/tmp_head_pose_cancel", Empty, self.callback)
-        rospy.loginfo("nav_tools->HeadPoseCanceller is ready.")
+        rospy.loginfo("nav_tools->TMPHeadPoseCanceller is ready.")
 
     def callback(self, msg):
         rospy.logwarn("nav_tools->Temporary move_head_canceller activated!!!")

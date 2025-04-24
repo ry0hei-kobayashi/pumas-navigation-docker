@@ -35,7 +35,7 @@ class NavModule:
     def __init__(self, select="hsr"):
 
         if self.__initialized:
-            rospy.logwarn("NavModule -> called class initializaion")
+            rospy.loginfo("NavModule -> called class initializaion")
             return
         self.global_goal_reached = True
         self.goal_reached = True
@@ -139,7 +139,7 @@ class NavModule:
         if type_nav in valid_types:
             self.navigation_setter = type_nav
         else:
-            rospy.logerr("Invalid navigation mode")
+            rospy.logerr("NavModule.->Invalid navigation mode")
         rospy.loginfo(f"USING {self.navigation_setter.upper()} NAVIGATION BY DEFAULT")
 
 
@@ -241,7 +241,7 @@ class NavModule:
         opposite_yaw = current_yaw + math.pi
 
         twist = Twist()
-        twist.angular.z = 0.5 if opposite_yaw > current_yaw else -0.5
+        twist.angular.z = 0.5 if opposite_yaw > current_yaw else - 0.5
         rate = rospy.Rate(10)
         duration = abs(opposite_yaw - current_yaw) / 0.5
 
@@ -252,6 +252,7 @@ class NavModule:
         # Stop rotation
         twist.angular.z = 0.0
         self.pub_cmd_vel.publish(twist)
+        rospy.sleep(0.1)
         
 
     def get_close(self, x, y, yaw, timeout, goal_distance=None):
@@ -307,7 +308,7 @@ class NavModule:
         return joints
 
     def send_goal(self, goal):
-        rospy.logwarn('NavModule -> Sending New Goal')
+        rospy.logwarn('NavModule -> Sending Nav Goal')
 
         # TODO bad code
         if self.motion_synth_start_pose is not None or self.motion_synth_end_pose is not None:
@@ -324,7 +325,7 @@ class NavModule:
                 start_and_end_joints.has_arm_end_pose = True
                 start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
             self.pub_move_joint_pose.publish(start_and_end_joints)
-            rospy.logwarn('NavModule -> Sending Arm Pose')
+            rospy.logwarn('NavModule -> Sending Arm Goal')
 
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
@@ -432,14 +433,11 @@ class NavModule:
 
         self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal_pose.theta - theta , 1.0)
 
-
     def use_obstacle_detection(self, status):
-
         #rospy.set_param('/obs_detector/use_lidar', status)
         rospy.set_param('/obs_detector/use_point_cloud', status)
         #rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
-        rospy.logwarn(f"NavModule.-> obstacle_detection use POINT CLOUD >>  {status}")
-
+        rospy.loginfo(f"NavModule.-> obstacle_detection use POINT CLOUD >>  {status}")
 
     #########################################
     ##   HSR Functions bypass with hsrif   ##
@@ -504,16 +502,16 @@ class NavModule:
          #motion_synth
          if motion_synth_pose is not None:
              start_pose = motion_synth_pose.get("start_pose")
-             rospy.logerr(start_pose)
+             rospy.loginfo(start_pose)
              end_pose = motion_synth_pose.get("goal_pose")
-             rospy.logerr(end_pose)
+             rospy.loginfo(end_pose)
              self.use_obstacle_detection(status=False) #TODO
 
              if start_pose:
-                rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. Start Pose")
+                rospy.loginfo(f"NavModule. -> Enable MotionSynth for PumasNav. Start Pose -> {start_pose}")
                 self.motion_synth_start_pose = start_pose
              if end_pose:
-                rospy.logwarn("NavModule. -> Enable MotionSynth for PumasNav. End Pose")
+                rospy.loginfo(f"NavModule. -> Enable MotionSynth for PumasNav. End Pose -> {end_pose}")
                 self.motion_synth_end_pose = end_pose
 
 
