@@ -5,7 +5,7 @@
 bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map,
                       geometry_msgs::Pose& start_pose, geometry_msgs::Pose& goal_pose, bool diagonal_paths, nav_msgs::Path& result_path)
 {
-    std::cout << "PathCalculator.-> Calculating by A* from " << start_pose.position.x << "  ";
+    std::cout << "PathPlanner.-> Calculating by A* from " << start_pose.position.x << "  ";
     std::cout << start_pose.position.y << "  to " << goal_pose.position.x << "  " << goal_pose.position.y << std::endl;
 
     int idx_start_x;
@@ -149,7 +149,7 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
 	current_node = current_node->parent;
     }
     
-    std::cout << "PathCalculator.->Resulting path by A* has " << result_path.poses.size() << " points." << std::endl;
+    std::cout << "PathPlanner.->Resulting path by A* has " << result_path.poses.size() << " points." << std::endl;
     return true;
 }
 
@@ -182,7 +182,7 @@ nav_msgs::Path PathPlanner::SmoothPath(nav_msgs::Path& path, float weight_data, 
             newPath.poses[i].pose.position = new_p;
         }
     }
-    std::cout << "PathCalculator.->Smoothing finished after " << attempts << " attempts" <<  std::endl;
+    std::cout << "PathPlanner.->Smoothing finished after " << attempts << " attempts" <<  std::endl;
     return newPath;
 }
 

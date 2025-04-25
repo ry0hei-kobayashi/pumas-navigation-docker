@@ -56,8 +56,8 @@
   <!--set same param max_x-->
 
   <!--obstacle reaction-->
-  <arg name="pot_fields_d0" default="0.55"/>
-  <arg name="pot_fields_k_rej" default="2.0"/>
+  <arg name="pot_fields_d0" default="0.5"/>
+  <arg name="pot_fields_k_rej" default="1.5"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
    
@@ -65,10 +65,10 @@
     <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
     <node name="arm" pkg="arm" type="arm_node" output="screen">
-      <rosparam param="torso_goal_pose">0.35</rosparam> <!--arm_lift, meter-->
-      <!--rosparam param="torso_goal_pose">0.35</rosparam--> <!--arm_lift, meter-->
+      <rosparam param="torso_goal_pose">0.26</rosparam> <!--arm_lift, meter-->
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
-      <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
+      <!--rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam-->
+      <rosparam param="arm_goal_pose">[-0.45, 2.54, -1.57, -0.00]</rosparam>
     </node>
 
   </group>
@@ -176,4 +176,6 @@
   <!--call twice-->
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node2" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
   
+  <!--head pose tmp cancel dynamically, using for motion_synth-->
+  <node name="tmp_head_pose_cancel_node"  pkg="navigation_tools"  type="tmp_head_pose_canceller.py" output="screen" respawn="true"/>
 </launch>

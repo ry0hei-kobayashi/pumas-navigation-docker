@@ -14,7 +14,6 @@
 #include "motion_synth/StartAndEndJoints.h"
 #include "motion_synth/MotionSynthesisAction.h"
 
-
 #define RATE 10
 
 #define SM_INIT 0
@@ -39,18 +38,18 @@ bool collision_risk = false;
 bool  patience = true;
 actionlib_msgs::GoalStatus simple_move_goal_status;
 int simple_move_status_id = 0;
+
 bool nav_goal_received = false;
-bool waiting_for_task = false;
-
 geometry_msgs::Pose global_goal;
+std::string base_link_name = "base_footprint";
 
-bool arm_goal_reached = false;
 bool arm_goal_received = false;
+bool arm_goal_reached = false;
 bool has_arm_start_pose = false;
 bool has_arm_end_pose = false;
 motion_synth::StartAndEndJoints target_arm_pose;
 
-std::string base_link_name = "base_footprint";
+
 void callback_general_stop(const std_msgs::Empty::ConstPtr& msg)
 {
     std::cout << "MvnPln.->General Stop signal received" << std::endl;
@@ -136,13 +135,14 @@ int publish_status(int status, int id, std::string text, ros::Publisher& pub)
 
 int main(int argc, char** argv)
 {
-    std::cout << "INITIALIZING MOVING PLANNER NODE BY MARCO NEGRETE..." << std::endl;
     ros::init(argc, argv, "mvn_pln");
+    ROS_INFO("INITIALIZING MOVING PLANNER NODE BY MARCO NEGRETE..." );
+
     ros::NodeHandle n;
     tf::TransformListener listener;
     
     float proximity_criterion = 2.0;
-    float move_error_threshold = 0.03;
+    //float move_error_threshold = 0.03;
 
     if(ros::param::has("~patience"))
         ros::param::get("~patience", patience);
@@ -150,12 +150,12 @@ int main(int argc, char** argv)
         ros::param::get("~proximity_criterion", proximity_criterion);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
-    if(ros::param::has("~move_error_threshold"))
-        ros::param::get("~move_error_threshold", move_error_threshold);
+    //if(ros::param::has("~move_error_threshold"))
+    //    ros::param::get("~move_error_threshold", move_error_threshold);
 
     std::cout << "MvnPln.->Patience: " << (patience?"True":"False") << "  Proximity criterion: " << proximity_criterion;
     std::cout << "  base link name: " << base_link_name << std::endl;
-    std::cout << "  move error threshold: " << move_error_threshold << std::endl;
+    //std::cout << "  move error threshold: " << move_error_threshold << std::endl;
     std::cout << "MvnPln.->Waiting for localization transform..." << std::endl;
     listener.waitForTransform("map", base_link_name, ros::Time(0), ros::Duration(10.0));
     std::cout << "MvnPln.->Localization transform is ready ..." << std::endl;
@@ -182,11 +182,13 @@ int main(int argc, char** argv)
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
 
+    ros::Publisher pub_tmp_head_pose_cancel    = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
+
     ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented");
     ros::ServiceClient clt_are_there_obs   = n.serviceClient<std_srvs::Trigger>("/map_augmenter/are_there_obstacles");
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
 
-    // for motion synth_action add by r.k 2025/04/10
+    // for motion synth_action_client add by r.k 2025/04/10
     typedef actionlib::SimpleActionClient<motion_synth::MotionSynthesisAction> MotionSynthActionClient;
     MotionSynthActionClient* ms_ac;
     ms_ac = new MotionSynthActionClient("/motion_synth", true);
@@ -215,10 +217,6 @@ int main(int argc, char** argv)
     std_msgs::Float32MultiArray msg_goal_dist_angle;
     msg_goal_dist_angle.data.resize(2);
 
-    //if is in static obstacle, moving backwards //TODO
-    //int recovery_attempts = 0;
-    //int max_recovery_attempts = 3;
-    //
 
     while(ros::ok())
     {
@@ -227,7 +225,7 @@ int main(int argc, char** argv)
             stop = false;
             state = SM_INIT;
             if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
-                current_status=publish_status(actionlib_msgs::GoalStatus::ABORTED,goal_id,"Stop signal received. Task cancelled", pub_status);
+                current_status=publish_status(actionlib_msgs::GoalStatus::ABORTED,goal_id, "Stop signal received. Task cancelled", pub_status);
         }
 
         if(nav_goal_received)
@@ -250,7 +248,6 @@ int main(int argc, char** argv)
                     motion_synth_goal.goal_location.x = global_goal.position.x;
                     motion_synth_goal.goal_location.y = global_goal.position.y;
                     motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
-                    //std::cout << target_arm_pose.has_arm_start_pose << std::endl;
                     if (target_arm_pose.has_arm_start_pose == true)
                     {
                         motion_synth_goal.apply_start_pose = true;
@@ -273,62 +270,62 @@ int main(int argc, char** argv)
                     if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
                         current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
                     goal_id++;
-                    std::cout << "MvnPln.->New goal received. Current task goal_id: " << goal_id << std::endl;
+                    ROS_INFO("MvnPln.->New goal received. Current task goal_id: ");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
                     near_goal_sent = false;
                 }
                 break;
                 
-            case SM_CALCULATE_PATH:
-                get_robot_position(listener, robot_x, robot_y, robot_a);
-                if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
-                {
-                    std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
-                    pub_simple_move_stop.publish(std_msgs::Empty());
-
-                    // if is inside STATIC obstacle, go backwards. add by r.k 2025/04/11 //TODO
-                    if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
-                    {
-                        ROS_ERROR("MvnPln.->Robot is inside an obstacle. Will attempt recovery with going backwards.");
-                        state = SM_CHECK_IF_INSIDE_OBSTACLES;
-                    }
-                    else
-                    {
-                        //original
-                        if(!patience)
-                            state = SM_CHECK_IF_INSIDE_OBSTACLES;
-                        else
-                            state = SM_CHECK_IF_OBSTACLES;
-                    }
-                }
-                else
-                {
-                    state = SM_ENABLE_OBS_DETECT;
-                }
-                break;
-
-            ////original
             //case SM_CALCULATE_PATH:
             //    get_robot_position(listener, robot_x, robot_y, robot_a);
             //    if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
             //    {
             //        std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
             //        pub_simple_move_stop.publish(std_msgs::Empty());
-            //        if(!patience)
+
+            //        // if is inside STATIC obstacle, go backwards. add by r.k 2025/04/11 //TODO
+            //        if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
+            //        {
+            //            ROS_ERROR("MvnPln.->Robot is inside an obstacle. Will attempt recovery with going backwards.");
             //            state = SM_CHECK_IF_INSIDE_OBSTACLES;
+            //        }
             //        else
-            //            state = SM_CHECK_IF_OBSTACLES;
+            //        {
+            //            //original
+            //            if(!patience)
+            //                state = SM_CHECK_IF_INSIDE_OBSTACLES;
+            //            else
+            //                state = SM_CHECK_IF_OBSTACLES;
+            //        }
             //    }
             //    else
+            //    {
             //        state = SM_ENABLE_OBS_DETECT;
+            //    }
             //    break;
 
+            case SM_CALCULATE_PATH:
+                get_robot_position(listener, robot_x, robot_y, robot_a);
+                if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
+                {
+                    std::cout<< "\033[31m" << "MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << "\033[0m]" << std::endl;
+
+                    pub_simple_move_stop.publish(std_msgs::Empty());
+                    if(!patience)
+                        state = SM_CHECK_IF_INSIDE_OBSTACLES;
+                    else
+                        state = SM_CHECK_IF_OBSTACLES;
+                }
+                else
+                    state = SM_ENABLE_OBS_DETECT;
+                break;
+
             case SM_CHECK_IF_INSIDE_OBSTACLES:
-                std::cout << "MvnPln.->Checking if robot is inside an obstacle..." << std::endl;
+                ROS_INFO("MvnPln.->Checking if robot is inside an obstacle...");
                 clt_is_in_obstacles.call(srv_check_obstacles);
                 if(srv_check_obstacles.response.success)
                 {
-                    std::cout << "MvnPln.->Robot is inside an obstacle. Moving backwards..." << std::endl;
+                    ROS_INFO("MvnPln.->Robot is inside an obstacle. Moving backwards...");
                     msg_goal_dist_angle.data[0] = -0.25;
                     msg_goal_dist_angle.data[1] = 0;
                     pub_goal_dist_angle.publish(msg_goal_dist_angle);
@@ -346,12 +343,12 @@ int main(int argc, char** argv)
                 if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == -1)
                 {
                     simple_move_goal_status.status = 0;
-                    std::cout << "MvnPln.->Moved backwards succesfully." << std::endl;
+                    ROS_INFO("MvnPln.->Moved backwards succesfully.");
                 }
                 else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                 {
                     simple_move_goal_status.status = 0;
-                    std::cout << "MvnPln.->Simple move reported move aborted. " << std::endl;
+                    ROS_ERROR("MvnPln.->Simple move reported move aborted. ");
                 }
                 state = SM_CALCULATE_PATH;
                 break;
@@ -359,14 +356,14 @@ int main(int argc, char** argv)
             case SM_CHECK_IF_OBSTACLES:
                 if(!clt_are_there_obs.call(srv_check_obstacles) || !srv_check_obstacles.response.success)
                 {
-                    std::cout << "MvnPln.->There are no temporal obstacles. Announcing failure." << std::endl;
+                    ROS_ERROR("MvnPln.->There are no temporal obstacles. Announcing failure.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id,
                                                     "Cannot calculate path from start to goal point", pub_status);
                     state = SM_INIT;
                 }
                 else
                 {
-                    std::cout << "MvnPln.->Temporal obstacles detected. Waiting for them to move." << std::endl;
+                    ROS_WARN("MvnPln.->Temporal obstacles detected. Waiting for them to move.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id,
                                                     "Waiting for temporal obstacles to move", pub_status);
                     state = SM_WAIT_FOR_NO_OBSTACLES;
@@ -376,14 +373,14 @@ int main(int argc, char** argv)
             case SM_WAIT_FOR_NO_OBSTACLES:
                 if(!clt_are_there_obs.call(srv_check_obstacles))
                 {
-                    std::cout << "MvnPln.->Cannot call service for checking temporal obstacles. Announcing failure." << std::endl;
+                    ROS_ERROR("MvnPln.->Cannot call service for checking temporal obstacles. Announcing failure.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id,
                                                     "Cannot calculate path from start to goal point", pub_status);
                     state = SM_INIT;
                 }
                 else if(!srv_check_obstacles.response.success)
                 {
-                    std::cout << "MvnPln.->Temporal obstacles removed. " << std::endl;
+                    ROS_INFO("MvnPln.->Temporal obstacles removed. ");
                     state = SM_CALCULATE_PATH;
                 }
                 else
@@ -393,18 +390,18 @@ int main(int argc, char** argv)
             case SM_ENABLE_OBS_DETECT:
                 msg_bool.data = true;
                 pub_obs_detector_enable.publish(msg_bool);
-                std::cout << "MvnPln.->Obstacle detector enable flag sent. Waiting for obs detector to be enabled..." << std::endl;
+                ROS_INFO("MvnPln.->Obstacle detector enable flag sent. Waiting for obs detector to be enabled..." );
                 state = SM_WAIT_FOR_OBS_DETECT;
                 break;
                 
             case SM_WAIT_FOR_OBS_DETECT:
                 ros::topic::waitForMessage<std_msgs::Bool>("/navigation/obs_detector/collision_risk", ros::Duration(100.0));
-                std::cout << "MvnPln.->Obstacle detector is now available." << std::endl;
+                ROS_INFO("MvnPln.->Obstacle detector is now available.");
                 state = SM_START_MOVE_PATH;
                 break;
 
             case SM_START_MOVE_PATH:
-                std::cout << "MvnPln. Starting path following " << std::endl;
+                ROS_INFO("MvnPln.->Starting path following");
                 collision_risk = false;
                 simple_move_sequencer++;
                 path.header.seq = simple_move_sequencer;
@@ -420,64 +417,58 @@ int main(int argc, char** argv)
                     state = SM_CORRECT_FINAL_ANGLE;
                     //state = SM_FINAL;
                 }
+
+                //add for hsrc because sometimes occured self collision //add by r.k 2025/04/23
+                pub_tmp_head_pose_cancel.publish(std_msgs::Empty());
+
                 break;
 
             case SM_WAIT_FOR_MOVE_FINISHED:
                 //motion synth add by r.k 2025/04/10
                 if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                 {
-                    ROS_WARN_THROTTLE(1.0, "MvnPln.->Arm motion finished successfully.");
+                    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion finished successfully.");
                 }
-                else
-                {
-                    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
-                }
+                //else
+                //{
+                //    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
+                //}
 
                 //navigation goal
                 //if(error < proximity_criterion && !near_goal_sent)
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
                 //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
+                
                 get_robot_position(listener, robot_x, robot_y, robot_a);
                 error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
-                ROS_WARN_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
-                if (error < proximity_criterion)
+                ROS_INFO_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
+                if (error < proximity_criterion && !near_goal_sent)
                 {
                     near_goal_counter++;
-                    std::cout << near_goal_counter << std::endl;
 
-                    if (!near_goal_sent)
-                    {
-                        near_goal_sent = true;
-                        publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
-                    }
-                    if (near_goal_counter > 30) //if rate is 10, 3s
-                    {
-                        ROS_ERROR("MvnPln.->Goal too close for long time. Forcing final angle correction.");
+                    near_goal_sent = true;
+                    ROS_INFO("MvnPln.->Error less than proximity criterion. Sending near goal point status.");
+                    publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
 
-                        //motion_synth_cancel
-
-                        state = SM_CORRECT_FINAL_ANGLE;
-                    }
-                    std::cout << "MvnPln.->Error less than proximity criterion. Sending near goal point status." << std::endl;
                 }
                 if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == simple_move_sequencer)
                 {
                     simple_move_goal_status.status = 0;
-                    std::cout << "MvnPln.->Path followed succesfully. " << std::endl;
+                    ROS_INFO("MvnPln.->Path followed succesfully. ");
                     msg_bool.data = false;
                     pub_obs_detector_enable.publish(msg_bool);
                     state = SM_CORRECT_FINAL_ANGLE;
                 }
                 else if(collision_risk)
                 {
-                    std::cout << "MvnPln.->COLLISION RISK DETECTED before goal is reached." << std::endl;
+                    ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
                     collision_risk = false;
                     state = SM_CALCULATE_PATH;
                 }
                 else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                 {
                     simple_move_goal_status.status = 0;
-                    std::cout << "MvnPln.->Simple move reported path aborted. Trying again..." << std::endl;
+                    ROS_ERROR("MvnPln.->Simple move reported path aborted. Trying again...");
                     
                     //motion synth
                     if (ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
@@ -487,10 +478,9 @@ int main(int argc, char** argv)
                     }
                     state = SM_CALCULATE_PATH;
                 }
-
                 break;
 
-            case SM_CORRECT_FINAL_ANGLE: //TODO? angle error
+            case SM_CORRECT_FINAL_ANGLE:
                 {
                     std::cout << "MvnPln.->Correcting final angle." << std::endl;
                     get_robot_position(listener, robot_x, robot_y, robot_a);
@@ -518,13 +508,13 @@ int main(int argc, char** argv)
                 if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == -1)
                 {
                     simple_move_goal_status.status = 0;
-                    std::cout << "MvnPln.->Final angle corrected succesfully." << std::endl;
+                    ROS_INFO("MvnPln.->Final angle corrected succesfully.");
                     state = SM_FINAL ;
                 }
                 else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                 {
                     simple_move_goal_status.status = 0;
-                    std::cout << "MvnPln.->Simple move reported move aborted. Trying again..." << std::endl;
+                    ROS_ERROR("MvnPln.->Simple move reported path aborted. Trying again...");
                     state = SM_CALCULATE_PATH;
                 }
                 break;

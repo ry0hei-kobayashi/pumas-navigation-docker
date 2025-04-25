@@ -123,10 +123,10 @@ int main(int argc, char **argv)
 
                 // publish ROS message
                 if(pub_hsr_head_gp.getNumSubscribers() > 0 && isNewData)
-        {
-          pub_hsr_head_gp.publish(traj);
-          isNewData = false;
-        }
+                {
+                  pub_hsr_head_gp.publish(traj);
+                  isNewData = false;
+                }
                 if(pub_pumas_head_cp.getNumSubscribers() > 0)
                         pub_pumas_head_cp.publish(msg_hd_cp);
                 loop.sleep();

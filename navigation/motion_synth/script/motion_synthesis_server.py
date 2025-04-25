@@ -2,6 +2,7 @@
 import copy
 import numpy as np
 
+from std_msgs.msg import Empty
 import rospy
 import tf
 import actionlib
@@ -13,10 +14,8 @@ from nav_msgs.msg import Path
 from actionlib_msgs.msg import GoalStatus
 from motion_synth.msg import MotionSynthesisAction, MotionSynthesisResult, MotionSynthesisFeedback
 
-
 class MotionSynthesisServer:
     def __init__(self):
-        rospy.init_node("motion_synth_server_for_pumas")
 
         self.server = actionlib.SimpleActionServer(
             "/motion_synth",
@@ -30,6 +29,7 @@ class MotionSynthesisServer:
         self.arm_pub = rospy.Publisher("/hardware/arm/goal_pose", Float32MultiArray, queue_size=1)
         self.lift_pub = rospy.Publisher("/hardware/torso/goal_pose", Float32, queue_size=1)
         self.head_pub = rospy.Publisher("/hardware/head/goal_pose", Float32MultiArray, queue_size=1)
+        self.tmp_head_pose_canceller = rospy.Publisher("/navigation/tmp_head_pose_cancel", Empty, queue_size=1)
 
         self.joint_states = {}
         self.joints_cb = rospy.Subscriber("/hsrb/joint_states", JointState, self.joint_state_callback)
@@ -39,8 +39,6 @@ class MotionSynthesisServer:
 
         self.global_nav_goal_reached = False
         self.nav_status_sub = rospy.Subscriber("/navigation/status", GoalStatus, self.nav_status_callback)
-
-        #rospy.get_param("/simple_move/move_head")
 
     def wait_for_get_path(self):
         rospy.loginfo("motion_synth -> Waiting for get path")
@@ -94,7 +92,6 @@ class MotionSynthesisServer:
             #abs(goal_joints.head_pan_joint - self.get_joint_positions("head_pan_joint")),
             #abs(goal_joints.head_tilt_joint - self.get_joint_positions("head_tilt_joint")),
         ]
-        #print("joint_pose_diff", diffs)
         return all(d < threshold for d in diffs)
 
     def global_pose_callback(self, msg):
@@ -110,7 +107,10 @@ class MotionSynthesisServer:
         rospy.loginfo("motion_synth -> Moving Arm State")
 
         #disable move_head
-        rospy.set_param("/simple_move/move_head", False)
+        #rospy.set_param("/simple_move/move_head", False)
+
+        #TODO disable move_head
+        #self.tmp_head_pose_canceller.publish(Empty())
 
         lift_msg = Float32()
         lift_msg.data = joints.arm_lift_joint
@@ -133,26 +133,24 @@ class MotionSynthesisServer:
         self.arm_pub.publish(arm_msg)
         self.head_pub.publish(head_msg)
 
-        #disable move_head
-        rospy.sleep(2.0) #TODO
-        rospy.set_param("/simple_move/move_head", True)
+        #enable move_head
+        #rospy.sleep(2.0) #TODO
+        #rospy.set_param("/simple_move/move_head", True)
 
     #TODO add another rule
     def check_self_collision_risk(self, goal_pose):
 
         if goal_pose.arm_flex_joint < -1.0:
-            #rospy.logerr("self collision")
             return True
         
-        rospy.logerr("no self collision")
         return False
 
     def create_temporary_pose(self, goal_pose):
-        #if end_pose is in collision
+        # if end_pose is in collision
         temporary_pose = copy.deepcopy(goal_pose)
 
         if goal_pose.arm_flex_joint < -1.0:
-            temporary_pose.arm_flex_joint = -0.6
+            temporary_pose.arm_flex_joint = -0.6 #hsrc
             #temporary_pose.arm_flex_joint = -0.3 #hsrb
 
         return temporary_pose
@@ -164,10 +162,8 @@ class MotionSynthesisServer:
         feedback = MotionSynthesisFeedback()
         triggered = False
         arm_start_position = int(self.path_len * 0.75)
-        rospy.logwarn(f"motion_synth -> motion_start_timing point is {arm_start_position}")
+        rospy.loginfo(f"motion_synth -> motion_start_timing point is {arm_start_position}")
 
-        #timeout = rospy.Time.now() + rospy.Duration(20.0) #TODO adjust time
-        #timeout = rospy.Time.now() + rospy.Duration(10000.0)
         rate = rospy.Rate(10)
 
         if goal.apply_start_pose: 
@@ -176,7 +172,7 @@ class MotionSynthesisServer:
         temporary_pose = None
         chk_self_collision = self.check_self_collision_risk(goal.goal_pose)
         if chk_self_collision:
-            rospy.logerr("motion_synth -> Detect Self Collision Pose, Using TMP Arm Pose")
+            rospy.logwarn("motion_synth -> Detect Self Collision Pose, Using TMP Arm Pose")
             temporary_pose = self.create_temporary_pose(goal.goal_pose)
 
         temporary_pose_sent = False
@@ -199,22 +195,19 @@ class MotionSynthesisServer:
                     if chk_self_collision:
                         self.send_pose(temporary_pose)
                         temporary_pose_sent = True
-                        #rospy.sleep(1)
                     else:
                         self.send_pose(goal.goal_pose)
                         final_pose_sent = True
-                        #rospy.sleep(1)
                     triggered = True
 
             if triggered:
                 if temporary_pose_sent and not final_pose_sent:
-                    yaw_error = abs(self.current_pose[2] - goal.goal_location.theta)
+                    yaw_error = abs(self.current_pose[2] - goal.goal_location.theta) #yawがgoalに近づいたら最終ポーズを送信
                     if yaw_error > np.pi:
                         yaw_error = 2 * np.pi - yaw_error
                     if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO adjust yaw
-                        rospy.logwarn("motion_synth -> Reached Global Nav Goal, sending final pose")
+                        rospy.loginfo("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
-                        #rospy.sleep(1)
                         final_pose_sent = True
                         self.global_nav_goal_reached = False
 
@@ -224,18 +217,11 @@ class MotionSynthesisServer:
                     self.server.set_succeeded(MotionSynthesisResult(result=True))
                     return
 
-            # if rospy.Time.now() > timeout:
-            #     rospy.logerr("motion_synth -> Timeout")
-            #     self.server.set_aborted(MotionSynthesisResult(result=False), "Timeout")
-            #     self.global_nav_goal_reached = False
-            #     self.temporary_pose_sent = False
-            #     self.final_pose_sent = False
-            #     return
-
             self.server.publish_feedback(feedback)
             rate.sleep()
 
 if __name__ == "__main__":
+    rospy.init_node("motion_synth_server_for_pumas")
     MotionSynthesisServer()
     rospy.spin()
 
