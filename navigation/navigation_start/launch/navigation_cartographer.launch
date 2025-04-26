@@ -61,9 +61,9 @@
     <node name="led" pkg="head" type="led_node" output="screen"/>
     <!--node name="arm" pkg="arm" type="arm_node" output="screen"/-->
     <node name="arm" pkg="arm" type="arm_node" output="screen">
-    <rosparam param="torso_goal_pose">0.2</rosparam> <!--arm_lift, meter-->
+    <rosparam param="torso_goal_pose">0.26</rosparam> <!--arm_lift, meter-->
     <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
-    <rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam>
+    <rosparam param="arm_goal_pose">[-0.45, 2.54, -1.57, -0.0]</rosparam>
     </node>
   </group>
   
@@ -154,9 +154,6 @@
     <remap from="/map" to="/prohibition_layer_map"/>
   </node>
 
-
-
-  
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
