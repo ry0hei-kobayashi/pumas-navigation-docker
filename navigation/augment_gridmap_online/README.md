@@ -43,7 +43,7 @@ To run a simple demo you can use the provide launch file:
 
 ``` 
 
-Thi is requires ros map server to run. From there you can use the `Publish point`
+This is requires ros map server to run. From there you can use the `Publish point`
 button on rviz to dynamically add obstacles to the map. 
 
 ## Nodes

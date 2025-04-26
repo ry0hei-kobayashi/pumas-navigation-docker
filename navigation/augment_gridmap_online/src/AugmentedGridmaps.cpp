@@ -22,6 +22,7 @@ AugmentedGridMap::AugmentedGridMap(ros::NodeHandle &nodeHandle)
   mapSubscriber = nodeHandle_.subscribe(input_map, 1, &AugmentedGridMap::saveMap, this);
   pointSubscriber = nodeHandle_.subscribe("point_obstacle", 1, &AugmentedGridMap::addPointCallback, this);
 
+
   // Initialize publishers
   augmented_map_pub = nodeHandle_.advertise<nav_msgs::OccupancyGrid>("/grid_map/augmented_map", 1, true);
   augmented_metadata_pub = nodeHandle_.advertise<nav_msgs::MapMetaData>("/grid_map/augmented_map_metadata", 1, true);
@@ -276,12 +277,6 @@ void AugmentedGridMap::drawObstacles()
   }
 }
 
-void AugmentedGridMap::publishEnhancedMap()
-{
-  augmented_map_pub.publish(enhanced_map);
-  augmented_metadata_pub.publish(map_metadata);
-}
-
 void AugmentedGridMap::publishObstacleMarkers()
 {
   for (const auto& marker : obstacle_markers_) {
@@ -289,6 +284,14 @@ void AugmentedGridMap::publishObstacleMarkers()
     ROS_INFO("Publishing markers");
   }
 }
+
+
+void AugmentedGridMap::publishEnhancedMap()
+{
+  augmented_map_pub.publish(enhanced_map);
+  augmented_metadata_pub.publish(map_metadata);
+}
+
 
 } // namespace ros_augmented_gridmaps
 
