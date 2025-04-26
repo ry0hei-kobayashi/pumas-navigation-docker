@@ -19,12 +19,12 @@
   <node name="pumasviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
   
   <!--map file path-->
-  <arg name="map_name" default="carrobo"/>
+  <arg name="map_name" default="wrs2020"/>
   <arg name="prohibition_map_file"  default="$(find navigation_start)/maps/prohibition_maps/$(arg map_name)/map.yaml"/>
   <arg name="static_map_file"  default="$(find navigation_start)/maps/maps/$(arg map_name)/map.yaml"/>
 
   <!--for env objs to map-->
-  <arg name="env_file_name" default="env_furniture_rcj25_3330_0412.yaml"/>
+  <arg name="env_file_name" default="env_furniture_$(arg map_name).yaml"/>
   <arg name="add_static_obstacles" default="true"/>
 
   <!--input topic-->
