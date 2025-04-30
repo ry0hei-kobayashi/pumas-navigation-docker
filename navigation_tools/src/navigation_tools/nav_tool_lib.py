@@ -320,12 +320,25 @@ class NavModule:
             if self.motion_synth_start_pose is not None:
                 start_and_end_joints.has_arm_start_pose = True
                 start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+            else:
+                # startが無いなら自動でgo_pose()代入
+                start_and_end_joints.has_arm_start_pose = True
+                go_pose = {}
+                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=go_pose)
 
             if self.motion_synth_end_pose is not None:
                 start_and_end_joints.has_arm_end_pose = True
                 start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
+            else:
+                # goalが無いなら自動でstart_poseと同じ姿勢を代入
+                start_and_end_joints.has_arm_end_pose = True
+                start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+
             self.pub_move_joint_pose.publish(start_and_end_joints)
+
             rospy.logwarn('NavModule -> Sending Arm Goal')
+            start_and_end_joints.has_arm_start_pose = False
+            start_and_end_joints.has_arm_end_pose = False
 
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
