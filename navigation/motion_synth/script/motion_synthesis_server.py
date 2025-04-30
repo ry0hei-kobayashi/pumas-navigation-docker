@@ -107,7 +107,7 @@ class MotionSynthesisServer:
         rospy.loginfo("motion_synth -> Moving Arm State")
 
         #disable move_head
-        #rospy.set_param("/simple_move/move_head", False)
+        rospy.set_param("/simple_move/move_head", False)
 
         #TODO disable move_head
         #self.tmp_head_pose_canceller.publish(Empty())
@@ -143,6 +143,9 @@ class MotionSynthesisServer:
         if goal_pose.arm_flex_joint < -1.0:
             return True
         
+        elif goal_pose.arm_flex_joint > -0.35 and goal_pose.arm_lift_joint > 0.15:
+            return True
+        
         return False
 
     def create_temporary_pose(self, goal_pose):
@@ -152,6 +155,11 @@ class MotionSynthesisServer:
         if goal_pose.arm_flex_joint < -1.0:
             temporary_pose.arm_flex_joint = -0.6 #hsrc
             #temporary_pose.arm_flex_joint = -0.3 #hsrb
+
+        elif goal_pose.arm_flex_joint > -0.35 and goal_pose.arm_lift_joint > 0.15:
+            temporary_pose.arm_flex_joint = -0.60
+            
+            
 
         return temporary_pose
 
