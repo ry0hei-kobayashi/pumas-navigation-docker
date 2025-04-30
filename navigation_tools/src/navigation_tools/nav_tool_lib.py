@@ -4,7 +4,7 @@
 import copy
 import math
 import numpy as np
-from typing import Union # go_nav function
+from typing import Union, Tuple # go_nav function
 from fractions import Fraction
 
 import rospy
@@ -18,7 +18,7 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist
 from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
-from std_srvs.srv import Trigger
+from std_srvs.srv import Trigger, SetBool
 from motion_synth.msg import Joints, StartAndEndJoints
 
 class NavModule:
@@ -77,6 +77,9 @@ class NavModule:
 
         self.is_inside_obstacles = rospy.ServiceProxy('/map_augmenter/is_inside_obstacles', Trigger)
         self.are_there_obstacles = rospy.ServiceProxy('/map_augmenter/are_there_obstacles', Trigger)
+
+        # Define a service client for /navigation/is_waypoints
+        self.is_waypoints_client = rospy.ServiceProxy('/navigation/is_waypoints', SetBool)
 
         rospy.sleep(1.0)
         self.set_navigation_type(select)
@@ -255,8 +258,52 @@ class NavModule:
         rospy.sleep(0.1)
         
 
-    def get_close(self, x, y, yaw, timeout, goal_distance=None):
+    def get_close(self, x, y, yaw, timeout, goal_distance=None, waypoints=None, waypoint_distance=0.2):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            y (_type_): _description_
+            yaw (_type_): _description_
+            timeout (_type_): _description_
+            goal_distance (_type_, optional): _description_. Defaults to None.
+            waypoints (_type_, optional): _description_. Defaults to None.
+        """
         rate = rospy.Rate(10)
+        print(waypoints)
+        if waypoints is not None:
+            for points in waypoints:
+                try:
+                    response = self.is_waypoints_client(True)
+                    rospy.loginfo(f"Check angle service response: {response.success}, {response.message}")
+                except rospy.ServiceException as e:
+                    rospy.logerr(f"Service call to /navigation/is_waypoints failed: {e}")
+
+                print("navigation with waypoints")
+                print(points)
+                goal = self.create_goal_pose(points.x, points.y, points.theta, "map")
+                self.global_goal_reached = False
+                self.robot_stop = False
+                attempts = int(timeout * 10) if timeout != 0 else float('inf')
+
+                self.global_goal_xyz = copy.deepcopy(goal)
+                self.send_goal(goal, skip_joint_move=True)
+
+                while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
+                    if waypoint_distance:
+                        now_x, now_y = self.global_pose.pose.position.x, self.global_pose.pose.position.y
+                        now_distance = math.sqrt((points.x - now_x) ** 2 + (points.y - now_y) ** 2)
+                        rospy.loginfo(now_distance)
+                        if now_distance < waypoint_distance:
+                            print("break")
+                            break
+
+                    attempts -= 1
+                    rate.sleep()
+
+                # self.handle_robot_stop()
+
+        response = self.is_waypoints_client(False)        
         goal = self.create_goal_pose(x, y, yaw, "map")
 
         self.global_goal_reached = False
@@ -278,10 +325,26 @@ class NavModule:
 
         self.handle_robot_stop()
 
-    def go_abs(self, x, y, theta, timeout=0, type_nav=None, goal_distance=None):
+    def go_abs(self, x: float, y: float, theta: float, timeout: int = 0, type_nav: str = None, goal_distance: float = None, waypoints: Tuple[Pose2D] = None):
+        """絶対座標ナビゲーション
+
+        Args:
+            x (float): ゴールのx座標
+            y (float): ゴールのy座標
+            theta (float): ゴールのyaw角
+            timeout (int, optional): ナビゲーションのタイムアウト. Defaults to 0.
+            type_nav (str, optional): ナビゲーションタイプ. Defaults to None.
+            goal_distance (float, optional): 許容誤差. Defaults to None.
+            waypoints (Tuple[Pose2D], optional): waypoints. Defaults to None.
+        """
         if type_nav == "pumas":
             rospy.loginfo("Call ABS mode in pumas nav")
-            self.get_close(x, y, theta, timeout, goal_distance)
+            if waypoints is not None:
+                print("with waypoints")
+                print(waypoints)
+                self.get_close(x, y, theta, timeout, goal_distance, waypoints)
+            else:
+                self.get_close(x, y, theta, timeout, goal_distance)
 
         elif type_nav == "hsr":
             rospy.loginfo("Call ABS mode in hsr nav")
@@ -307,25 +370,26 @@ class NavModule:
         joints.head_tilt_joint = joint_poses["head_tilt_joint"]
         return joints
 
-    def send_goal(self, goal):
+    def send_goal(self, goal, skip_joint_move=False):
         rospy.logwarn('NavModule -> Sending Nav Goal')
 
-        # TODO bad code
-        if self.motion_synth_start_pose is not None or self.motion_synth_end_pose is not None:
+        if skip_joint_move is False:
+            # TODO bad code
+            if self.motion_synth_start_pose is not None or self.motion_synth_end_pose is not None:
 
-            start_and_end_joints = StartAndEndJoints()
-            start_and_end_joints.has_arm_start_pose = False
-            start_and_end_joints.has_arm_end_pose = False
+                start_and_end_joints = StartAndEndJoints()
+                start_and_end_joints.has_arm_start_pose = False
+                start_and_end_joints.has_arm_end_pose = False
 
-            if self.motion_synth_start_pose is not None:
-                start_and_end_joints.has_arm_start_pose = True
-                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+                if self.motion_synth_start_pose is not None:
+                    start_and_end_joints.has_arm_start_pose = True
+                    start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
 
-            if self.motion_synth_end_pose is not None:
-                start_and_end_joints.has_arm_end_pose = True
-                start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
-            self.pub_move_joint_pose.publish(start_and_end_joints)
-            rospy.logwarn('NavModule -> Sending Arm Goal')
+                if self.motion_synth_end_pose is not None:
+                    start_and_end_joints.has_arm_end_pose = True
+                    start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
+                self.pub_move_joint_pose.publish(start_and_end_joints)
+                rospy.logwarn('NavModule -> Sending Arm Goal')
 
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
