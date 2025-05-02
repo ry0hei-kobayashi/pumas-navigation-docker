@@ -577,9 +577,9 @@ int main(int argc, char** argv)
 
                 std::cout << "MvnPln.->TASK FINISHED." << std::endl;
                 //TODO debug
-                if(is_waypoints){
-                    current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
-                }
+                // if(is_waypoints){
+                current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
+                // }
                 state = SM_INIT;
                 break;
     
