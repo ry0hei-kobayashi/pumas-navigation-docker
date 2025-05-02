@@ -3,6 +3,7 @@
 #include "std_msgs/Bool.h"
 #include "std_msgs/Float32MultiArray.h"
 #include "std_srvs/Trigger.h"
+#include "std_srvs/SetBool.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "nav_msgs/Path.h"
 #include "nav_msgs/GetPlan.h"
@@ -34,6 +35,7 @@
 #define SM_FINAL    17
 
 bool stop = false;
+bool is_waypoints = false;
 bool collision_risk = false;
 bool  patience = true;
 actionlib_msgs::GoalStatus simple_move_goal_status;
@@ -90,6 +92,15 @@ void callback_set_patience(const std_msgs::Bool::ConstPtr& msg)
 {
     std::cout << "MvnPln.->Set patience: " << (msg->data ? "True" : "False") << std::endl;
     patience = msg->data;
+}
+
+bool callback_is_waypoints(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
+{
+    is_waypoints = req.data; // Assuming req.data is a boolean
+    std::cout << "MvnPln.->Check angle: " << (is_waypoints ? "True" : "False") << std::endl; 
+    res.success = true;
+    res.message = is_waypoints ? "is_waypoints is now true" : "is_waypoints is now false";
+    return true;
 }
 
 bool plan_path_from_augmented_map(float robot_x, float robot_y, float goal_x, float goal_y, ros::ServiceClient& clt, nav_msgs::Path& path)
@@ -182,11 +193,12 @@ int main(int argc, char** argv)
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
 
-    ros::Publisher pub_tmp_head_pose_cancel    = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
+    ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
     ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented");
     ros::ServiceClient clt_are_there_obs   = n.serviceClient<std_srvs::Trigger>("/map_augmenter/are_there_obstacles");
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
+    ros::ServiceServer service_callback_is_waypoints = n.advertiseService("/navigation/is_waypoints", callback_is_waypoints);
 
     // for motion synth_action_client add by r.k 2025/04/10
     typedef actionlib::SimpleActionClient<motion_synth::MotionSynthesisAction> MotionSynthActionClient;
@@ -248,15 +260,20 @@ int main(int argc, char** argv)
                     motion_synth_goal.goal_location.x = global_goal.position.x;
                     motion_synth_goal.goal_location.y = global_goal.position.y;
                     motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
-                    if (target_arm_pose.has_arm_start_pose == true)
-                    {
-                        motion_synth_goal.apply_start_pose = true;
-                        motion_synth_goal.start_pose = target_arm_pose.start_pose;
-                    } 
-                    if (target_arm_pose.has_arm_end_pose == true)
-                    {
-                        motion_synth_goal.apply_goal_pose = true;
-                        motion_synth_goal.goal_pose = target_arm_pose.end_pose;
+                    if (!is_waypoints){
+                        if (target_arm_pose.has_arm_start_pose == true)
+                        {
+                            motion_synth_goal.apply_start_pose = true;
+                            motion_synth_goal.start_pose = target_arm_pose.start_pose;
+                        } 
+                        if (target_arm_pose.has_arm_end_pose == true)
+                        {
+                            motion_synth_goal.apply_goal_pose = true;
+                            motion_synth_goal.goal_pose = target_arm_pose.end_pose;
+                        }
+                    }else{
+                        motion_synth_goal.apply_start_pose = false;
+                        motion_synth_goal.apply_goal_pose = false;
                     }
                     arm_goal_received = false;
                     ms_ac->sendGoal(motion_synth_goal);
@@ -267,11 +284,13 @@ int main(int argc, char** argv)
                 {
                     nav_goal_received = false;
                     state = SM_CALCULATE_PATH;
-                    if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
+                    if(current_status == actionlib_msgs::GoalStatus::ACTIVE && !is_waypoints)
                         current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
                     goal_id++;
                     ROS_INFO("MvnPln.->New goal received. Current task goal_id: ");
-                    current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
+                    if (!is_waypoints){
+                        current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
+                    }
                     near_goal_sent = false;
                 }
                 break;
@@ -482,6 +501,12 @@ int main(int argc, char** argv)
 
             case SM_CORRECT_FINAL_ANGLE:
                 {
+                    std::cout << is_waypoints << std::endl;
+                    if (is_waypoints){
+                        std::cout << "MvnPln.->Skipping final angle." << std::endl;
+                        state = SM_WAITING_FOR_TASK;
+                        break;
+                    }
                     std::cout << "MvnPln.->Correcting final angle." << std::endl;
                     get_robot_position(listener, robot_x, robot_y, robot_a);
                     //error = atan2(global_goal.orientation.z, global_goal.orientation.w)*2 - robot_a;
@@ -551,7 +576,10 @@ int main(int argc, char** argv)
                 /* } */
 
                 std::cout << "MvnPln.->TASK FINISHED." << std::endl;
+                //TODO debug
+                // if(is_waypoints){
                 current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
+                // }
                 state = SM_INIT;
                 break;
     
