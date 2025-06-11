@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 
+//original Astar func
 bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& cost_map,
                       geometry_msgs::Pose& start_pose, geometry_msgs::Pose& goal_pose, bool diagonal_paths, nav_msgs::Path& result_path)
 {
@@ -153,6 +154,64 @@ bool PathPlanner::AStar(nav_msgs::OccupancyGrid& map, nav_msgs::OccupancyGrid& c
     return true;
 }
 
+// via point bias 
+void PathPlanner::addViaPointBias(nav_msgs::OccupancyGrid& cost_map,
+                                   const geometry_msgs::Pose& via_pose,
+                                   double radius, int cost_bias)
+{
+    int width = cost_map.info.width;
+    int height = cost_map.info.height;
+    double resolution = cost_map.info.resolution;
+    double origin_x = cost_map.info.origin.position.x;
+    double origin_y = cost_map.info.origin.position.y;
+
+    int center_x = (int)((via_pose.position.x - origin_x) / resolution);
+    int center_y = (int)((via_pose.position.y - origin_y) / resolution);
+    int cell_radius = (int)(radius / resolution);
+
+    for (int dy = -cell_radius; dy <= cell_radius; ++dy) {
+        for (int dx = -cell_radius; dx <= cell_radius; ++dx) {
+            int x = center_x + dx;
+            int y = center_y + dy;
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                int idx = y * width + x;
+                double dist = std::sqrt(dx * dx + dy * dy) * resolution;
+                if (dist <= radius) {
+                    cost_map.data[idx] = std::max(0, cost_map.data[idx] - cost_bias); 
+                }
+            }
+        }
+    }
+}
+
+// A* with via points function
+bool PathPlanner::AStarWithViaPoints(nav_msgs::OccupancyGrid& map,
+                                     nav_msgs::OccupancyGrid& cost_map,
+                                     geometry_msgs::Pose& start_pose,
+                                     std::vector<geometry_msgs::Pose>& via_poses,
+                                     geometry_msgs::Pose& goal_pose,
+                                     bool diagonal_paths,
+                                     nav_msgs::Path& result_path)
+{
+    result_path.poses.clear();
+    nav_msgs::Path partial_path;
+    geometry_msgs::Pose current_start = start_pose;
+
+    for (const auto& via : via_poses) {
+        nav_msgs::OccupancyGrid biased_cost_map = cost_map;
+        geometry_msgs::Pose via_copy = via;
+        PathPlanner::addViaPointBias(biased_cost_map, via_copy, 0.5, 400);
+        partial_path.poses.clear();
+        if (!PathPlanner::AStar(map, biased_cost_map, current_start, via_copy, diagonal_paths, partial_path)) return false;
+        result_path.poses.insert(result_path.poses.end(), partial_path.poses.begin(), partial_path.poses.end());
+        current_start = via_copy;
+    }
+
+    partial_path.poses.clear();
+    if (!PathPlanner::AStar(map, cost_map, current_start, goal_pose, diagonal_paths, partial_path)) return false;
+    result_path.poses.insert(result_path.poses.end(), partial_path.poses.begin(), partial_path.poses.end());
+    return true;
+}
 
 nav_msgs::Path PathPlanner::SmoothPath(nav_msgs::Path& path, float weight_data, float weight_smooth, float tolerance)
 {
