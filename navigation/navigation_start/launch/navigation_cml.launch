@@ -74,8 +74,8 @@
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
-    <!--param name="occupied_threshold" value="70"/-->
-    <param name="occupied_threshold" value="10"/>
+    <param name="occupied_threshold" value="50"/>
+    <!--param name="occupied_threshold" value="10"/-->
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
