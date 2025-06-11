@@ -69,7 +69,7 @@
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
     <!--param name="occupied_threshold" value="70"/-->
-    <param name="occupied_threshold" value="10"/>
+    <param name="occupied_threshold" value="80"/>
   </node>
   
   <node name="path_planner" pkg="path_planner" type="path_planner_node" output="screen" respawn="true">
@@ -134,8 +134,8 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.15"/>
-    <param name="cost_radius" value="0.20"/>
+    <param name="inflation_radius" value="0.13"/>
+    <param name="cost_radius" value="0.18"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
