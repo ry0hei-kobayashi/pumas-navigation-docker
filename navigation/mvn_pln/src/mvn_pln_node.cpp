@@ -5,6 +5,7 @@
 #include "std_srvs/Trigger.h"
 #include "std_srvs/SetBool.h"
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/PoseArray.h"
 #include "nav_msgs/Path.h"
 #include "nav_msgs/GetPlan.h"
 #include "actionlib_msgs/GoalStatus.h"
@@ -14,6 +15,9 @@
 #include "motion_synth/Joints.h"
 #include "motion_synth/StartAndEndJoints.h"
 #include "motion_synth/MotionSynthesisAction.h"
+
+#include "path_planner/GetPlanWithVia.h"
+#include "geometry_msgs/Pose.h"
 
 #define RATE 10
 
@@ -35,7 +39,6 @@
 #define SM_FINAL    17
 
 bool stop = false;
-bool is_waypoints = false;
 bool collision_risk = false;
 bool  patience = true;
 actionlib_msgs::GoalStatus simple_move_goal_status;
@@ -51,6 +54,13 @@ bool has_arm_start_pose = false;
 bool has_arm_end_pose = false;
 motion_synth::StartAndEndJoints target_arm_pose;
 
+std::vector<geometry_msgs::Pose> via_points;
+
+//add by r.k 2025/06/12 via point
+void callback_viapoints(const geometry_msgs::PoseArray::ConstPtr& msg) {
+    via_points = msg->poses;
+    ROS_INFO("MvnPln.->Received %lu viapoints", via_points.size());
+}
 
 void callback_general_stop(const std_msgs::Empty::ConstPtr& msg)
 {
@@ -94,27 +104,74 @@ void callback_set_patience(const std_msgs::Bool::ConstPtr& msg)
     patience = msg->data;
 }
 
-bool callback_is_waypoints(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res)
-{
-    is_waypoints = req.data; // Assuming req.data is a boolean
-    std::cout << "MvnPln.->Check angle: " << (is_waypoints ? "True" : "False") << std::endl; 
-    res.success = true;
-    res.message = is_waypoints ? "is_waypoints is now true" : "is_waypoints is now false";
-    return true;
-}
+// original implementation
+//bool plan_path_from_augmented_map(float robot_x, float robot_y, float goal_x, float goal_y, ros::ServiceClient& clt, nav_msgs::Path& path)
+//{
+//    nav_msgs::GetPlan srv;
+//    srv.request.start.pose.position.x = robot_x;
+//    srv.request.start.pose.position.y = robot_y;
+//    srv.request.goal.pose.position.x = goal_x;
+//    srv.request.goal.pose.position.y = goal_y;
+//    if(!clt.call(srv))
+//        return false;
+//    path = srv.response.plan;
+//    return true;
+//}
 
+//add by r.k 2025/06/12 for via
 bool plan_path_from_augmented_map(float robot_x, float robot_y, float goal_x, float goal_y, ros::ServiceClient& clt, nav_msgs::Path& path)
 {
-    nav_msgs::GetPlan srv;
-    srv.request.start.pose.position.x = robot_x;
-    srv.request.start.pose.position.y = robot_y;
-    srv.request.goal.pose.position.x = goal_x;
-    srv.request.goal.pose.position.y = goal_y;
-    if(!clt.call(srv))
+    path_planner::GetPlanWithVia srv;
+    geometry_msgs::PoseStamped start_pose, goal_pose;
+    start_pose.header.frame_id = "map";
+    start_pose.header.stamp = ros::Time::now();
+    start_pose.pose.position.x = robot_x;
+    start_pose.pose.position.y = robot_y;
+
+    goal_pose.header.frame_id = "map";
+    goal_pose.header.stamp = ros::Time::now();
+    goal_pose.pose.position.x = goal_x;
+    goal_pose.pose.position.y = goal_y;
+
+
+    srv.request.start = start_pose;
+    srv.request.goal = goal_pose;
+
+    for (const auto& vp : via_points)
+    {
+        geometry_msgs::PoseStamped ps;
+        ps.header.frame_id = "map";
+        ps.header.stamp = ros::Time::now();
+        ps.pose = vp;
+        srv.request.via_points.push_back(ps);
+    }
+
+    if (!clt.call(srv))
         return false;
+
     path = srv.response.plan;
     return true;
 }
+
+//add by r.k 2025/06/12 for via
+void updateViaPoints(const geometry_msgs::Pose& current_pose, double threshold=1.0)
+{
+    auto it = via_points.begin();
+    while (it != via_points.end())
+    {
+        double dx = it->position.x - current_pose.position.x;
+        double dy = it->position.y - current_pose.position.y;
+        double dist = std::sqrt(dx * dx + dy * dy);
+
+        if (dist < threshold) {
+            ROS_INFO("MvnPln.->ViaPoint passed (distance=%.2f), removing.", dist);
+            it = via_points.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 
 void get_robot_position(tf::TransformListener& listener, float& robot_x, float& robot_y, float& robot_a){
     tf::StampedTransform tf;
@@ -187,6 +244,7 @@ int main(int argc, char** argv)
     ros::Subscriber sub_collision_risk     = n.subscribe("/navigation/obs_detector/collision_risk", 10, callback_collision_risk);
     ros::Subscriber sub_move_goal_status   = n.subscribe("/simple_move/goal_reached", 10, callback_simple_move_goal_status);
     ros::Subscriber sub_set_patience       = n.subscribe("/navigation/set_patience", 10, callback_set_patience);
+    ros::Subscriber sub_via_points       = n.subscribe("/navigation/via_points", 10, callback_viapoints);
     ros::Publisher pub_obs_detector_enable = n.advertise<std_msgs::Bool>("/navigation/obs_detector/enable", 1);
     ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1);
     ros::Publisher pub_goal_dist_angle     = n.advertise<std_msgs::Float32MultiArray>("/simple_move/goal_dist_angle", 1);
@@ -195,10 +253,10 @@ int main(int argc, char** argv)
 
     ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
-    ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented");
+    //ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented");
+    ros::ServiceClient clt_plan_path = n.serviceClient<path_planner::GetPlanWithVia>("/path_planner/plan_path");
     ros::ServiceClient clt_are_there_obs   = n.serviceClient<std_srvs::Trigger>("/map_augmenter/are_there_obstacles");
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
-    ros::ServiceServer service_callback_is_waypoints = n.advertiseService("/navigation/is_waypoints", callback_is_waypoints);
 
     // for motion synth_action_client add by r.k 2025/04/10
     typedef actionlib::SimpleActionClient<motion_synth::MotionSynthesisAction> MotionSynthActionClient;
@@ -248,6 +306,10 @@ int main(int argc, char** argv)
             case SM_INIT:
                 ROS_WARN("Pumas Navigation. -> Ready!!!!!!!!! ");
                 ROS_WARN("MvnPln.-> MVN PLN READY. Waiting For New Goal.");
+
+                //add by r.k 2025/06/12
+                via_points.clear();
+
                 state = SM_WAITING_FOR_TASK;
                 break;
 
@@ -260,18 +322,17 @@ int main(int argc, char** argv)
                     motion_synth_goal.goal_location.x = global_goal.position.x;
                     motion_synth_goal.goal_location.y = global_goal.position.y;
                     motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
-                    if (!is_waypoints){
-                        if (target_arm_pose.has_arm_start_pose == true)
-                        {
-                            motion_synth_goal.apply_start_pose = true;
-                            motion_synth_goal.start_pose = target_arm_pose.start_pose;
-                        } 
-                        if (target_arm_pose.has_arm_end_pose == true)
-                        {
-                            motion_synth_goal.apply_goal_pose = true;
-                            motion_synth_goal.goal_pose = target_arm_pose.end_pose;
-                        }
-                    }else{
+                    if (target_arm_pose.has_arm_start_pose == true)
+                    {
+                        motion_synth_goal.apply_start_pose = true;
+                        motion_synth_goal.start_pose = target_arm_pose.start_pose;
+                    } 
+                    if (target_arm_pose.has_arm_end_pose == true)
+                    {
+                        motion_synth_goal.apply_goal_pose = true;
+                        motion_synth_goal.goal_pose = target_arm_pose.end_pose;
+                    }
+                    else{
                         motion_synth_goal.apply_start_pose = false;
                         motion_synth_goal.apply_goal_pose = false;
                     }
@@ -284,13 +345,13 @@ int main(int argc, char** argv)
                 {
                     nav_goal_received = false;
                     state = SM_CALCULATE_PATH;
-                    if(current_status == actionlib_msgs::GoalStatus::ACTIVE && !is_waypoints)
+                    if(current_status == actionlib_msgs::GoalStatus::ACTIVE)
                         current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
                     goal_id++;
                     ROS_INFO("MvnPln.->New goal received. Current task goal_id: ");
-                    if (!is_waypoints){
-                        current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
-                    }
+                    //if (!is_waypoints){
+                    //    current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
+                    //}
                     near_goal_sent = false;
                 }
                 break;
@@ -324,20 +385,30 @@ int main(int argc, char** argv)
             //    break;
 
             case SM_CALCULATE_PATH:
-                get_robot_position(listener, robot_x, robot_y, robot_a);
-                if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
                 {
-                    std::cout<< "\033[31m" << "MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << "\033[0m]" << std::endl;
+                    get_robot_position(listener, robot_x, robot_y, robot_a);
+                    //add by r.k 2025/06/12 for via
+                    //important implementation
+                    geometry_msgs::Pose current_pos;
+                    current_pos.position.x = robot_x;
+                    current_pos.position.y = robot_y;
+                    //注：
+                    updateViaPoints(current_pos, 1.5); // default threshold 1.5m 
 
-                    pub_simple_move_stop.publish(std_msgs::Empty());
-                    if(!patience)
-                        state = SM_CHECK_IF_INSIDE_OBSTACLES;
+                    if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
+                    {
+                        std::cout<< "\033[31m" << "MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << "\033[0m]" << std::endl;
+
+                        pub_simple_move_stop.publish(std_msgs::Empty());
+                        if(!patience)
+                            state = SM_CHECK_IF_INSIDE_OBSTACLES;
+                        else
+                            state = SM_CHECK_IF_OBSTACLES;
+                    }
                     else
-                        state = SM_CHECK_IF_OBSTACLES;
+                        state = SM_ENABLE_OBS_DETECT;
+                    break;
                 }
-                else
-                    state = SM_ENABLE_OBS_DETECT;
-                break;
 
             case SM_CHECK_IF_INSIDE_OBSTACLES:
                 ROS_INFO("MvnPln.->Checking if robot is inside an obstacle...");
@@ -501,12 +572,6 @@ int main(int argc, char** argv)
 
             case SM_CORRECT_FINAL_ANGLE:
                 {
-                    std::cout << is_waypoints << std::endl;
-                    if (is_waypoints){
-                        std::cout << "MvnPln.->Skipping final angle." << std::endl;
-                        state = SM_WAITING_FOR_TASK;
-                        break;
-                    }
                     std::cout << "MvnPln.->Correcting final angle." << std::endl;
                     get_robot_position(listener, robot_x, robot_y, robot_a);
                     //error = atan2(global_goal.orientation.z, global_goal.orientation.w)*2 - robot_a;
@@ -576,10 +641,10 @@ int main(int argc, char** argv)
                 /* } */
 
                 std::cout << "MvnPln.->TASK FINISHED." << std::endl;
-                //TODO debug
-                if(is_waypoints){
-                    current_status = publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
-                }
+                publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Global goal point reached", pub_status);
+
+                //add by r.k 2025/06/12
+                via_points.clear();
                 state = SM_INIT;
                 break;
     
