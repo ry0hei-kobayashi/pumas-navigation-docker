@@ -651,7 +651,7 @@ if __name__ == "__main__":
     #nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
     #goal = Pose2D(2.31, 5.6, 0.0)
 
-    via_points = [Pose2D(2.5, 0.0, 0.0),  Pose2D(1.0, 4.2, 0.0)]
+    via_points = [Pose2D(2.3, 0.0, 0.0),  Pose2D(2.0, 4.2, 0.0)]
     #via_points = None
     #nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=via_points)
     nav.nav_goal(goal, motion_synth_pose=None, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=via_points)

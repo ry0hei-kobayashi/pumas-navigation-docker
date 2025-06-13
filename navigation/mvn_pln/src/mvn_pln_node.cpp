@@ -19,6 +19,7 @@
 #include "path_planner/GetPlanWithVia.h"
 #include "geometry_msgs/Pose.h"
 
+
 #define RATE 10
 
 #define SM_INIT 0
@@ -154,21 +155,37 @@ bool plan_path_from_augmented_map(float robot_x, float robot_y, float goal_x, fl
 }
 
 //add by r.k 2025/06/12 for via
-void updateViaPoints(const geometry_msgs::Pose& current_pose, double threshold=1.0)
+void updateViaPoints(const geometry_msgs::Pose& robot, double pass_via_threshold)
 {
-    auto it = via_points.begin();
-    while (it != via_points.end())
-    {
-        double dx = it->position.x - current_pose.position.x;
-        double dy = it->position.y - current_pose.position.y;
-        double dist = std::sqrt(dx * dx + dy * dy);
+    if (via_points.empty()) {
+        return; // No via points to update
+    }
 
-        if (dist < threshold) {
-            ROS_INFO("MvnPln.->ViaPoint passed (distance=%.2f), removing.", dist);
-            it = via_points.erase(it);
-        } else {
-            ++it;
-        }
+    // check collision_risk, if true, purge all via points
+    if (collision_risk) {
+        ROS_WARN("MvnPln.->Collision risk detected, purging all via points.");
+        via_points.clear();
+        return;
+    }
+
+    //previous dist
+    static double previous_dist = std::numeric_limits<double>::infinity();
+
+    //get first via position
+    const auto& v = via_points.front(); // Access the first via point
+    double dx = v.position.x - robot.position.x;
+    double dy = v.position.y - robot.position.y;
+    double robot2via_distance = std::hypot(dx, dy);
+
+    if (robot2via_distance < pass_via_threshold) {
+        via_points.erase(via_points.begin());
+        previous_dist = std::numeric_limits<double>::infinity(); // Reset previous distance for next via point
+        ROS_INFO ("MvnPln.-> Passed via-point at (%.3f, %.3f) →  Erase via-point", v.position.x, v.position.y);
+    }
+
+    if (robot2via_distance < previous_dist - 1e-4) {
+        previous_dist = robot2via_distance; 
+        return;
     }
 }
 
@@ -209,7 +226,7 @@ int main(int argc, char** argv)
     ros::NodeHandle n;
     tf::TransformListener listener;
     
-    float proximity_criterion = 2.0;
+    float proximity_criterion = 0.7;
     //float move_error_threshold = 0.03;
 
     if(ros::param::has("~patience"))
@@ -387,13 +404,6 @@ int main(int argc, char** argv)
             case SM_CALCULATE_PATH:
                 {
                     get_robot_position(listener, robot_x, robot_y, robot_a);
-                    //add by r.k 2025/06/12 for via
-                    //important implementation
-                    geometry_msgs::Pose current_pos;
-                    current_pos.position.x = robot_x;
-                    current_pos.position.y = robot_y;
-                    //注：
-                    updateViaPoints(current_pos, 1.5); // default threshold 1.5m 
 
                     if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
                     {
@@ -514,61 +524,71 @@ int main(int argc, char** argv)
                 break;
 
             case SM_WAIT_FOR_MOVE_FINISHED:
-                //motion synth add by r.k 2025/04/10
-                if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                 {
-                    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion finished successfully.");
-                }
-                //else
-                //{
-                //    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
-                //}
-
-                //navigation goal
-                //if(error < proximity_criterion && !near_goal_sent)
-                //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
-                //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
-                
-                get_robot_position(listener, robot_x, robot_y, robot_a);
-                error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
-                ROS_INFO_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
-                if (error < proximity_criterion && !near_goal_sent)
-                {
-                    near_goal_counter++;
-
-                    near_goal_sent = true;
-                    ROS_INFO("MvnPln.->Error less than proximity criterion. Sending near goal point status.");
-                    publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
-
-                }
-                if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == simple_move_sequencer)
-                {
-                    simple_move_goal_status.status = 0;
-                    ROS_INFO("MvnPln.->Path followed succesfully. ");
-                    msg_bool.data = false;
-                    pub_obs_detector_enable.publish(msg_bool);
-                    state = SM_CORRECT_FINAL_ANGLE;
-                }
-                else if(collision_risk)
-                {
-                    ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
-                    collision_risk = false;
-                    state = SM_CALCULATE_PATH;
-                }
-                else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
-                {
-                    simple_move_goal_status.status = 0;
-                    ROS_ERROR("MvnPln.->Simple move reported path aborted. Trying again...");
-                    
-                    //motion synth
-                    if (ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+                    //motion synth add by r.k 2025/04/10
+                    if (ms_ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                     {
-                        ms_ac->cancelGoal();
-                        ROS_WARN("MvnPln->Canceling arm motion due to move abort.");
+                        ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion finished successfully.");
                     }
-                    state = SM_CALCULATE_PATH;
+                    //else
+                    //{
+                    //    ROS_INFO_THROTTLE(1.0, "MvnPln.->Arm motion not completed and not running (state: %s)", ms_ac->getState().toString().c_str());
+                    //}
+
+                    //navigation goal
+                    //if(error < proximity_criterion && !near_goal_sent)
+                    //if(error < proximity_criterion && !near_goal_sent && error > 0.03) //hsrb
+                    //if(error < proximity_criterion && !near_goal_sent && error > 0.001) //sim
+                    
+                    get_robot_position(listener, robot_x, robot_y, robot_a);
+
+                    //add by r.k 2025/06/12 for via
+                    //important implementation
+                    geometry_msgs::Pose current_pos;
+                    current_pos.position.x = robot_x;
+                    current_pos.position.y = robot_y;
+                    updateViaPoints(current_pos, 0.5); // default threshold 0.5m
+                                                       
+                    error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
+                    ROS_INFO_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
+                    if (error < proximity_criterion && !near_goal_sent)
+                    {
+                        near_goal_counter++;
+
+                        near_goal_sent = true;
+                        ROS_INFO("MvnPln.->Error less than proximity criterion. Sending near goal point status.");
+                        publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
+
+                    }
+                    if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == simple_move_sequencer)
+                    {
+                        simple_move_goal_status.status = 0;
+                        ROS_INFO("MvnPln.->Path followed succesfully. ");
+                        msg_bool.data = false;
+                        pub_obs_detector_enable.publish(msg_bool);
+                        state = SM_CORRECT_FINAL_ANGLE;
+                    }
+                    else if(collision_risk)
+                    {
+                        ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
+                        collision_risk = false;
+                        state = SM_CALCULATE_PATH;
+                    }
+                    else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
+                    {
+                        simple_move_goal_status.status = 0;
+                        ROS_ERROR("MvnPln.->Simple move reported path aborted. Trying again...");
+                        
+                        //motion synth
+                        if (ms_ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+                        {
+                            ms_ac->cancelGoal();
+                            ROS_WARN("MvnPln->Canceling arm motion due to move abort.");
+                        }
+                        state = SM_CALCULATE_PATH;
+                    }
+                    break;
                 }
-                break;
 
             case SM_CORRECT_FINAL_ANGLE:
                 {
