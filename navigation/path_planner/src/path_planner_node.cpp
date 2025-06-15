@@ -5,15 +5,16 @@
 #include "nav_msgs/GetMap.h"
 #include "std_srvs/Trigger.h"
 #include "PathPlanner.h"
+#include "path_planner/GetPlanWithVia.h"
 
 ros::ServiceClient cltGetStaticMap       ;
 ros::ServiceClient cltGetStaticCostMap   ;
 ros::ServiceClient cltGetAugmentedMap    ;
 ros::ServiceClient cltGetAugmentedCostMap;
+
 float smooth_alpha   = 0.1;
 float smooth_beta    = 0.9;
-bool  diagonal_paths = false;
-
+bool diagonal_paths = false;
 bool path_plan_success = false;
 
 bool callback_path_plan_status(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& resp)
@@ -82,6 +83,37 @@ bool callback_a_star_with_augmented_map(nav_msgs::GetPlan::Request& req, nav_msg
     return success;
 }
 
+//add by ry0hei k 2025/06/12
+bool callback_astar_service(path_planner::GetPlanWithVia::Request& req, path_planner::GetPlanWithVia::Response& resp)
+{
+    nav_msgs::GetMap srvMap, srvCostMap;
+
+    //use augmented maps!!!
+    if (!cltGetAugmentedMap.call(srvMap)) return false;
+    if (!cltGetAugmentedCostMap.call(srvCostMap)) return false;
+
+    nav_msgs::Path raw_path;
+    bool success = false;
+
+    if (req.via_points.empty()) {
+        success = PathPlanner::AStar(srvMap.response.map, srvCostMap.response.map,
+                                     req.start.pose, req.goal.pose, diagonal_paths, raw_path);
+    } else {
+        std::vector<geometry_msgs::Pose> via_poses;
+        for (auto& vp : req.via_points) via_poses.push_back(vp.pose);
+        success = PathPlanner::AStarWithViaPoints(srvMap.response.map, srvCostMap.response.map,
+                                                  req.start.pose, via_poses, req.goal.pose, diagonal_paths, raw_path);
+    }
+
+    if (success) {
+        resp.plan = PathPlanner::SmoothPath(raw_path, smooth_alpha, smooth_beta);
+        path_plan_success = true;
+    } else {
+        path_plan_success = false;
+    }
+    return success;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -115,6 +147,9 @@ int main(int argc, char** argv)
     ros::ServiceServer srvPathPlanStatus = n.advertiseService("/path_planner/path_plan_status", callback_path_plan_status);
     ros::ServiceServer srvGetPlanStatic   =n.advertiseService("/path_planner/plan_path_with_static"   , callback_a_star_with_static_map);
     ros::ServiceServer srvGetPlanAugmented=n.advertiseService("/path_planner/plan_path_with_augmented", callback_a_star_with_augmented_map);
+
+    //add by ry0hei k 2025/06/12
+    ros::ServiceServer srvGetPlanUnified = n.advertiseService("/path_planner/plan_path", callback_astar_service);
 
     while(ros::ok())
     {

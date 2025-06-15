@@ -15,7 +15,7 @@ from hsrlib.rosif import ROSInterfaces
 
 from std_msgs.msg import Float32MultiArray, Bool, Empty
 from nav_msgs.msg import Path
-from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist
+from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist, PoseArray
 from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
 from std_srvs.srv import Trigger, SetBool
@@ -68,6 +68,11 @@ class NavModule:
         self.pub_dist_angle = rospy.Publisher('/simple_move/goal_dist_angle', Float32MultiArray, queue_size=1)
         self.pub_robot_stop = rospy.Publisher('/navigation/stop', Empty, queue_size=1)
 
+        # for via_points
+        self.via_points = None
+        self.pub_via_points = rospy.Publisher('/navigation/via_points', PoseArray, queue_size=1)
+        
+
         self.pub_cmd_vel = rospy.Publisher('/hsrb/command_velocity', Twist, queue_size=10)
         self.pub_marker = rospy.Publisher('/nav_goal_marker', Marker, queue_size=10)
 
@@ -88,8 +93,6 @@ class NavModule:
         self.is_inside_obstacles = rospy.ServiceProxy('/map_augmenter/is_inside_obstacles', Trigger)
         self.are_there_obstacles = rospy.ServiceProxy('/map_augmenter/are_there_obstacles', Trigger)
 
-        # Define a service client for /navigation/is_waypoints
-        self.is_waypoints_client = rospy.ServiceProxy('/navigation/is_waypoints', SetBool)
 
         rospy.sleep(1.0)
         self.set_navigation_type(select)
@@ -155,7 +158,6 @@ class NavModule:
             rospy.logerr("NavModule.->Invalid navigation mode")
         rospy.loginfo(f"USING {self.navigation_setter.upper()} NAVIGATION BY DEFAULT")
 
-
     def global_pose_callback(self, msg):
         self.global_pose = msg
 
@@ -167,6 +169,31 @@ class NavModule:
         euler = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
         pose2d.theta = euler[2]
         return pose2d
+
+    def pose2d2pose(self, pose2d):
+        pose = Pose()
+        pose.position.x = pose2d.x
+        pose.position.y = pose2d.y
+        pose.position.z = 0.0
+        q = tf.transformations.quaternion_from_euler(0, 0, pose2d.theta)
+        pose.orientation.x = q[0]
+        pose.orientation.y = q[1]
+        pose.orientation.z = q[2]
+        pose.orientation.w = q[3]
+        return pose
+
+    def create_goal_pose(self, x, y, yaw, frame_id):
+        goal = PoseStamped()
+        goal.header.frame_id = frame_id
+        goal.pose.position.x = x
+        goal.pose.position.y = y
+        goal.pose.position.z = 0
+        q = tf.transformations.quaternion_from_euler(0, 0, yaw)
+        goal.pose.orientation.x = q[0]
+        goal.pose.orientation.y = q[1]
+        goal.pose.orientation.z = q[2]
+        goal.pose.orientation.w = q[3]
+        return goal
 
     """
     def replan_safe_point(self):
@@ -268,7 +295,7 @@ class NavModule:
         rospy.sleep(0.1)
         
 
-    def get_close(self, x, y, yaw, timeout, goal_distance=None, waypoints=None, waypoint_distance=0.2):
+    def get_close(self, x, y, yaw, timeout, goal_distance=None, via_points=None):
         """_summary_
 
         Args:
@@ -277,51 +304,29 @@ class NavModule:
             yaw (_type_): _description_
             timeout (_type_): _description_
             goal_distance (_type_, optional): _description_. Defaults to None.
-            waypoints (_type_, optional): _description_. Defaults to None.
+            via_points (_type_, optional): _description_. Defaults to None.
         """
         rate = rospy.Rate(10)
-        print(waypoints)
-        if waypoints is not None:
-            for points in waypoints:
-                try:
-                    response = self.is_waypoints_client(True)
-                    rospy.loginfo(f"Check angle service response: {response.success}, {response.message}")
-                except rospy.ServiceException as e:
-                    rospy.logerr(f"Service call to /navigation/is_waypoints failed: {e}")
+        rospy.loginfo(self.via_points)
 
-                print("navigation with waypoints")
-                print(points)
-                goal = self.create_goal_pose(points.x, points.y, points.theta, "map")
-                self.global_goal_reached = False
-                self.robot_stop = False
-                attempts = int(timeout * 10) if timeout != 0 else float('inf')
+        via_points_list = []
+        if self.via_points is not None:
+            via_points_array = PoseArray()
+            for points in self.via_points:
+                via_points_list.append(self.pose2d2pose(points))
+            via_points_array.poses = via_points_list
+            self.pub_via_points.publish(via_points_array)
 
-                self.global_goal_xyz = copy.deepcopy(goal)
-                self.send_goal(goal)
+            rospy.loginfo(f"NavModule. -> via_points: {via_points_list}")
 
-                while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
-                    if waypoint_distance:
-                        now_x, now_y = self.global_pose.pose.position.x, self.global_pose.pose.position.y
-                        now_distance = math.sqrt((points.x - now_x) ** 2 + (points.y - now_y) ** 2)
-                        rospy.loginfo(now_distance)
-                        if now_distance < waypoint_distance:
-                            print("break")
-                            break
-
-                    attempts -= 1
-                    rate.sleep()
-
-                # self.handle_robot_stop()
-
-        response = self.is_waypoints_client(False)        
         goal = self.create_goal_pose(x, y, yaw, "map")
-
         self.global_goal_reached = False
         self.robot_stop = False
         attempts = int(timeout * 10) if timeout != 0 else float('inf')
 
         self.global_goal_xyz = copy.deepcopy(goal)
         self.send_goal(goal)
+        #self.send_goal(goal) TODO with viapoint
 
         while not self.global_goal_reached and not rospy.is_shutdown() and not self.robot_stop and attempts >= 0:
             if goal_distance:
@@ -334,8 +339,9 @@ class NavModule:
             rate.sleep()
 
         self.handle_robot_stop()
+        self.via_points = None
 
-    def go_abs(self, x: float, y: float, theta: float, timeout: int = 0, type_nav: str = None, goal_distance: float = None, waypoints: Tuple[Pose2D] = None):
+    def go_abs(self, x: float, y: float, theta: float, timeout: int=0, type_nav: str=None, goal_distance: float=None, via_points: Tuple[Pose2D]=None):
         """絶対座標ナビゲーション
 
         Args:
@@ -345,14 +351,14 @@ class NavModule:
             timeout (int, optional): ナビゲーションのタイムアウト. Defaults to 0.
             type_nav (str, optional): ナビゲーションタイプ. Defaults to None.
             goal_distance (float, optional): 許容誤差. Defaults to None.
-            waypoints (Tuple[Pose2D], optional): waypoints. Defaults to None.
+            via_points (Tuple[Pose2D], optional): via_points. Defaults to None.
         """
         if type_nav == "pumas":
             rospy.loginfo("Call ABS mode in pumas nav")
-            if waypoints is not None:
-                print("with waypoints")
-                print(waypoints)
-                self.get_close(x, y, theta, timeout, goal_distance, waypoints)
+            if via_points is not None:
+                print("with via_points")
+                print(via_points)
+                self.get_close(x, y, theta, timeout, goal_distance, via_points)
             else:
                 self.get_close(x, y, theta, timeout, goal_distance)
 
@@ -477,18 +483,6 @@ class NavModule:
                 rospy.loginfo("Call REL mode in hsr nav")
                 self.hsrif.omni_base.go_rel(x, y, yaw, timeout)
 
-    def create_goal_pose(self, x, y, yaw, frame_id):
-        goal = PoseStamped()
-        goal.header.frame_id = frame_id
-        goal.pose.position.x = x
-        goal.pose.position.y = y
-        goal.pose.position.z = 0
-        q = tf.transformations.quaternion_from_euler(0, 0, yaw)
-        goal.pose.orientation.x = q[0]
-        goal.pose.orientation.y = q[1]
-        goal.pose.orientation.z = q[2]
-        goal.pose.orientation.w = q[3]
-        return goal
 
     def handle_robot_stop(self):
         if not self.global_goal_reached:
@@ -567,7 +561,7 @@ class NavModule:
     #######################
     ##   call function   ##
     #######################
-    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=False, obstacle_detection=True):
+    def nav_goal(self, goal: Union[Pose2D, str], motion_synth_pose=None, nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0.0, angle_correction=False, obstacle_detection=True, via_points=None):
          """ _NavModulePumas_
          Args:
          goal (Pose2D): Final Position given by x,y,yaw
@@ -601,6 +595,9 @@ class NavModule:
                 self.motion_synth_end_pose = end_pose
 
 
+         if via_points is not None:
+             self.via_points = via_points
+
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
          else:
@@ -610,6 +607,8 @@ class NavModule:
              self.rotate_yaw(goal)
          else:
              pass
+
+
 
 if __name__ == "__main__":
     rospy.init_node('navigation_module')
@@ -639,8 +638,8 @@ if __name__ == "__main__":
 
     #while True:
 
-    goal = Pose2D(.0, .0, 0.0)
     goal = Pose2D(0.8, 1.32, 0.0)
+    goal = Pose2D(.0, .0, 0.0)
     goal = Pose2D(0.5, 3.8, 0.0)
     #goal = Pose2D(3.0, 0.8, 0.0)
     #goal = Pose2D(5.3, 4.4, 0.0)
@@ -673,5 +672,9 @@ if __name__ == "__main__":
 
     #nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
     #goal = Pose2D(2.31, 5.6, 0.0)
-    nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False)
+
+    via_points = [Pose2D(2.3, 0.0, 0.0),  Pose2D(2.0, 4.2, 0.0)]
+    #via_points = None
+    #nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=via_points)
+    nav.nav_goal(goal, motion_synth_pose=None, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=via_points)
     
