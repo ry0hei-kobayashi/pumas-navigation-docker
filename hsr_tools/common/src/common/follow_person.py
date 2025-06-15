@@ -63,10 +63,10 @@ class FollowPerson(smach.State, Logger):
               
         if self.leg_pose.point.x > 1.5:
             if not self.distance_flag:                                                          
-                self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=True)
+                self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=False)
                 self.say_count += 1
                 if self.say_count % 2 == 0:
-                    self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=True)
+                    self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=False)
                 self.distance_flag = True
         else:
             self.distance_flag = False

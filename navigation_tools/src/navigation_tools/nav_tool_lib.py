@@ -21,6 +21,16 @@ from visualization_msgs.msg import Marker
 from std_srvs.srv import Trigger, SetBool
 from motion_synth.msg import Joints, StartAndEndJoints
 
+arm_go_pose = {'arm_flex_joint': 0.0,
+               'arm_lift_joint': 0.0,
+               'arm_roll_joint': -1.57,
+               'wrist_flex_joint': -1.57,
+               'wrist_roll_joint': 0.0,
+               'head_pan_joint': 0.0,
+               'head_tilt_joint': np.deg2rad(0.0),}
+
+
+
 class NavModule:
     """Navigation Module for the robot"""
     __instance = None
@@ -376,26 +386,38 @@ class NavModule:
         joints.head_tilt_joint = joint_poses["head_tilt_joint"]
         return joints
 
-    def send_goal(self, goal, skip_joint_move=False):
+    def send_goal(self, goal):
         rospy.logwarn('NavModule -> Sending Nav Goal')
 
-        if skip_joint_move is False:
-            # TODO bad code
-            if self.motion_synth_start_pose is not None or self.motion_synth_end_pose is not None:
+        # if skip_joint_move is False:
+        # TODO bad code
+        if self.motion_synth_start_pose is not None or self.motion_synth_end_pose is not None:
 
-                start_and_end_joints = StartAndEndJoints()
-                start_and_end_joints.has_arm_start_pose = False
-                start_and_end_joints.has_arm_end_pose = False
+            start_and_end_joints = StartAndEndJoints()
+            start_and_end_joints.has_arm_start_pose = False
+            start_and_end_joints.has_arm_end_pose = False
 
-                if self.motion_synth_start_pose is not None:
-                    start_and_end_joints.has_arm_start_pose = True
-                    start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+            if self.motion_synth_start_pose is not None:
+                start_and_end_joints.has_arm_start_pose = True
+                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+            else:
+                start_and_end_joints.has_arm_start_pose = True
+                # startが無いなら自動でgo_pose()代入
+                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=arm_go_pose)
 
-                if self.motion_synth_end_pose is not None:
-                    start_and_end_joints.has_arm_end_pose = True
-                    start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
-                self.pub_move_joint_pose.publish(start_and_end_joints)
-                rospy.logwarn('NavModule -> Sending Arm Goal')
+            if self.motion_synth_end_pose is not None:
+                start_and_end_joints.has_arm_end_pose = True
+                start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
+            else:
+                # goalが無いなら自動でstart_poseと同じ姿勢を代入
+                start_and_end_joints.has_arm_end_pose = True
+                start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+
+            self.pub_move_joint_pose.publish(start_and_end_joints)
+
+            rospy.logwarn('NavModule -> Sending Arm Goal')
+            start_and_end_joints.has_arm_start_pose = False
+            start_and_end_joints.has_arm_end_pose = False
 
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
