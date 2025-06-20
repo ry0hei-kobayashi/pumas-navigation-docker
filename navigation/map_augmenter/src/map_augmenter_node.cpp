@@ -43,6 +43,21 @@ nav_msgs::OccupancyGrid obstacles_map;          //Only obstacles map calculated 
 nav_msgs::OccupancyGrid obstacles_inflated_map; //Only obstacles with inflation.
 nav_msgs::OccupancyGrid augmented_map;          //Static map plus prohibition layer plus obstacles map plus inflation. Calculated on service request.
 
+//add by r.k memory obstacles
+std::vector<geometry_msgs::Point> persistent_obstacles;
+void memory_all_obstacles(nav_msgs::OccupancyGrid& map)
+{
+    for (const auto& p : persistent_obstacles)
+    {
+        int cell_x = (int)((p.x - map.info.origin.position.x) / map.info.resolution);
+        int cell_y = (int)((p.y - map.info.origin.position.y) / map.info.resolution);
+        int cell = cell_y * map.info.width + cell_x;
+        if (cell >= 0 && cell < (int)map.data.size())
+            map.data[cell] = 100;
+    }
+
+}
+
 Eigen::Affine3d get_robot_position()
 {
     tf::StampedTransform tf;
@@ -182,7 +197,15 @@ bool obstacles_map_with_cloud()
         v = cam_to_robot * v;
         if(v.x() > minX && v.x() < maxX && v.y() > minY && v.y() < maxY && v.z() > minZ && v.z() < maxZ)
         {
-            v = robot_to_map * v;
+
+            v = robot_to_map * v; //map coordinate
+
+            //add by r.k memory_all_obs
+            geometry_msgs::Point obs;
+            obs.x = v.x();
+            obs.y = v.y();
+            persistent_obstacles.push_back(obs);
+
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
             cell   = cell_y * obstacles_map.info.width + cell_x;
@@ -254,7 +277,16 @@ bool obstacles_map_with_lidar()
         v = lidar_to_robot * v;
         if(v.x() > minX && v.x() < maxX && v.y() > minY && v.y() < maxY && v.z() > minZ && v.z() < maxZ) 
         {
+
+
             v = robot_to_map * v;
+
+            //add by r.k memory_all_obs
+            geometry_msgs::Point obs;
+            obs.x = v.x();
+            obs.y = v.y();
+            persistent_obstacles.push_back(obs);
+
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
             cell   = cell_y * obstacles_map.info.width + cell_x;
@@ -447,8 +479,8 @@ int main(int argc, char** argv)
     ros::Publisher pubAugmentedMap = n.advertise<nav_msgs::OccupancyGrid>("/augmented_map", 10);
     listener = new tf::TransformListener();
     ros::Rate loop(10);
-
     int decay_factor = 10;
+
     if(ros::param::has("~use_lidar"))
         ros::param::get("~use_lidar", use_lidar);
     if(ros::param::has("~use_sonars"))
@@ -573,6 +605,10 @@ int main(int argc, char** argv)
         {
             counter = 0;
             are_there_obstacles = decay_map_and_check_if_obstacles(obstacles_map, decay_factor);
+
+            //add by r.k memory_all_obstacles
+            memory_all_obstacles(obstacles_map);
+
             obstacles_inflated_map = inflate_map(obstacles_map, inflation_radius);
             augmented_map = merge_maps(static_map, obstacles_inflated_map);
             pubAugmentedMap.publish(augmented_map);

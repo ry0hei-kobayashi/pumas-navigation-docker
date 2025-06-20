@@ -120,6 +120,7 @@
   </node>
   
   
+  <!--TODO decay_factor >> delete dynamic obstacle to move 10s-->
   <node name="map_augmenter"  pkg="map_augmenter"  type="map_augmenter_node"  output="screen">
     <param name="laser_scan_topic" value="$(arg laser_scan_topic)"/>
     <param name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
@@ -136,6 +137,8 @@
     
     <param name="inflation_radius" value="0.13"/>
     <param name="cost_radius" value="0.18"/>
+    
+    <param name="decay_factor" value="10"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>

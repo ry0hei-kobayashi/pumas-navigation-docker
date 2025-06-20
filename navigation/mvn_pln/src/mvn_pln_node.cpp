@@ -577,7 +577,8 @@ int main(int argc, char** argv)
                     {
                         ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
                         collision_risk = false;
-                        state = SM_CALCULATE_PATH;
+                        //state = SM_CALCULATE_PATH;
+                        state = SM_COLLISION_DETECTED;
                     }
                     else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                     {
@@ -595,7 +596,20 @@ int main(int argc, char** argv)
                     break;
                 }
 
-            case SM_CORRECT_FINAL_ANGLE:
+                case SM_COLLISION_DETECTED:
+                    ROS_WARN("MvnPln.->Handling collision risk: checking if inside static obstacle...");
+                    //TODO add by r.kobayashi force backward
+                    //if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
+                    {
+                        ROS_WARN("MvnPln.->Confirmed: inside obstacle. Initiating backward recovery.");
+                        msg_goal_dist_angle.data[0] = -0.25;
+                        msg_goal_dist_angle.data[1] = 0;
+                        pub_goal_dist_angle.publish(msg_goal_dist_angle);
+                        state = SM_WAITING_FOR_MOVE_BACKWARDS;
+                    }
+                    break;
+                
+                case SM_CORRECT_FINAL_ANGLE:
                 {
                     std::cout << "MvnPln.->Correcting final angle." << std::endl;
                     get_robot_position(listener, robot_x, robot_y, robot_a);
