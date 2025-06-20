@@ -30,7 +30,6 @@ arm_go_pose = {'arm_flex_joint': 0.0,
                'head_tilt_joint': np.deg2rad(0.0),}
 
 
-
 class NavModule:
     """Navigation Module for the robot"""
     __instance = None
@@ -54,10 +53,8 @@ class NavModule:
         self.hsrif = HSRInterfaces()
         self.rosif = ROSInterfaces()
         
-        # 8 diagonal safe point detection
-        # self.distance_from_cost = 0.1
+        # for visualize goal point
         self.marker_num = 0
-        # self.points = []
 
         self.global_pose = None
         self.marker = Marker()
@@ -102,8 +99,6 @@ class NavModule:
         path_plan_success = self.path_plan_client()
         if path_plan_success.success:
             rospy.loginfo("NavModule -> pathplan success")
-            #self.points = []
-            #self.distance_from_cost = 0.1
         else:
             rospy.loginfo("NavModule -> pathplan fail")
 
@@ -114,29 +109,13 @@ class NavModule:
         if msg.status == GoalStatus.ACTIVE:
             if msg.text == 'Waiting for temporal obstacles to move':
                 rospy.loginfo('NavigationStatus -> Waiting for temporal obstacle to move')
-
-                #TODO temporal obstacles
-                #self.go_rel(x=0.2, y=0.0, yaw=0.0, timeout=0.0, type_nav="hsr")
-                #self.go_rel(x=-0.2, y=0.0, yaw=0.0, timeout=0.0, type_nav="hsr")
+                # TODO rotation
                 self.recovery_from_cost()
-                
-                ##if len(self.points) == 0:
-                #if not self.points:
-                #   self.replan_safe_point()
-                #   self.distance_from_cost += 0.2
-                #else:
-                #   self.publish_next_point()
 
         elif msg.status == GoalStatus.ABORTED:
             #TODO start incollision
             if msg.text == 'Cannot calculate path from start to goal point':
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
-                #state is goal incollision
-                #if not self.points:
-                #    self.replan_safe_point()
-                #    self.distance_from_cost += 0.2
-                #else:
-                #    self.publish_next_point()
             elif msg.text == 'Cancelling current movement':
                 rospy.loginfo('NavigationStatus -> Cancelling current movement')
 
@@ -144,11 +123,9 @@ class NavModule:
         self.goal_reached = False
         if msg.status == GoalStatus.SUCCEEDED:
             self.goal_reached = True
-            #self.distance_from_cost = 0.1
 
     def callback_stop(self, msg):
         self.robot_stop = True
-        #self.distance_from_cost = 0.1
 
     def set_navigation_type(self, type_nav):
         valid_types = ["hsr", "pumas"]
@@ -195,65 +172,7 @@ class NavModule:
         goal.pose.orientation.w = q[3]
         return goal
 
-    """
-    def replan_safe_point(self):
-        rospy.loginfo('called replan_safe_point')
-        try:
-            #rospy.logerr(f"self.global_goal_xyz: { self.global_goal_xyz}")
-            current_goal_pose2d = self.pose_stamped2pose_2d(self.global_goal_xyz)
-            radius = self.distance_from_cost
-            num_points = 8
-            self.points = self.calculate_safe_points(current_goal_pose2d, radius, num_points)
-
-            if self.points:
-                self.publish_next_point()
-            else:
-                #self.hsrif.tts.say('Path Planning failed. I will try again.', language='en', queue=True, sync=True)
-                rospy.loginfo('called replan_safe_point -> but not found')
-                #self.distance_from_cost += 0.2
-
-        except:
-            import traceback
-            traceback.print_exc()
-
-
-    def publish_next_point(self):
-        rospy.loginfo("called publish next point")
-
-        safe_point = self.points.pop(0)  # Remove the first value
-        goal = PoseStamped()
-        goal.header.frame_id = self.global_goal_xyz.header.frame_id
-        goal.pose.position.x = safe_point.x
-        goal.pose.position.y = safe_point.y
-
-
-        # robot will rotate original goal rotation
-        goal_direction = math.atan2(self.global_goal_xyz.pose.position.y - safe_point.y,
-                                    self.global_goal_xyz.pose.position.x - safe_point.x)
-
-        q = tf.transformations.quaternion_from_euler(0, 0, goal_direction)
-        goal.pose.orientation.x = q[0]
-        goal.pose.orientation.y = q[1]
-        goal.pose.orientation.z = q[2]
-        goal.pose.orientation.w = q[3]
-
-        self.send_goal(goal)
-
-    def calculate_safe_points(self, center_pose2d, radius, num_points):
-        points = []
-        angle_increment = 2 * math.pi / (num_points - 1)
-
-        for i in range(num_points):
-            angle = i * angle_increment
-            x = center_pose2d.x + radius * math.cos(angle)
-            y = center_pose2d.y + radius * math.sin(angle)
-            points.append(Pose2D(x, y, angle))
-
-        return points
-    """
-
     def marker_plot(self, goal):
-        
         self.marker.header.frame_id = "map"
         self.marker.header.stamp = rospy.Time.now()
         self.marker.ns = "goal_markers"
@@ -272,9 +191,8 @@ class NavModule:
         self.pub_marker.publish(self.marker)
 
     def recovery_from_cost(self):
-
+        # TODO rotate cancel
         rospy.loginfo('NavigationStatus. -> Recovery From Dynamic Cost -> Rotation')
-        #self.hsrif.tts.say('Obstacle detected.', language='en')
 
         current_orientation = self.global_pose.pose.orientation
         _, _, current_yaw = tf.transformations.euler_from_quaternion([current_orientation.x, current_orientation.y, current_orientation.z, current_orientation.w])
@@ -494,8 +412,6 @@ class NavModule:
     def rotate_yaw(self, goal_pose):
 
         pi = 3.1415926535
-
-        #current_pose = self.pose_stamped2pose_2d(self.global_pose) #TODO 小数点レベルで誤差あり
         current_pose = self.pose()
         x, y, theta = current_pose.x, current_pose.y, current_pose.theta
 
@@ -514,10 +430,10 @@ class NavModule:
         self.rosif.pub.command_velocity_in_sec(0.0, 0.0, goal_pose.theta - theta , 1.0)
 
     def use_obstacle_detection(self, status):
-        #rospy.set_param('/obs_detector/use_lidar', status)
         rospy.set_param('/obs_detector/use_point_cloud', status)
-        #rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
         rospy.loginfo(f"NavModule.-> obstacle_detection use POINT CLOUD >>  {status}")
+        #rospy.set_param('/obs_detector/use_lidar', status)
+        #rospy.logwarn(f"NavModule.-> obstacle_detection use LIDAR >>  {status}")
 
     #########################################
     ##   HSR Functions bypass with hsrif   ##
@@ -573,7 +489,7 @@ class NavModule:
          """
          rospy.loginfo(goal)
 
-         # under constructoin: obstacle_detection (lidar and point_cloud) can set to only on/off. 
+         # under constructoin: obstacle_detection (point_cloud) can set to only on/off. 
          if obstacle_detection:
              self.use_obstacle_detection(status=True)
          else:
@@ -676,5 +592,5 @@ if __name__ == "__main__":
     via_points = [Pose2D(2.3, 0.0, 0.0),  Pose2D(2.0, 4.2, 0.0)]
     #via_points = None
     #nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=via_points)
-    nav.nav_goal(goal, motion_synth_pose=None, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=via_points)
+    nav.nav_goal(goal, motion_synth_pose=ms_config, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, via_points=None)
     

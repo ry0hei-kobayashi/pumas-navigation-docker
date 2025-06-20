@@ -60,7 +60,7 @@ std::vector<geometry_msgs::Pose> via_points;
 //add by r.k 2025/06/12 via point
 void callback_viapoints(const geometry_msgs::PoseArray::ConstPtr& msg) {
     via_points = msg->poses;
-    ROS_INFO("MvnPln.->Received %lu viapoints", via_points.size());
+    ROS_INFO("MvnPln.->Received %lu viapoints -> A* with via_points!!!", via_points.size());
 }
 
 void callback_general_stop(const std_msgs::Empty::ConstPtr& msg)
@@ -105,7 +105,7 @@ void callback_set_patience(const std_msgs::Bool::ConstPtr& msg)
     patience = msg->data;
 }
 
-// original implementation
+// original path_plan implementation
 //bool plan_path_from_augmented_map(float robot_x, float robot_y, float goal_x, float goal_y, ros::ServiceClient& clt, nav_msgs::Path& path)
 //{
 //    nav_msgs::GetPlan srv;
@@ -178,9 +178,9 @@ void updateViaPoints(const geometry_msgs::Pose& robot, double pass_via_threshold
     double robot2via_distance = std::hypot(dx, dy);
 
     if (robot2via_distance < pass_via_threshold) {
+        ROS_INFO ("MvnPln.-> Passed via-point at (%.3f, %.3f) -> Erase via-point", v.position.x, v.position.y);
         via_points.erase(via_points.begin());
         previous_dist = std::numeric_limits<double>::infinity(); // Reset previous distance for next via point
-        ROS_INFO ("MvnPln.-> Passed via-point at (%.3f, %.3f) →  Erase via-point", v.position.x, v.position.y);
     }
 
     if (robot2via_distance < previous_dist - 1e-4) {
@@ -263,10 +263,12 @@ int main(int argc, char** argv)
     ros::Subscriber sub_set_patience       = n.subscribe("/navigation/set_patience", 10, callback_set_patience);
     ros::Subscriber sub_via_points       = n.subscribe("/navigation/via_points", 10, callback_viapoints);
     ros::Publisher pub_obs_detector_enable = n.advertise<std_msgs::Bool>("/navigation/obs_detector/enable", 1);
-    ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1);
     ros::Publisher pub_goal_dist_angle     = n.advertise<std_msgs::Float32MultiArray>("/simple_move/goal_dist_angle", 1);
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
+
+    ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1); //original
+    //ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1, true); //latch true
 
     ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
@@ -338,24 +340,30 @@ int main(int argc, char** argv)
                     motion_synth::MotionSynthesisGoal motion_synth_goal;
                     motion_synth_goal.goal_location.x = global_goal.position.x;
                     motion_synth_goal.goal_location.y = global_goal.position.y;
-                    motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
-                    if (target_arm_pose.has_arm_start_pose == true)
+                    //motion_synth_goal.goal_location.theta = atan2(global_goal.orientation.z, global_goal.orientation.w) * 2;
+                    motion_synth_goal.goal_location.theta = tf::getYaw(global_goal.orientation);
+
+                    motion_synth_goal.apply_start_pose = false;
+                    motion_synth_goal.apply_goal_pose = false;
+
+                    if (target_arm_pose.has_arm_start_pose)
                     {
                         motion_synth_goal.apply_start_pose = true;
                         motion_synth_goal.start_pose = target_arm_pose.start_pose;
-                    } 
-                    if (target_arm_pose.has_arm_end_pose == true)
+                        ROS_INFO("MvnPln.->Arm motion start_pose sent");
+                    }
+
+                    if (target_arm_pose.has_arm_end_pose)
                     {
                         motion_synth_goal.apply_goal_pose = true;
                         motion_synth_goal.goal_pose = target_arm_pose.end_pose;
+                        ROS_INFO("MvnPln.->Arm motion end_pose sent");
                     }
-                    else{
-                        motion_synth_goal.apply_start_pose = false;
-                        motion_synth_goal.apply_goal_pose = false;
-                    }
-                    arm_goal_received = false;
+
                     ms_ac->sendGoal(motion_synth_goal);
-                    ROS_INFO("MvnPln.->Arm motion goal sent");
+                    arm_goal_received = false;
+                    motion_synth_goal.apply_start_pose = false;
+                    motion_synth_goal.apply_goal_pose = false;
                 }
 
                 if(nav_goal_received)
@@ -366,9 +374,6 @@ int main(int argc, char** argv)
                         current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Cancelling current movement.", pub_status);
                     goal_id++;
                     ROS_INFO("MvnPln.->New goal received. Current task goal_id: ");
-                    //if (!is_waypoints){
-                    //    current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Starting new movement task", pub_status);
-                    //}
                     near_goal_sent = false;
                 }
                 break;
