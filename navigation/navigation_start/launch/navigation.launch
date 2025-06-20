@@ -27,6 +27,8 @@
   <arg name="env_file_name" default="env_furniture_$(arg map_name).yaml"/>
   <arg name="add_static_obstacles" default="true"/>
 
+  <arg name="memory_all_obstacles" default="False"/>
+
   <!--input topic-->
   <arg name="cmd_vel_name" default="/hsrb/command_velocity"/>
   <arg name="laser_scan_topic" default="/hsrb/base_scan"/>
@@ -43,6 +45,7 @@
 
   <!--potential fields-->
   <arg name="use_pot_fields" default="True"/>
+
   
   <!--sensor downsampling, detection threshold-->
   <arg name="cloud_downsampling" default="9"/>
@@ -171,6 +174,7 @@
     <param name="cost_radius" value="0.20"/>
 
     <!--param name="decay_factor" value="10"/-->
+    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>

@@ -32,6 +32,8 @@
   <arg name="use_bumper" default="False"/>
   <arg name="use_pot_fields" default="True"/>
   
+  <arg name="memory_all_obstacles" default="False"/>
+
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
   <arg name="cloud_points_threshold" default="100"/>
@@ -139,6 +141,7 @@
     <param name="cost_radius" value="0.18"/>
     
     <param name="decay_factor" value="10"/>
+    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -146,6 +149,7 @@
     <param name="min_y" value="$(arg min_y)"/>
     <param name="max_z" value="$(arg max_z)"/>
     <param name="min_z" value="$(arg min_z)"/>
+
 
   </node>
 

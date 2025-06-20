@@ -49,15 +49,15 @@ bool nav_goal_received = false;
 geometry_msgs::Pose global_goal;
 std::string base_link_name = "base_footprint";
 
+// motion_synth
 bool arm_goal_received = false;
 bool arm_goal_reached = false;
 bool has_arm_start_pose = false;
 bool has_arm_end_pose = false;
 motion_synth::StartAndEndJoints target_arm_pose;
 
-std::vector<geometry_msgs::Pose> via_points;
-
 //add by r.k 2025/06/12 via point
+std::vector<geometry_msgs::Pose> via_points;
 void callback_viapoints(const geometry_msgs::PoseArray::ConstPtr& msg) {
     via_points = msg->poses;
     ROS_INFO("MvnPln.->Received %lu viapoints -> A* with via_points!!!", via_points.size());
@@ -200,9 +200,6 @@ void get_robot_position(tf::TransformListener& listener, float& robot_x, float& 
     double roll, pitch, yaw;
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
     robot_a = yaw;
-
-    //q = tf.getRotation();
-    //robot_a = atan2((float)q.z(), (float)q.w()) * 2;
 }
 
 int publish_status(int status, int id, std::string text, ros::Publisher& pub)
@@ -268,11 +265,10 @@ int main(int argc, char** argv)
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
 
     ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1); //original
-    //ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1, true); //latch true
 
     ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
-    //ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented");
+    //ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented"); //original implementation
     ros::ServiceClient clt_plan_path = n.serviceClient<path_planner::GetPlanWithVia>("/path_planner/plan_path");
     ros::ServiceClient clt_are_there_obs   = n.serviceClient<std_srvs::Trigger>("/map_augmenter/are_there_obstacles");
     ros::ServiceClient clt_is_in_obstacles = n.serviceClient<std_srvs::Trigger>("/map_augmenter/is_inside_obstacles");
@@ -305,7 +301,6 @@ int main(int argc, char** argv)
     nav_msgs::Path path;
     std_msgs::Float32MultiArray msg_goal_dist_angle;
     msg_goal_dist_angle.data.resize(2);
-
 
     while(ros::ok())
     {
@@ -577,8 +572,10 @@ int main(int argc, char** argv)
                     {
                         ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
                         collision_risk = false;
-                        //state = SM_CALCULATE_PATH;
-                        state = SM_COLLISION_DETECTED;
+                        //state = SM_CALCULATE_PATH;   //default implementation
+
+                        //TODO
+                        state = SM_COLLISION_DETECTED; //forcing backward
                     }
                     else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                     {
@@ -601,7 +598,7 @@ int main(int argc, char** argv)
                     //TODO add by r.kobayashi force backward
                     //if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
                     {
-                        ROS_WARN("MvnPln.->Confirmed: inside obstacle. Initiating backward recovery.");
+                        ROS_WARN("MvnPln.->Collision Risk Detected Forcing Backward.");
                         msg_goal_dist_angle.data[0] = -0.25;
                         msg_goal_dist_angle.data[1] = 0;
                         pub_goal_dist_angle.publish(msg_goal_dist_angle);
@@ -626,7 +623,7 @@ int main(int argc, char** argv)
 
                     if(error  >  M_PI) error -= 2*M_PI;
                     if(error <= -M_PI) error += 2*M_PI;
-                    msg_goal_dist_angle.data[0] = 0;
+                    msg_goal_dist_angle.data[0] = 0.0;
                     msg_goal_dist_angle.data[1] = error;
                     pub_goal_dist_angle.publish(msg_goal_dist_angle);
                     state = SM_WAIT_FOR_ANGLE_CORRECTED;
@@ -684,6 +681,7 @@ int main(int argc, char** argv)
 
                 //add by r.k 2025/06/12
                 via_points.clear();
+
                 state = SM_INIT;
                 break;
     

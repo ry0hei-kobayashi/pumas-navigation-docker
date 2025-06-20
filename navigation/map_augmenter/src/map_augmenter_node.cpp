@@ -44,8 +44,9 @@ nav_msgs::OccupancyGrid obstacles_inflated_map; //Only obstacles with inflation.
 nav_msgs::OccupancyGrid augmented_map;          //Static map plus prohibition layer plus obstacles map plus inflation. Calculated on service request.
 
 //add by r.k memory obstacles
+bool memory_all_obstacles = false;
 std::vector<geometry_msgs::Point> persistent_obstacles;
-void memory_all_obstacles(nav_msgs::OccupancyGrid& map)
+void memory_obstacles_map(nav_msgs::OccupancyGrid& map)
 {
     for (const auto& p : persistent_obstacles)
     {
@@ -201,12 +202,12 @@ bool obstacles_map_with_cloud()
             v = robot_to_map * v; //map coordinate
 
             //add by r.k memory_all_obs
-	    if (use_online){
-            	geometry_msgs::Point obs;
-            	obs.x = v.x();
-            	obs.y = v.y();
-            	persistent_obstacles.push_back(obs);
-	    }
+	        if (memory_all_obstacles){
+                	geometry_msgs::Point obs;
+                	obs.x = v.x();
+                	obs.y = v.y();
+                	persistent_obstacles.push_back(obs);
+	        }
 
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
@@ -284,13 +285,13 @@ bool obstacles_map_with_lidar()
             v = robot_to_map * v;
 
             //add by r.k memory_all_obs
-	    if (use_online)
-	    {
-            	geometry_msgs::Point obs;
-            	obs.x = v.x();
-            	obs.y = v.y();
-            	persistent_obstacles.push_back(obs);
-	    }
+    	    if (memory_all_obstacles)
+    	    {
+                	geometry_msgs::Point obs;
+                	obs.x = v.x();
+                	obs.y = v.y();
+                	persistent_obstacles.push_back(obs);
+    	    }
 
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
@@ -530,6 +531,8 @@ int main(int argc, char** argv)
         ros::param::get("~lidar_downsampling", lidar_downsampling);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
+    if(ros::param::has("~memory_all_obstacles"))
+        ros::param::get("~memory_all_obstacles", memory_all_obstacles);
 
     std::cout << "MapAugmenter.->Parameters: min_x =" << minX << "  max_x =" << maxX << "  min_y =" << minY << "  max_y =" << maxY;
     std::cout << "  min_z =" << minZ << "  max_z =" << maxZ << std::endl;
@@ -612,9 +615,9 @@ int main(int argc, char** argv)
             are_there_obstacles = decay_map_and_check_if_obstacles(obstacles_map, decay_factor);
 
             //add by r.k memory_all_obstacles
-	    if (use_online){
-            	memory_all_obstacles(obstacles_map);
-	    }
+    	    if (memory_all_obstacles){
+                	memory_obstacles_map(obstacles_map);
+    	    }
 
             obstacles_inflated_map = inflate_map(obstacles_map, inflation_radius);
             augmented_map = merge_maps(static_map, obstacles_inflated_map);
