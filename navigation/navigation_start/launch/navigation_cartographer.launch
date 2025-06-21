@@ -52,6 +52,10 @@
   <arg name="max_z" default="1.5"/>
   <!--arg name="max_z" default="1.5"/-->
 
+  <!--backward behavior-->
+  <arg name="forcing_backward" default="True"/>
+  <arg name="backward_distance" default="-0.2"/>
+
   <!--set same param max_x-->
   <arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="0.5"/>
@@ -137,8 +141,8 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.13"/>
-    <param name="cost_radius" value="0.18"/>
+    <param name="inflation_radius" value="0.2"/>
+    <param name="cost_radius" value="0.28"/>
     
     <param name="decay_factor" value="10"/>
     <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
@@ -164,6 +168,9 @@
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
+    <param name="proximity_criterion" value="0.2"/>
+    <param name="forcing_backward" value="$(arg forcing_backward)"/>
+    <param name="backward_distance" value="$(arg backward_distance)"/>
   </node>
 
   <!--call twice-->

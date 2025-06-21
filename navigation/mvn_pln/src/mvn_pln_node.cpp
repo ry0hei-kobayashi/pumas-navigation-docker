@@ -49,6 +49,11 @@ bool nav_goal_received = false;
 geometry_msgs::Pose global_goal;
 std::string base_link_name = "base_footprint";
 
+//forcing_backward
+bool forcing_backward = false;
+float backward_distance = -0.25;
+
+
 // motion_synth
 bool arm_goal_received = false;
 bool arm_goal_reached = false;
@@ -232,6 +237,10 @@ int main(int argc, char** argv)
         ros::param::get("~proximity_criterion", proximity_criterion);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
+    if(ros::param::has("~forcing_backward"))
+        ros::param::get("~forcing_backward", forcing_backward);
+    if(ros::param::has("~backward_distance"))
+        ros::param::get("~backward_distance", backward_distance);
     //if(ros::param::has("~move_error_threshold"))
     //    ros::param::get("~move_error_threshold", move_error_threshold);
 
@@ -263,9 +272,7 @@ int main(int argc, char** argv)
     ros::Publisher pub_goal_dist_angle     = n.advertise<std_msgs::Float32MultiArray>("/simple_move/goal_dist_angle", 1);
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
-
     ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1); //original
-
     ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
     //ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented"); //original implementation
@@ -373,60 +380,61 @@ int main(int argc, char** argv)
                 }
                 break;
                 
-            //case SM_CALCULATE_PATH:
-            //    get_robot_position(listener, robot_x, robot_y, robot_a);
-            //    if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
-            //    {
-            //        std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
-            //        pub_simple_move_stop.publish(std_msgs::Empty());
-
-            //        // if is inside STATIC obstacle, go backwards. add by r.k 2025/04/11 //TODO
-            //        if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
-            //        {
-            //            ROS_ERROR("MvnPln.->Robot is inside an obstacle. Will attempt recovery with going backwards.");
-            //            state = SM_CHECK_IF_INSIDE_OBSTACLES;
-            //        }
-            //        else
-            //        {
-            //            //original
-            //            if(!patience)
-            //                state = SM_CHECK_IF_INSIDE_OBSTACLES;
-            //            else
-            //                state = SM_CHECK_IF_OBSTACLES;
-            //        }
-            //    }
-            //    else
-            //    {
-            //        state = SM_ENABLE_OBS_DETECT;
-            //    }
-            //    break;
-
             case SM_CALCULATE_PATH:
+                get_robot_position(listener, robot_x, robot_y, robot_a);
+                if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
                 {
-                    get_robot_position(listener, robot_x, robot_y, robot_a);
+                    std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
+                    pub_simple_move_stop.publish(std_msgs::Empty());
 
-                    if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
+                    // if is inside STATIC obstacle, go backwards. add by r.k 2025/04/11 //TODO
+                    if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
                     {
-                        std::cout<< "\033[31m" << "MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << "\033[0m]" << std::endl;
-
-                        pub_simple_move_stop.publish(std_msgs::Empty());
+                        ROS_ERROR("MvnPln.->Robot is inside an obstacle. Will attempt recovery with going backwards.");
+                        state = SM_CHECK_IF_INSIDE_OBSTACLES;
+                    }
+                    else
+                    {
+                        //original implementation
                         if(!patience)
                             state = SM_CHECK_IF_INSIDE_OBSTACLES;
                         else
                             state = SM_CHECK_IF_OBSTACLES;
                     }
-                    else
-                        state = SM_ENABLE_OBS_DETECT;
-                    break;
                 }
+                else
+                {
+                    state = SM_ENABLE_OBS_DETECT;
+                }
+                break;
+
+            //case SM_CALCULATE_PATH:
+            //    {
+            //        get_robot_position(listener, robot_x, robot_y, robot_a);
+
+            //        if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
+            //        {
+            //            std::cout<< "\033[31m" << "MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << "\033[0m]" << std::endl;
+
+            //            pub_simple_move_stop.publish(std_msgs::Empty());
+            //            if(!patience)
+            //                state = SM_CHECK_IF_INSIDE_OBSTACLES;
+            //            else
+            //                state = SM_CHECK_IF_OBSTACLES;
+            //        }
+            //        else
+            //            state = SM_ENABLE_OBS_DETECT;
+            //        break;
+            //    }
 
             case SM_CHECK_IF_INSIDE_OBSTACLES:
                 ROS_INFO("MvnPln.->Checking if robot is inside an obstacle...");
                 clt_is_in_obstacles.call(srv_check_obstacles);
                 if(srv_check_obstacles.response.success)
                 {
+
                     ROS_INFO("MvnPln.->Robot is inside an obstacle. Moving backwards...");
-                    msg_goal_dist_angle.data[0] = -0.25;
+                    msg_goal_dist_angle.data[0] = backward_distance;
                     msg_goal_dist_angle.data[1] = 0;
                     pub_goal_dist_angle.publish(msg_goal_dist_angle);
 
@@ -459,7 +467,14 @@ int main(int argc, char** argv)
                     ROS_ERROR("MvnPln.->There are no temporal obstacles. Announcing failure.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id,
                                                     "Cannot calculate path from start to goal point", pub_status);
-                    state = SM_INIT;
+                    if(forcing_backward){
+                        ROS_WARN("MvnPln.->Recovery Start In Collision!!!");
+                        state = SM_COLLISION_DETECTED; //TODO need to debug
+                    }
+                    else
+                    {
+                        state = SM_INIT;
+                    }
                 }
                 else
                 {
@@ -572,10 +587,13 @@ int main(int argc, char** argv)
                     {
                         ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
                         collision_risk = false;
-                        //state = SM_CALCULATE_PATH;   //default implementation
+                        state = SM_CALCULATE_PATH;   //default implementation
 
                         //TODO
-                        state = SM_COLLISION_DETECTED; //forcing backward
+                        if(forcing_backward)
+                        {
+                            state = SM_COLLISION_DETECTED; //forcing backward
+                        }
                     }
                     else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                     {
@@ -593,15 +611,16 @@ int main(int argc, char** argv)
                     break;
                 }
 
+                //TODO add by r.kobayashi force backward
                 case SM_COLLISION_DETECTED:
-                    ROS_WARN("MvnPln.->Handling collision risk: checking if inside static obstacle...");
-                    //TODO add by r.kobayashi force backward
-                    //if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
                     {
                         ROS_WARN("MvnPln.->Collision Risk Detected Forcing Backward.");
-                        msg_goal_dist_angle.data[0] = -0.25;
+
+                        //send backward
+                        msg_goal_dist_angle.data[0] = backward_distance; //-0.10 is default
                         msg_goal_dist_angle.data[1] = 0;
                         pub_goal_dist_angle.publish(msg_goal_dist_angle);
+
                         state = SM_WAITING_FOR_MOVE_BACKWARDS;
                     }
                     break;

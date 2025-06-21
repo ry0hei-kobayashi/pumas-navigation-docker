@@ -67,6 +67,10 @@
   <!--arg name="min_z" default="0.05"/-->
   <arg name="max_z" default="1.2"/>
 
+  <!--backward behavior-->
+  <arg name="forcing_backward" default="True"/>
+  <arg name="backward_distance" default="-0.2"/>
+
   <!--Hardware-->
   <group ns="hardware">
     <node name="head" pkg="head" type="head_node" output="screen"/>
@@ -215,6 +219,8 @@
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
     <param name="proximity_criterion" value="0.2"/>
+    <param name="forcing_backward" value="$(arg forcing_backward)"/>
+    <param name="backward_distance" value="$(arg backward_distance)"/>
 
     <!--simulator-->
     <!--param if="$(arg simulator)" name="move_error_threshold" value="0.001"/-->
