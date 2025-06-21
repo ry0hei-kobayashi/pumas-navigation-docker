@@ -201,10 +201,12 @@ bool obstacles_map_with_cloud()
             v = robot_to_map * v; //map coordinate
 
             //add by r.k memory_all_obs
-            geometry_msgs::Point obs;
-            obs.x = v.x();
-            obs.y = v.y();
-            persistent_obstacles.push_back(obs);
+	    if (use_online){
+            	geometry_msgs::Point obs;
+            	obs.x = v.x();
+            	obs.y = v.y();
+            	persistent_obstacles.push_back(obs);
+	    }
 
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
@@ -282,10 +284,13 @@ bool obstacles_map_with_lidar()
             v = robot_to_map * v;
 
             //add by r.k memory_all_obs
-            geometry_msgs::Point obs;
-            obs.x = v.x();
-            obs.y = v.y();
-            persistent_obstacles.push_back(obs);
+	    if (use_online)
+	    {
+            	geometry_msgs::Point obs;
+            	obs.x = v.x();
+            	obs.y = v.y();
+            	persistent_obstacles.push_back(obs);
+	    }
 
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
@@ -607,7 +612,9 @@ int main(int argc, char** argv)
             are_there_obstacles = decay_map_and_check_if_obstacles(obstacles_map, decay_factor);
 
             //add by r.k memory_all_obstacles
-            memory_all_obstacles(obstacles_map);
+	    if (use_online){
+            	memory_all_obstacles(obstacles_map);
+	    }
 
             obstacles_inflated_map = inflate_map(obstacles_map, inflation_radius);
             augmented_map = merge_maps(static_map, obstacles_inflated_map);
