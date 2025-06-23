@@ -34,6 +34,8 @@
 
   <arg name="memory_all_obstacles" default="True"/>
   
+  <arg name="memory_all_obstacles" default="False"/>
+
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
   <arg name="cloud_points_threshold" default="100"/>
@@ -51,6 +53,10 @@
   <arg name="min_z" default="0.05"/>
   <arg name="max_z" default="1.5"/>
   <!--arg name="max_z" default="1.5"/-->
+
+  <!--backward behavior-->
+  <arg name="forcing_backward" default="True"/>
+  <arg name="backward_distance" default="-0.2"/>
 
   <!--set same param max_x-->
   <arg name="pot_fields_d0" default="0.35"/>
@@ -122,6 +128,7 @@
   </node>
   
   
+  <!--TODO decay_factor >> delete dynamic obstacle to move 10s-->
   <node name="map_augmenter"  pkg="map_augmenter"  type="map_augmenter_node"  output="screen">
     <param name="laser_scan_topic" value="$(arg laser_scan_topic)"/>
     <param name="point_cloud_topic" value="$(arg point_cloud_topic)"/>
@@ -137,8 +144,11 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.13"/>
-    <param name="cost_radius" value="0.18"/>
+    <param name="inflation_radius" value="0.2"/>
+    <param name="cost_radius" value="0.28"/>
+    
+    <param name="decay_factor" value="10"/>
+    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
@@ -146,6 +156,7 @@
     <param name="min_y" value="$(arg min_y)"/>
     <param name="max_z" value="$(arg max_z)"/>
     <param name="min_z" value="$(arg min_z)"/>
+
 
   </node>
 
@@ -160,6 +171,9 @@
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
+    <param name="proximity_criterion" value="0.2"/>
+    <param name="forcing_backward" value="$(arg forcing_backward)"/>
+    <param name="backward_distance" value="$(arg backward_distance)"/>
   </node>
 
   <!--call twice-->

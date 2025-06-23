@@ -63,6 +63,22 @@ void add_memory_obstacle(const Eigen::Vector3d& point)
     memory_cells.insert(idx);
 }
 
+//add by r.k memory obstacles
+bool memory_all_obstacles = false;
+std::vector<geometry_msgs::Point> persistent_obstacles;
+void memory_obstacles_map(nav_msgs::OccupancyGrid& map)
+{
+    for (const auto& p : persistent_obstacles)
+    {
+        int cell_x = (int)((p.x - map.info.origin.position.x) / map.info.resolution);
+        int cell_y = (int)((p.y - map.info.origin.position.y) / map.info.resolution);
+        int cell = cell_y * map.info.width + cell_x;
+        if (cell >= 0 && cell < (int)map.data.size())
+            map.data[cell] = 100;
+    }
+
+}
+
 Eigen::Affine3d get_robot_position()
 {
     tf::StampedTransform tf;
@@ -314,6 +330,8 @@ bool obstacles_map_with_lidar()
         v = lidar_to_robot * v;
         if(v.x() > minX && v.x() < maxX && v.y() > minY && v.y() < maxY && v.z() > minZ && v.z() < maxZ) 
         {
+
+
             v = robot_to_map * v;
 
             if (memory_all_obstacles){
@@ -577,6 +595,8 @@ int main(int argc, char** argv)
         ros::param::get("~lidar_downsampling", lidar_downsampling);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
+    if(ros::param::has("~memory_all_obstacles"))
+        ros::param::get("~memory_all_obstacles", memory_all_obstacles);
 
     //TODO memory_all_obstacles
     if(memory_all_obstacles)
