@@ -600,11 +600,13 @@ int main(int argc, char** argv)
                     {
                         ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
                         collision_risk = false;
-                        state = SM_CALCULATE_PATH;   //default implementation
 
                         if(forcing_backward)
                         {
                             state = SM_COLLISION_DETECTED; //forcing backward
+                        }
+                        else{
+                            state = SM_CALCULATE_PATH;   //default implementation
                         }
                     }
                     else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
