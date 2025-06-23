@@ -122,8 +122,8 @@ void callback_rejection_force(const geometry_msgs::Vector3::ConstPtr& msg)
 geometry_msgs::Twist calculate_speeds(float robot_x, float robot_y, float robot_t, float goal_x, float goal_y,float min_linear_speed, float max_linear_speed, float angular_speed, float alpha, float beta, bool backwards, bool lateral, bool use_pot_fields=false, double rejection_force_y=0)
 {
     float angle_error = 0;
-    if(backwards) angle_error = (atan2(robot_y - goal_y, robot_x -goal_x)-robot_t);
-    else angle_error = (atan2(goal_y - robot_y, goal_x - robot_x)-robot_t);
+    if(backwards) angle_error = (atan2(robot_y - goal_y, robot_x - goal_x) - robot_t);
+    else angle_error = (atan2(goal_y - robot_y, goal_x - robot_x) - robot_t);
     if(angle_error >   M_PI) angle_error -= 2*M_PI;
     if(angle_error <= -M_PI) angle_error += 2*M_PI;
     if(lateral) angle_error -= M_PI/2;

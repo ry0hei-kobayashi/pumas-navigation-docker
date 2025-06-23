@@ -46,7 +46,7 @@ class MotionSynthesisServer:
 
         while not rospy.is_shutdown():
             try:
-                msg = rospy.wait_for_message("/simple_move/goal_path", Path, timeout=1.0)
+                msg = rospy.wait_for_message("/simple_move/goal_path", Path, timeout=5.0) #TODO timeout
                 if msg.poses and len(msg.poses) > 0:
                     first_pose = msg.poses[0].pose
                     if first_pose.position.x is not None and first_pose.position.y is not None:
@@ -158,11 +158,7 @@ class MotionSynthesisServer:
 
         elif goal_pose.arm_flex_joint > -0.35 and goal_pose.arm_lift_joint > 0.15:
             temporary_pose.arm_flex_joint = -0.60
-            
-            
-
         return temporary_pose
-
 
     def execute_cb(self, goal):
         self.global_nav_goal_reached = False

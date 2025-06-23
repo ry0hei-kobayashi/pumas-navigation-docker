@@ -43,6 +43,22 @@ nav_msgs::OccupancyGrid obstacles_map;          //Only obstacles map calculated 
 nav_msgs::OccupancyGrid obstacles_inflated_map; //Only obstacles with inflation.
 nav_msgs::OccupancyGrid augmented_map;          //Static map plus prohibition layer plus obstacles map plus inflation. Calculated on service request.
 
+//add by r.k memory obstacles
+bool memory_all_obstacles = false;
+std::vector<geometry_msgs::Point> persistent_obstacles;
+void memory_obstacles_map(nav_msgs::OccupancyGrid& map)
+{
+    for (const auto& p : persistent_obstacles)
+    {
+        int cell_x = (int)((p.x - map.info.origin.position.x) / map.info.resolution);
+        int cell_y = (int)((p.y - map.info.origin.position.y) / map.info.resolution);
+        int cell = cell_y * map.info.width + cell_x;
+        if (cell >= 0 && cell < (int)map.data.size())
+            map.data[cell] = 100;
+    }
+
+}
+
 Eigen::Affine3d get_robot_position()
 {
     tf::StampedTransform tf;
@@ -182,7 +198,17 @@ bool obstacles_map_with_cloud()
         v = cam_to_robot * v;
         if(v.x() > minX && v.x() < maxX && v.y() > minY && v.y() < maxY && v.z() > minZ && v.z() < maxZ)
         {
-            v = robot_to_map * v;
+
+            v = robot_to_map * v; //map coordinate
+
+            //add by r.k memory_all_obs
+	        if (memory_all_obstacles){
+                	geometry_msgs::Point obs;
+                	obs.x = v.x();
+                	obs.y = v.y();
+                	persistent_obstacles.push_back(obs);
+	        }
+
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
             cell   = cell_y * obstacles_map.info.width + cell_x;
@@ -254,7 +280,19 @@ bool obstacles_map_with_lidar()
         v = lidar_to_robot * v;
         if(v.x() > minX && v.x() < maxX && v.y() > minY && v.y() < maxY && v.z() > minZ && v.z() < maxZ) 
         {
+
+
             v = robot_to_map * v;
+
+            //add by r.k memory_all_obs
+    	    if (memory_all_obstacles)
+    	    {
+                	geometry_msgs::Point obs;
+                	obs.x = v.x();
+                	obs.y = v.y();
+                	persistent_obstacles.push_back(obs);
+    	    }
+
             cell_x = (int)((v.x() - obstacles_map.info.origin.position.x)/obstacles_map.info.resolution);
             cell_y = (int)((v.y() - obstacles_map.info.origin.position.y)/obstacles_map.info.resolution);
             cell   = cell_y * obstacles_map.info.width + cell_x;
@@ -447,8 +485,8 @@ int main(int argc, char** argv)
     ros::Publisher pubAugmentedMap = n.advertise<nav_msgs::OccupancyGrid>("/augmented_map", 10);
     listener = new tf::TransformListener();
     ros::Rate loop(10);
-
     int decay_factor = 10;
+
     if(ros::param::has("~use_lidar"))
         ros::param::get("~use_lidar", use_lidar);
     if(ros::param::has("~use_sonars"))
@@ -493,6 +531,8 @@ int main(int argc, char** argv)
         ros::param::get("~lidar_downsampling", lidar_downsampling);
     if(ros::param::has("/base_link_name"))
         ros::param::get("/base_link_name", base_link_name);
+    if(ros::param::has("~memory_all_obstacles"))
+        ros::param::get("~memory_all_obstacles", memory_all_obstacles);
 
     std::cout << "MapAugmenter.->Parameters: min_x =" << minX << "  max_x =" << maxX << "  min_y =" << minY << "  max_y =" << maxY;
     std::cout << "  min_z =" << minZ << "  max_z =" << maxZ << std::endl;
@@ -573,6 +613,12 @@ int main(int argc, char** argv)
         {
             counter = 0;
             are_there_obstacles = decay_map_and_check_if_obstacles(obstacles_map, decay_factor);
+
+            //add by r.k memory_all_obstacles
+    	    if (memory_all_obstacles){
+                	memory_obstacles_map(obstacles_map);
+    	    }
+
             obstacles_inflated_map = inflate_map(obstacles_map, inflation_radius);
             augmented_map = merge_maps(static_map, obstacles_inflated_map);
             pubAugmentedMap.publish(augmented_map);

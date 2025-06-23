@@ -18,4 +18,3 @@ if __name__ == "__main__":
     rospy.init_node("head_pose_canceller_topic")
     hpc = HeadPoseCanceller()
     rospy.spin()
-
