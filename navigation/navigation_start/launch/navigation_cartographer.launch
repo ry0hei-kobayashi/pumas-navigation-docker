@@ -34,7 +34,6 @@
 
   <arg name="memory_all_obstacles" default="True"/>
   
-  <arg name="memory_all_obstacles" default="False"/>
 
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
@@ -45,7 +44,7 @@
   <!--障害物を検出する範囲を指定するパラメータ-->
   <!--depth-->
   <arg name="min_x" default="0.17"/>
-  <arg name="max_x" default="0.5"/>
+  <arg name="max_x" default="0.7"/>
   <!--width, min_y is rightside-->
   <arg name="min_y" default="-0.25"/>
   <arg name="max_y" default="0.25"/>
@@ -56,7 +55,7 @@
 
   <!--backward behavior-->
   <arg name="forcing_backward" default="True"/>
-  <arg name="backward_distance" default="-0.2"/>
+  <arg name="backward_distance" default="-0.25"/>
 
   <!--set same param max_x-->
   <arg name="pot_fields_d0" default="0.35"/>
@@ -140,6 +139,7 @@
     <param name="use_point_cloud2" value="$(arg use_point_cloud2)"/>
     
     <param name="use_online" value="True"/>
+    <param name="decay_factor" value="10"/>
     <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
@@ -147,8 +147,6 @@
     <param name="inflation_radius" value="0.2"/>
     <param name="cost_radius" value="0.28"/>
     
-    <param name="decay_factor" value="10"/>
-    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
