@@ -63,22 +63,6 @@ void add_memory_obstacle(const Eigen::Vector3d& point)
     memory_cells.insert(idx);
 }
 
-//add by r.k memory obstacles
-bool memory_all_obstacles = false;
-std::vector<geometry_msgs::Point> persistent_obstacles;
-void memory_obstacles_map(nav_msgs::OccupancyGrid& map)
-{
-    for (const auto& p : persistent_obstacles)
-    {
-        int cell_x = (int)((p.x - map.info.origin.position.x) / map.info.resolution);
-        int cell_y = (int)((p.y - map.info.origin.position.y) / map.info.resolution);
-        int cell = cell_y * map.info.width + cell_x;
-        if (cell >= 0 && cell < (int)map.data.size())
-            map.data[cell] = 100;
-    }
-
-}
-
 Eigen::Affine3d get_robot_position()
 {
     tf::StampedTransform tf;
