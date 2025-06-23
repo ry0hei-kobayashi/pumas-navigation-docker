@@ -31,6 +31,8 @@
   <arg name="use_point_cloud2" value="False"/>
   <arg name="use_bumper" default="False"/>
   <arg name="use_pot_fields" default="True"/>
+
+  <arg name="memory_all_obstacles" default="True"/>
   
   <arg name="memory_all_obstacles" default="False"/>
 
@@ -138,6 +140,7 @@
     <param name="use_point_cloud2" value="$(arg use_point_cloud2)"/>
     
     <param name="use_online" value="True"/>
+    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
