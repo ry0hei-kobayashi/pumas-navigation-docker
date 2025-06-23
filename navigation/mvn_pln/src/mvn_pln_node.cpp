@@ -311,6 +311,10 @@ int main(int argc, char** argv)
 
     while(ros::ok())
     {
+
+        //rosparam update dynamically
+        ros::param::get("~forcing_backward", forcing_backward);
+        
         if(stop)
         {
             stop = false;
@@ -386,6 +390,15 @@ int main(int argc, char** argv)
                 {
                     std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
                     pub_simple_move_stop.publish(std_msgs::Empty());
+
+                    //check forcing backward is false
+                    if (!forcing_backward)
+                    {
+                        ROS_INFO("MvnPln.->forcing_backward is false, could not move");
+                        current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Start Point is Inside an obstacle", pub_status);
+                        state = SM_INIT;
+                        break;
+                    }
 
                     // if is inside STATIC obstacle, go backwards. add by r.k 2025/04/11 //TODO
                     if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
@@ -589,7 +602,6 @@ int main(int argc, char** argv)
                         collision_risk = false;
                         state = SM_CALCULATE_PATH;   //default implementation
 
-                        //TODO
                         if(forcing_backward)
                         {
                             state = SM_COLLISION_DETECTED; //forcing backward
