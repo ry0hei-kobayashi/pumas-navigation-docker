@@ -27,6 +27,7 @@
   <arg name="env_file_name" default="env_furniture_$(arg map_name).yaml"/>
   <arg name="add_static_obstacles" default="true"/>
 
+  <!--map_augmenter & obs detect-->
   <arg name="memory_all_obstacles" default="False"/>
 
   <!--input topic-->
@@ -46,8 +47,6 @@
   <!--potential fields-->
   <arg name="use_pot_fields" default="True"/>
 
-  <!--map_augmenter & obs detect-->
-  <arg name="memory_all_obstacles" default="False"/>
 
   <!--sensor downsampling, detection threshold-->
   <arg name="cloud_downsampling" default="9"/>
@@ -71,7 +70,7 @@
 
   <!--backward behavior-->
   <arg name="forcing_backward" default="True"/>
-  <arg name="backward_distance" default="-0.2"/>
+  <arg name="backward_distance" default="-0.25"/>
 
   <!--Hardware-->
   <group ns="hardware">
