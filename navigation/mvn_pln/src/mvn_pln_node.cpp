@@ -388,60 +388,44 @@ int main(int argc, char** argv)
                 break;
                 
             case SM_CALCULATE_PATH:
-                get_robot_position(listener, robot_x, robot_y, robot_a);
-                if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
+            get_robot_position(listener, robot_x, robot_y, robot_a);
+            if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
+            {
+                std::cout << "MvnPln.->Cannot calc path to " << global_goal.position.x << " " << global_goal.position.y << std::endl;
+                pub_simple_move_stop.publish(std_msgs::Empty());
+
+                bool robot_is_in_static_obstacle = false;
+                if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
                 {
-                    std::cout<<"MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << std::endl;
-                    pub_simple_move_stop.publish(std_msgs::Empty());
+                    robot_is_in_static_obstacle = true;
+                }
 
-                    //check forcing backward is false
-                    if (!forcing_backward)
-                    {
-                        ROS_INFO("MvnPln.->forcing_backward is false, could not move");
-                        current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Start Point is Inside an obstacle", pub_status);
-                        state = SM_INIT;
-                        break;
-                    }
-
-                    // if is inside STATIC obstacle, go backwards. add by r.k 2025/04/11 //TODO
-                    if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
-                    {
-                        ROS_ERROR("MvnPln.->Robot is inside an obstacle. Will attempt recovery with going backwards.");
-                        state = SM_CHECK_IF_INSIDE_OBSTACLES;
-                    }
-                    else
-                    {
-                        //original implementation
-                        if(!patience)
-                            state = SM_CHECK_IF_INSIDE_OBSTACLES;
-                        else
-                            state = SM_CHECK_IF_OBSTACLES;
-                    }
+                if (robot_is_in_static_obstacle)
+                {
+                    ROS_ERROR("MvnPln.->Robot is inside a static obstacle. Attempting recovery by moving backwards.");
+                    state = SM_CHECK_IF_INSIDE_OBSTACLES; //replan
                 }
                 else
                 {
-                    state = SM_ENABLE_OBS_DETECT;
+                    if (patience) // If patient, check for temporal obstacles first
+                    {
+                        ROS_WARN("MvnPln.->Path planning failed, but robot is not in a static obstacle. Checking for temporal obstacles.");
+                        state = SM_CHECK_IF_OBSTACLES;
+                    }
+                    else
+                    {
+                        ROS_ERROR("MvnPln.->Path planning failed and patience is false. Goal unreachable or in obstacle. Aborting.");
+                        current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id, "Goal unreachable or in obstacle", pub_status);
+                        state = SM_INIT;
+                    }
                 }
-                break;
+            }
+            else
+            {
+                state = SM_ENABLE_OBS_DETECT;
+            }
+            break;
 
-            //case SM_CALCULATE_PATH:
-            //    {
-            //        get_robot_position(listener, robot_x, robot_y, robot_a);
-
-            //        if(!plan_path_from_augmented_map(robot_x, robot_y, global_goal.position.x, global_goal.position.y, clt_plan_path, path))
-            //        {
-            //            std::cout<< "\033[31m" << "MvnPln.->Cannot calc path to "<< global_goal.position.x <<" "<<global_goal.position.y << "\033[0m]" << std::endl;
-
-            //            pub_simple_move_stop.publish(std_msgs::Empty());
-            //            if(!patience)
-            //                state = SM_CHECK_IF_INSIDE_OBSTACLES;
-            //            else
-            //                state = SM_CHECK_IF_OBSTACLES;
-            //        }
-            //        else
-            //            state = SM_ENABLE_OBS_DETECT;
-            //        break;
-            //    }
 
             case SM_CHECK_IF_INSIDE_OBSTACLES:
                 ROS_INFO("MvnPln.->Checking if robot is inside an obstacle...");
@@ -468,35 +452,36 @@ int main(int argc, char** argv)
                 {
                     simple_move_goal_status.status = 0;
                     ROS_INFO("MvnPln.->Moved backwards succesfully.");
+                    state = SM_CALCULATE_PATH;
                 }
                 else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
                 {
                     simple_move_goal_status.status = 0;
-                    ROS_ERROR("MvnPln.->Simple move reported move aborted. ");
+                    ROS_ERROR("MvnPln.->Simple move reported move aborted. "); //TODO always abort
+
+                    if(robot_is_in_static_obstacle){
+                        state = SM_COLLISION_DETECTED;
+                    }
+                    else{
+                        state = SM_CALCULATE_PATH;
+                    }
                 }
-                state = SM_CALCULATE_PATH;
+                //state = SM_CALCULATE_PATH;
                 break;
                 
             case SM_CHECK_IF_OBSTACLES:
                 if(!clt_are_there_obs.call(srv_check_obstacles) || !srv_check_obstacles.response.success)
                 {
-                    ROS_ERROR("MvnPln.->There are no temporal obstacles. Announcing failure.");
+                    ROS_ERROR("MvnPln.->No temporal obstacles detected OR service failed. Goal is likely unreachable.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id,
-                                                    "Cannot calculate path from start to goal point", pub_status);
-                    if(forcing_backward){
-                        ROS_WARN("MvnPln.->Recovery Start In Collision!!!");
-                        state = SM_COLLISION_DETECTED; //TODO need to debug
-                    }
-                    else
-                    {
-                        state = SM_INIT;
-                    }
+                                                     "Goal unreachable or in static obstacle (no temporal obs)", pub_status);
+                    state = SM_INIT;
                 }
                 else
                 {
                     ROS_WARN("MvnPln.->Temporal obstacles detected. Waiting for them to move.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id,
-                                                    "Waiting for temporal obstacles to move", pub_status);
+                                                     "Waiting for temporal obstacles to move", pub_status);
                     state = SM_WAIT_FOR_NO_OBSTACLES;
                 }
                 break;
@@ -515,7 +500,7 @@ int main(int argc, char** argv)
                     ROS_INFO("MvnPln.->Temporal obstacles removed. ");
                     state = SM_CALCULATE_PATH;
                 }
-                else
+                else //TODO
                     slow_loop.sleep();
                 break;
                 
@@ -637,14 +622,33 @@ int main(int argc, char** argv)
                 //TODO add by r.kobayashi force backward
                 case SM_COLLISION_DETECTED:
                     {
-                        ROS_WARN("MvnPln.->Collision Risk Detected Forcing Backward.");
+                        get_robot_position(listener, robot_x, robot_y, robot_a);
+                        //TODO
+                        float reach_threshold = 0.10;
+                        if (hypot(robot_x - global_goal.position.x, robot_y - global_goal.position.y) < reach_threshold){
+                            if(near_goal_sent){
+                                ROS_WARN("MvnPln.-> Near Goal Reached");
+                                state = SM_CORRECT_FINAL_ANGLE;
+                            }
+                            else{
+                                msg_bool.data = false;
+                                pub_obs_detector_enable.publish(msg_bool);
 
-                        //send backward
-                        msg_goal_dist_angle.data[0] = backward_distance; //-0.10 is default
-                        msg_goal_dist_angle.data[1] = 0;
-                        pub_goal_dist_angle.publish(msg_goal_dist_angle);
+                                publish_status(actionlib_msgs::GoalStatus::SUCCEEDED, goal_id, "Goal reached after collision recovery", pub_status);
+                                state = SM_INIT;
+                            }
+                            break;
+                        }
+                        else{
+                            ROS_WARN("MvnPln.->Collision Risk Detected Forcing Backward.");
 
-                        state = SM_WAITING_FOR_MOVE_BACKWARDS;
+                            //send backward
+                            msg_goal_dist_angle.data[0] = backward_distance; //-0.10 is default
+                            msg_goal_dist_angle.data[1] = 0;
+                            pub_goal_dist_angle.publish(msg_goal_dist_angle);
+
+                            state = SM_WAITING_FOR_MOVE_BACKWARDS;
+                        }
                     }
                     break;
                 
