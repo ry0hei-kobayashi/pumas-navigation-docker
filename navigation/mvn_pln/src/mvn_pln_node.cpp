@@ -49,9 +49,11 @@ bool nav_goal_received = false;
 geometry_msgs::Pose global_goal;
 std::string base_link_name = "base_footprint";
 
+//update r.kobayashi 2025/6/27
 //forcing_backward
 bool forcing_backward = false;
 float backward_distance = -0.25;
+float disable_backward_threshold = 0.7; //nearness to goal, backward behavior is disable, goal error < disable_backward_threshold
 
 
 // motion_synth
@@ -241,6 +243,8 @@ int main(int argc, char** argv)
         ros::param::get("~forcing_backward", forcing_backward);
     if(ros::param::has("~backward_distance"))
         ros::param::get("~backward_distance", backward_distance);
+    if(ros::param::has("~disable_backward_threshold"))
+        ros::param::get("~disable_backward_threshold", disable_backward_threshold);
     //if(ros::param::has("~move_error_threshold"))
     //    ros::param::get("~move_error_threshold", move_error_threshold);
 
@@ -302,7 +306,7 @@ int main(int argc, char** argv)
     int  goal_id = -1;
     int  current_status = 0;
     bool near_goal_sent = false;
-    int near_goal_counter = 0;
+
     std_msgs::Bool msg_bool;
     std_srvs::Trigger srv_check_obstacles;
     nav_msgs::Path path;
@@ -311,7 +315,6 @@ int main(int argc, char** argv)
 
     while(ros::ok())
     {
-
         //rosparam update dynamically
         ros::param::get("~forcing_backward", forcing_backward);
         
@@ -499,6 +502,7 @@ int main(int argc, char** argv)
                 break;
 
             case SM_WAIT_FOR_NO_OBSTACLES:
+                //TODO
                 if(!clt_are_there_obs.call(srv_check_obstacles))
                 {
                     ROS_ERROR("MvnPln.->Cannot call service for checking temporal obstacles. Announcing failure.");
@@ -577,16 +581,14 @@ int main(int argc, char** argv)
                     current_pos.position.y = robot_y;
                     updateViaPoints(current_pos, 0.5); // default threshold 0.5m
                                                        
-                    error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2));
+                    error = sqrt(pow(global_goal.position.x - robot_x, 2) + pow(global_goal.position.y - robot_y, 2)); //important calc dist error
+
                     ROS_INFO_THROTTLE(1.0, "MvnPln. -> will move error: %f", error);
                     if (error < proximity_criterion && !near_goal_sent)
                     {
-                        near_goal_counter++;
-
                         near_goal_sent = true;
                         ROS_INFO("MvnPln.->Error less than proximity criterion. Sending near goal point status.");
                         publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Near goal point", pub_status);
-
                     }
                     if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::SUCCEEDED && simple_move_status_id == simple_move_sequencer)
                     {
@@ -598,9 +600,15 @@ int main(int argc, char** argv)
                     }
                     else if(collision_risk)
                     {
-                        ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
-                        collision_risk = false;
+                        //add by r kobayashi 2025/06/27 for disable obs_avoid nearness to goal
+                        if (error < disable_backward_threshold)
+                        {
+                            ROS_WARN("MvnPln.-> Near goal point skip collision risk.");
+                            collision_risk = false;
+                            break;
+                        }
 
+                        ROS_INFO("MvnPln.->COLLISION RISK DETECTED before goal is reached.");
                         if(forcing_backward)
                         {
                             state = SM_COLLISION_DETECTED; //forcing backward
@@ -609,8 +617,9 @@ int main(int argc, char** argv)
                             state = SM_CALCULATE_PATH;   //default implementation
                         }
                     }
-                    else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED)
+                    else if(simple_move_goal_status.status == actionlib_msgs::GoalStatus::ABORTED && simple_move_status_id == simple_move_sequencer)
                     {
+                        // this function can not enter backward
                         simple_move_goal_status.status = 0;
                         ROS_ERROR("MvnPln.->Simple move reported path aborted. Trying again...");
                         
