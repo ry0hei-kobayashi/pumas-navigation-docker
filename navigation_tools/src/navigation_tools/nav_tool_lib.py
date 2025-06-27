@@ -10,7 +10,7 @@ from fractions import Fraction
 import rospy
 import tf
 
-from hsrlib.hsrif import HSRInterfaces
+from hsrlib.hsrif import HSRInterfaces 
 from hsrlib.rosif import ROSInterfaces
 
 from std_msgs.msg import Float32MultiArray, Bool, Empty
@@ -213,7 +213,7 @@ class NavModule:
         rospy.sleep(0.1)
         
 
-    def get_close(self, x, y, yaw, timeout, goal_distance=None, via_points=None):
+    def get_close(self, x, y, yaw, timeout, goal_distance=None):
         """_summary_
 
         Args:
@@ -225,11 +225,13 @@ class NavModule:
             via_points (_type_, optional): _description_. Defaults to None.
         """
         rate = rospy.Rate(10)
-        rospy.loginfo(self.via_points)
 
         via_points_list = []
         if self.via_points is not None:
+            rospy.loginfo("enable ViaPoint")
             via_points_array = PoseArray()
+            via_points_array.header.frame_id = "map"
+            via_points_array.header.stamp = rospy.Time.now()
             for points in self.via_points:
                 via_points_list.append(self.pose2d2pose(points))
             via_points_array.poses = via_points_list
@@ -275,9 +277,10 @@ class NavModule:
             rospy.loginfo("Call ABS mode in pumas nav")
             if via_points is not None:
                 print("with via_points")
-                print(via_points)
-                self.get_close(x, y, theta, timeout, goal_distance, via_points)
+                self.via_points = via_points
+                self.get_close(x, y, theta, timeout, goal_distance=None)
             else:
+                self.via_points = None
                 self.get_close(x, y, theta, timeout, goal_distance)
 
         elif type_nav == "hsr":
@@ -511,13 +514,14 @@ class NavModule:
                 self.motion_synth_end_pose = end_pose
 
 
-         if via_points is not None:
-             self.via_points = via_points
+         self.via_points = list(via_points) if via_points else None
+         #if via_points is not None:
+         #    self.via_points = via_points
 
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
          else:
-             self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance)
+             self.go_abs(goal.x, goal.y, goal.theta, nav_timeout, nav_type, goal_distance, via_points=self.via_points)
 
          if angle_correction is True:
              self.rotate_yaw(goal)
