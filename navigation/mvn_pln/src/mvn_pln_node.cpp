@@ -222,6 +222,7 @@ int publish_status(int status, int id, std::string text, ros::Publisher& pub)
     return status;
 }
 
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "mvn_pln");
@@ -458,6 +459,12 @@ int main(int argc, char** argv)
                 {
                     simple_move_goal_status.status = 0;
                     ROS_ERROR("MvnPln.->Simple move reported move aborted. "); //TODO always abort
+                                                                               //
+                    bool robot_is_in_static_obstacle = false;
+                    if (clt_is_in_obstacles.call(srv_check_obstacles) && srv_check_obstacles.response.success)
+                    {
+                        robot_is_in_static_obstacle = true;
+                    }
 
                     if(robot_is_in_static_obstacle){
                         state = SM_COLLISION_DETECTED;
