@@ -30,11 +30,12 @@ goal_pose = {
     "head_tilt_joint": np.deg2rad(0.0),
 }
 
-via_points = [Pose2D(1.0, 0.7, 0.0), Pose2D(2.3, 4.1, 0.0)]
-via_points = None
+#via_points = [Pose2D(5.0, 5.0, 0.0), Pose2D(8.0, 4.1, 0.0)]
+via_points = [Pose2D(8.6, -0.6, 0.0)]
+#via_points = None
 
 ms_config = {"start_pose": start_pose, "goal_pose": goal_pose}
-goal = Pose2D(0.2, 3.3, 0.0)
+goal = Pose2D(5.0, 5.0, 0.0)
 #lme.run(goal = goal, pose = ms_config, destination_name = None, first_rotate = False, 
 #        nav_type = "pumas", nav_mode = "abs", nav_timeout = 0, goal_distance = 0,)
 lme.run(goal=goal, pose=ms_config, destination_name="Table", first_rotate=False, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, via_points=via_points)
