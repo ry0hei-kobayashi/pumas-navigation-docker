@@ -627,6 +627,9 @@ if __name__ == "__main__":
     goal = Pose2D(6.0, 0.0, 0.0)
     goal = Pose2D(2.0, 0.0, 0.0)
     goal = Pose2D(8.0, 3.0, 0.0)
+
+    goal = Pose2D(5.6, -2.8, 0.0)
+    goal = Pose2D(1.2, 0.0, 0.0)
     
     start_pose = {
         "arm_lift_joint": 0.0,
@@ -649,9 +652,9 @@ if __name__ == "__main__":
     
     #ms_config = {"start_pose": "auto", "goal_pose": goal_pose}
     ms_config = {"start_pose": start_pose}
+    ms_config = None
     ms_config = {"goal_pose": goal_pose}
     ms_config = {"start_pose": start_pose, "goal_pose": goal_pose}
-    ms_config = None
     
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="rel", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)
     #nav.nav_goal(goal, motion_synth_start_pose=arm_start_pose, motion_synth_end_pose=arm_end_pose, nav_type="pumas", nav_mode="abs", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)

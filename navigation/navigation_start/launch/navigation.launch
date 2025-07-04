@@ -81,10 +81,12 @@
     <!--navigationするときのアームの初期姿勢を変更する-->
     <node name="arm" pkg="arm" type="arm_node" output="screen">
       <!--arm_lift, meter-->
-      <rosparam param="torso_goal_pose">0.0</rosparam> 
+      <!--rosparam param="torso_goal_pose">0.0</rosparam--> 
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], rad-->
       <!--rosparam param="arm_goal_pose">[0.0, -1.57, -1.57, 0.0]</rosparam-->
-      <rosparam param="arm_goal_pose">[-0.26, -1.57, -1.57, 0.0]</rosparam>
+      <!--rosparam param="arm_goal_pose">[-0.26, -1.57, -1.57, 0.0]</rosparam-->
+      <rosparam param="torso_goal_pose">0.26</rosparam> 
+      <rosparam param="arm_goal_pose">[-0.45, 2.54, -1.57, 0.0]</rosparam>
     </node>
 
   </group>
