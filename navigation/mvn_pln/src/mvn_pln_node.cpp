@@ -278,7 +278,7 @@ int main(int argc, char** argv)
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
     ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1); //original
-    ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
+    //ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
     //ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented"); //original implementation
     ros::ServiceClient clt_plan_path = n.serviceClient<path_planner::GetPlanWithVia>("/path_planner/plan_path");
@@ -507,8 +507,17 @@ int main(int argc, char** argv)
                     ROS_INFO("MvnPln.->Temporal obstacles removed. ");
                     state = SM_CALCULATE_PATH;
                 }
-                else //TODO
+                else
+                {
+                    //add recovery from cost by r.k 2025/07/04
+                    std_msgs::Float32MultiArray rotate_angle;
+                    rotate_angle.data.resize(2);
+                    rotate_angle.data[0] = 0.0;
+                    rotate_angle.data[1] = M_PI/4;
+                    pub_goal_dist_angle.publish(rotate_angle);
+                    
                     slow_loop.sleep();
+                }
                 break;
                 
             case SM_ENABLE_OBS_DETECT:
@@ -542,8 +551,9 @@ int main(int argc, char** argv)
                     //state = SM_FINAL;
                 }
 
+                //TODO
                 //add for hsrc because sometimes occured self collision //add by r.k 2025/04/23
-                pub_tmp_head_pose_cancel.publish(std_msgs::Empty());
+                //pub_tmp_head_pose_cancel.publish(std_msgs::Empty());
 
                 break;
 
