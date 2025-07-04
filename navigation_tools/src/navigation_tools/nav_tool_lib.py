@@ -13,7 +13,7 @@ import tf
 from hsrlib.hsrif import HSRInterfaces 
 from hsrlib.rosif import ROSInterfaces
 
-from std_msgs.msg import Float32MultiArray, Bool, Empty
+from std_msgs.msg import Float32MultiArray, Bool, Empty, Float32
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Pose, Vector3, Quaternion, PoseStamped, Pose2D, Twist, PoseArray
 from actionlib_msgs.msg import GoalStatus
@@ -21,8 +21,10 @@ from visualization_msgs.msg import Marker
 from std_srvs.srv import Trigger, SetBool
 from motion_synth.msg import Joints, StartAndEndJoints
 
-arm_go_pose = {'arm_flex_joint': 0.0,
-               'arm_lift_joint': 0.0,
+#default pose for motion_synth start pose {rad,}
+default_arm_pose = {
+               'arm_flex_joint': -0.26, #default is 0.0
+               'arm_lift_joint': 0.0, 
                'arm_roll_joint': -1.57,
                'wrist_flex_joint': -1.57,
                'wrist_roll_joint': 0.0,
@@ -78,6 +80,12 @@ class NavModule:
         self.motion_synth_end_pose = None
         self.pub_move_joint_pose = rospy.Publisher('/pumas_motion_synth/joint_pose', StartAndEndJoints, queue_size=1)
 
+        # for recovery motion synth is not set
+        self.check_default_arm_pose()
+        self.arm_pub = rospy.Publisher("/hardware/arm/goal_pose", Float32MultiArray, queue_size=1)
+        self.lift_pub = rospy.Publisher("/hardware/torso/goal_pose", Float32, queue_size=1)
+        self.head_pub = rospy.Publisher("/hardware/head/goal_pose", Float32MultiArray, queue_size=1)
+
         rospy.Subscriber("/navigation/status", GoalStatus, self.callback_global_goal_reached)
         rospy.Subscriber("/simple_move/goal_reached", GoalStatus, self.callback_goal_reached)
         rospy.Subscriber("/stop", Empty, self.callback_stop)
@@ -93,6 +101,35 @@ class NavModule:
 
         rospy.sleep(1.0)
         self.set_navigation_type(select)
+    
+    # Load default_arm_pose from ROS param if available 
+    def check_default_arm_pose(self):
+
+        #arm lift
+        if rospy.has_param('/hardware/arm/torso_goal_pose'):
+            torso_goal = rospy.get_param('/hardware/arm/torso_goal_pose')
+            try:
+                default_arm_pose['arm_lift_joint'] = float(torso_goal)
+                rospy.loginfo(f"Loaded torso_goal_pose: {torso_goal}")
+            except ValueError:
+                rospy.logwarn("torso_goal_pose is not a valid float, using default.")
+        else:
+            rospy.logwarn("torso_goal_pose parameter not set, using default.")
+
+        #arm&wrist
+        if rospy.has_param('/hardware/arm/arm_goal_pose'):
+            arm_goal_param = rospy.get_param('/hardware/arm/arm_goal_pose')
+            if isinstance(arm_goal_param, list):
+                arm_goal_pose = [float(x) for x in arm_goal_param]
+                rospy.loginfo(f"Loaded arm_goal_pose: {arm_goal_pose}")
+            else:
+                rospy.logwarn("arm_goal_pose is not a list, using defaults.")
+        else:
+            rospy.logwarn("arm_goal_pose parameter not set, using defaults.")
+
+        #head
+        default_arm_pose['head_pan_joint'] = 0.0
+        default_arm_pose['head_tilt_joint'] = 0.0
 
     def callback_global_goal_reached(self, msg):
 
@@ -110,10 +147,9 @@ class NavModule:
             if msg.text == 'Waiting for temporal obstacles to move':
                 rospy.loginfo('NavigationStatus -> Waiting for temporal obstacle to move')
                 # TODO rotation
-                self.recovery_from_cost()
+                #self.recovery_from_cost()
 
         elif msg.status == GoalStatus.ABORTED:
-            #TODO start incollision
             if msg.text == 'Cannot calculate path from start to goal point':
                 rospy.loginfo('NavigationStatus -> Cannot calculate path from start to goal point')
             elif msg.text == 'Cancelling current movement':
@@ -190,28 +226,27 @@ class NavModule:
         self.marker.color.b = 0.0
         self.pub_marker.publish(self.marker)
 
-    def recovery_from_cost(self):
-        # TODO rotate cancel
-        rospy.loginfo('NavigationStatus. -> Recovery From Dynamic Cost -> Rotation')
+    #def recovery_from_cost(self):
+    #    # TODO rotate cancel
+    #    rospy.loginfo('NavigationStatus. -> Recovery From Dynamic Cost -> Rotation')
 
-        current_orientation = self.global_pose.pose.orientation
-        _, _, current_yaw = tf.transformations.euler_from_quaternion([current_orientation.x, current_orientation.y, current_orientation.z, current_orientation.w])
-        opposite_yaw = current_yaw + math.pi
+    #    current_orientation = self.global_pose.pose.orientation
+    #    _, _, current_yaw = tf.transformations.euler_from_quaternion([current_orientation.x, current_orientation.y, current_orientation.z, current_orientation.w])
+    #    opposite_yaw = current_yaw + math.pi
 
-        twist = Twist()
-        twist.angular.z = 0.5 if opposite_yaw > current_yaw else - 0.5
-        rate = rospy.Rate(10)
-        duration = abs(opposite_yaw - current_yaw) / 0.5
+    #    twist = Twist()
+    #    twist.angular.z = 0.5 if opposite_yaw > current_yaw else - 0.5
+    #    rate = rospy.Rate(10)
+    #    duration = abs(opposite_yaw - current_yaw) / 0.5
 
-        for _ in range(int(duration * 10)):  # duration in seconds, rate is 10 Hz
-            self.pub_cmd_vel.publish(twist)
-            rate.sleep()
+    #    for _ in range(int(duration * 10)):  # duration in seconds, rate is 10 Hz
+    #        self.pub_cmd_vel.publish(twist)
+    #        rate.sleep()
 
-        # Stop rotation
-        twist.angular.z = 0.0
-        self.pub_cmd_vel.publish(twist)
-        rospy.sleep(0.1)
-        
+    #    # Stop rotation
+    #    twist.angular.z = 0.0
+    #    self.pub_cmd_vel.publish(twist)
+    #    rospy.sleep(0.1)
 
     def get_close(self, x, y, yaw, timeout, goal_distance=None):
         """_summary_
@@ -324,21 +359,45 @@ class NavModule:
             else:
                 start_and_end_joints.has_arm_start_pose = True
                 # startが無いなら自動でgo_pose()代入
-                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=arm_go_pose)
+                start_and_end_joints.start_pose = self.create_arm_joint_goal(joint_poses=default_arm_pose)
 
             if self.motion_synth_end_pose is not None:
                 start_and_end_joints.has_arm_end_pose = True
                 start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_end_pose)
             else:
-                # goalが無いなら自動でstart_poseと同じ姿勢を代入
-                start_and_end_joints.has_arm_end_pose = True
-                start_and_end_joints.end_pose = self.create_arm_joint_goal(joint_poses=self.motion_synth_start_pose)
+                # goalが無い場合
+                start_and_end_joints.has_arm_end_pose = False
 
             self.pub_move_joint_pose.publish(start_and_end_joints)
 
             rospy.logwarn('NavModule -> Sending Arm Goal')
             start_and_end_joints.has_arm_start_pose = False
             start_and_end_joints.has_arm_end_pose = False
+
+        else:
+            #add by r.k 2025/07/04 recovery motion synth is not enable but arm is not default pose
+            rospy.logwarn('NavModule -> Sending Recovery Arm Go Pose')
+
+            lift_msg = Float32()
+            lift_msg.data = default_arm_pose['arm_lift_joint']
+    
+            arm_msg = Float32MultiArray()
+            arm_msg.data = [
+                default_arm_pose['arm_flex_joint'],
+                default_arm_pose['arm_roll_joint'],
+                default_arm_pose['wrist_flex_joint'],
+                default_arm_pose['wrist_roll_joint'],
+            ]
+    
+            head_msg = Float32MultiArray()
+            head_msg.data = [
+                default_arm_pose['head_pan_joint'],
+                default_arm_pose['head_tilt_joint'],
+            ]
+    
+            self.lift_pub.publish(lift_msg)
+            self.arm_pub.publish(arm_msg)
+            self.head_pub.publish(head_msg)
 
         self.marker_plot(goal)
         self.pub_global_goal_xyz.publish(goal)
@@ -500,23 +559,24 @@ class NavModule:
 
          #motion_synth
          if motion_synth_pose is not None:
-             start_pose = motion_synth_pose.get("start_pose")
-             rospy.loginfo(start_pose)
-             end_pose = motion_synth_pose.get("goal_pose")
-             rospy.loginfo(end_pose)
-             self.use_obstacle_detection(status=False) #TODO
+            start_pose = motion_synth_pose.get("start_pose")
+            end_pose = motion_synth_pose.get("goal_pose")
 
-             if start_pose:
+            #head cloud is off
+            self.use_obstacle_detection(status=False)
+
+            if start_pose:
                 rospy.loginfo(f"NavModule. -> Enable MotionSynth for PumasNav. Start Pose -> {start_pose}")
                 self.motion_synth_start_pose = start_pose
-             if end_pose:
+            else:
+                rospy.loginfo(f"NavModule. -> Enable MotionSynth for PumasNav. Start Pose is not set. Calling default Pose -> {start_pose}")
+                self.motion_synth_start_pose = start_pose
+            if end_pose:
                 rospy.loginfo(f"NavModule. -> Enable MotionSynth for PumasNav. End Pose -> {end_pose}")
                 self.motion_synth_end_pose = end_pose
 
 
          self.via_points = list(via_points) if via_points else None
-         #if via_points is not None:
-         #    self.via_points = via_points
 
          if nav_mode == "rel":
              self.go_rel(goal.x, goal.y, goal.theta, nav_timeout, nav_type)
@@ -558,11 +618,18 @@ if __name__ == "__main__":
 
     #while True:
 
-    goal = Pose2D(0.8, 1.32, 0.0)
-    goal = Pose2D(.0, .0, 0.0)
-    goal = Pose2D(0.5, 3.8, 0.0)
+    #goal = Pose2D(0.8, 1.32, 0.0)
+    #goal = Pose2D(.0, .0, 0.0)
+    #goal = Pose2D(0.5, 3.8, 0.0)
     #goal = Pose2D(3.0, 0.8, 0.0)
     #goal = Pose2D(5.3, 4.4, 0.0)
+
+    goal = Pose2D(6.0, 0.0, 0.0)
+    goal = Pose2D(2.0, 0.0, 0.0)
+    goal = Pose2D(8.0, 3.0, 0.0)
+
+    goal = Pose2D(5.6, -2.8, 0.0)
+    goal = Pose2D(1.2, 0.0, 0.0)
     
     start_pose = {
         "arm_lift_joint": 0.0,
@@ -584,6 +651,9 @@ if __name__ == "__main__":
     }
     
     #ms_config = {"start_pose": "auto", "goal_pose": goal_pose}
+    ms_config = {"start_pose": start_pose}
+    ms_config = None
+    ms_config = {"goal_pose": goal_pose}
     ms_config = {"start_pose": start_pose, "goal_pose": goal_pose}
     
     #nav.nav_goal(goal, nav_type="hsr", nav_mode="rel", nav_timeout=0, goal_distance=0, angle_correction=False, obstacle_detection=False)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+from types import resolve_bases
 import numpy as np
 
 from std_msgs.msg import Empty
@@ -29,7 +30,7 @@ class MotionSynthesisServer:
         self.arm_pub = rospy.Publisher("/hardware/arm/goal_pose", Float32MultiArray, queue_size=1)
         self.lift_pub = rospy.Publisher("/hardware/torso/goal_pose", Float32, queue_size=1)
         self.head_pub = rospy.Publisher("/hardware/head/goal_pose", Float32MultiArray, queue_size=1)
-        self.tmp_head_pose_canceller = rospy.Publisher("/navigation/tmp_head_pose_cancel", Empty, queue_size=1)
+        #self.tmp_head_pose_canceller = rospy.Publisher("/navigation/tmp_head_pose_cancel", Empty, queue_size=1)
 
         self.joint_states = {}
         self.joints_cb = rospy.Subscriber("/hsrb/joint_states", JointState, self.joint_state_callback)
@@ -46,14 +47,16 @@ class MotionSynthesisServer:
 
         while not rospy.is_shutdown():
             try:
-                msg = rospy.wait_for_message("/simple_move/goal_path", Path, timeout=5.0) #TODO timeout
+                #msg = rospy.wait_for_message("/simple_move/goal_path", Path, timeout=5.0) #TODO timeout
+                msg = rospy.wait_for_message("/simple_move/goal_path", Path) #TODO timeout
                 if msg.poses and len(msg.poses) > 0:
                     first_pose = msg.poses[0].pose
                     if first_pose.position.x is not None and first_pose.position.y is not None:
                         path_cb = msg
                         break
             except rospy.ROSException:
-                rospy.logwarn("motion_synth -> Timeout while wait_for_get_path... retrying")
+                #rospy.logwarn("motion_synth -> Timeout while wait_for_get_path... retrying")
+                rospy.logwarn("motion_synth -> Could not get path")
             rospy.sleep(0.1)
 
         path_points = []
@@ -107,7 +110,7 @@ class MotionSynthesisServer:
         rospy.loginfo("motion_synth -> Moving Arm State")
 
         #disable move_head
-        rospy.set_param("/simple_move/move_head", False)
+        #rospy.set_param("/simple_move/move_head", False)
 
         #TODO disable move_head
         #self.tmp_head_pose_canceller.publish(Empty())
@@ -162,6 +165,14 @@ class MotionSynthesisServer:
 
     def execute_cb(self, goal):
         self.global_nav_goal_reached = False
+
+        #both none
+        if goal.apply_start_pose is None and goal.apply_goal_pose is None:
+            self.send_pose(goal.start_pose)
+            rospy.loginfo("motion_synth -> Both Pose has None, Set Default Pose")
+            self.server.set_succeeded(MotionSynthesisResult(result=True))
+            return
+
         self.wait_for_get_path()
         feedback = MotionSynthesisFeedback()
         triggered = False
@@ -170,7 +181,16 @@ class MotionSynthesisServer:
 
         rate = rospy.Rate(10)
 
-        if goal.apply_start_pose: 
+        #start pose only
+        if goal.apply_start_pose and not goal.apply_goal_pose:
+            self.send_pose(goal.start_pose)
+            rospy.loginfo("motion_synth -> Start Pose Only, Skipping Goal Pose")
+            self.server.set_succeeded(MotionSynthesisResult(result=True))
+            return #important
+
+        #start pose is True or both pose is True
+        if goal.apply_start_pose:
+            rospy.loginfo("motion_synth -> Start Pose Only, Skipping Goal Pose")
             self.send_pose(goal.start_pose)
 
         temporary_pose = None
@@ -209,7 +229,7 @@ class MotionSynthesisServer:
                     yaw_error = abs(self.current_pose[2] - goal.goal_location.theta) #yawがgoalに近づいたら最終ポーズを送信
                     if yaw_error > np.pi:
                         yaw_error = 2 * np.pi - yaw_error
-                    if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO adjust yaw
+                    if yaw_error < 0.3 or self.global_nav_goal_reached: #TODO use angle tolerance from simple_move
                         rospy.loginfo("motion_synth -> Reached Global Nav Goal, sending final pose")
                         self.send_pose(goal.goal_pose)
                         final_pose_sent = True

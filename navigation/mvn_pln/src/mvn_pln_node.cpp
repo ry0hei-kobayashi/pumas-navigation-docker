@@ -31,6 +31,7 @@
 #define SM_WAIT_FOR_NO_OBSTACLES 22
 #define SM_ENABLE_OBS_DETECT 23
 #define SM_WAIT_FOR_OBS_DETECT 24
+#define SM_RECOVERY_ROTATE 25
 #define SM_START_MOVE_PATH 3
 #define SM_WAIT_FOR_MOVE_FINISHED 4
 #define SM_COLLISION_DETECTED 5
@@ -278,7 +279,7 @@ int main(int argc, char** argv)
     ros::Publisher pub_status              = n.advertise<actionlib_msgs::GoalStatus>("/navigation/status", 10);
     ros::Publisher pub_simple_move_stop    = n.advertise<std_msgs::Empty>("/simple_move/stop", 1);
     ros::Publisher pub_goal_path           = n.advertise<nav_msgs::Path>("/simple_move/goal_path", 1); //original
-    ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
+    //ros::Publisher pub_tmp_head_pose_cancel = n.advertise<std_msgs::Empty>("/navigation/tmp_head_pose_cancel", 1);
 
     //ros::ServiceClient clt_plan_path       = n.serviceClient<nav_msgs::GetPlan>("/path_planner/plan_path_with_augmented"); //original implementation
     ros::ServiceClient clt_plan_path = n.serviceClient<path_planner::GetPlanWithVia>("/path_planner/plan_path");
@@ -489,7 +490,7 @@ int main(int argc, char** argv)
                     ROS_WARN("MvnPln.->Temporal obstacles detected. Waiting for them to move.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id,
                                                      "Waiting for temporal obstacles to move", pub_status);
-                    state = SM_WAIT_FOR_NO_OBSTACLES;
+                    state = SM_RECOVERY_ROTATE;
                 }
                 break;
 
@@ -500,17 +501,36 @@ int main(int argc, char** argv)
                     ROS_ERROR("MvnPln.->Cannot call service for checking temporal obstacles. Announcing failure.");
                     current_status = publish_status(actionlib_msgs::GoalStatus::ABORTED, goal_id,
                                                     "Cannot calculate path from start to goal point", pub_status);
-                    state = SM_INIT;
+                    state = SM_RECOVERY_ROTATE;
                 }
                 else if(!srv_check_obstacles.response.success)
                 {
                     ROS_INFO("MvnPln.->Temporal obstacles removed. ");
                     state = SM_CALCULATE_PATH;
                 }
-                else //TODO
+                else
+                {
                     slow_loop.sleep();
+                }
                 break;
                 
+            case SM_RECOVERY_ROTATE:
+                {
+                    //add recovery from cost by r.k 2025/07/04
+                    std_msgs::Float32MultiArray rotate_angle;
+                    rotate_angle.data.resize(2);
+                    rotate_angle.data[0] = 0.0;
+                    rotate_angle.data[1] = (2*M_PI)/4;
+                    pub_goal_dist_angle.publish(rotate_angle);
+
+                    ROS_WARN("MvnPln.->Recovery from temporary cost.");
+                    current_status = publish_status(actionlib_msgs::GoalStatus::ACTIVE, goal_id, "Recovery from temporary cost", pub_status);
+                    ros::Duration(1.0).sleep();
+       
+                    state = SM_CALCULATE_PATH;
+                }
+                break;
+            
             case SM_ENABLE_OBS_DETECT:
                 msg_bool.data = true;
                 pub_obs_detector_enable.publish(msg_bool);
@@ -542,8 +562,9 @@ int main(int argc, char** argv)
                     //state = SM_FINAL;
                 }
 
+                //TODO
                 //add for hsrc because sometimes occured self collision //add by r.k 2025/04/23
-                pub_tmp_head_pose_cancel.publish(std_msgs::Empty());
+                //pub_tmp_head_pose_cancel.publish(std_msgs::Empty());
 
                 break;
 
