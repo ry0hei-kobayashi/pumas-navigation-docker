@@ -181,6 +181,6 @@
   <node pkg="rostopic" type="rostopic" name="rostopic_pub_node2" output="screen" args="pub $(arg topic_name) std_msgs/Bool 'data: true'" />
 
   <!--head pose tmp cancel dynamically, using for motion_synth-->
-  <node name="tmp_head_pose_cancel_node"  pkg="navigation_tools"  type="tmp_head_pose_canceller.py" output="screen" respawn="true"/>
+  <!--node name="tmp_head_pose_cancel_node"  pkg="navigation_tools"  type="tmp_head_pose_canceller.py" output="screen" respawn="true"/-->
   
 </launch>
