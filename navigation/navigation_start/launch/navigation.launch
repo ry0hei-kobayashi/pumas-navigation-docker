@@ -260,6 +260,6 @@
   <node name="pot_fields_updator_node"  pkg="navigation_tools"  type="pot_fields_updator.py" output="screen" respawn="true"/>
 
   <!--head pose tmp cancel dynamically, using for motion_synth-->
-  <!--node name="tmp_head_pose_cancel_node"  pkg="navigation_tools"  type="tmp_head_pose_canceller.py" output="screen" respawn="true"/-->
+  <node name="tmp_head_pose_cancel_node"  pkg="navigation_tools"  type="tmp_head_pose_canceller.py" output="screen" respawn="true"/>
   
 </launch>
