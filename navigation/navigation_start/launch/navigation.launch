@@ -71,8 +71,8 @@
 
   <!--backward behavior-->
   <arg name="forcing_backward" default="True"/>
-  <arg name="backward_distance" default="-0.25"/>
-  <arg name="disable_backward_threshold" default="0.7"/>
+  <arg name="backward_distance" default="-0.15"/>
+  <arg name="disable_backward_threshold" default="1.2"/>
 
   <!--Hardware-->
   <group ns="hardware">
@@ -174,14 +174,12 @@
     <param name="cost_radius" value="0.35"/-->
 
     <param name="inflation_radius" value="0.15"/>
-    <param name="cost_radius" value="0.20"/>
+    <param name="cost_radius" value="0.2"/>
 
     <!--known environment default is false -->
     <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
 
     <!--param name="decay_factor" value="10"/-->
-    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
-    
     <param name="max_x" value="$(arg max_x)"/>
     <param name="min_x" value="$(arg min_x)"/>
     <param name="max_y" value="$(arg max_y)"/>
