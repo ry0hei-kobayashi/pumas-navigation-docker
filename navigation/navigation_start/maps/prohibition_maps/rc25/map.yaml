@@ -1,0 +1,7 @@
+image: /home/hma40/ros_ws/src/5_skills/pumas-navigation-docker/navigation/navigation_start/maps/maps/rc25/map.pgm
+resolution: 0.050000
+origin: [-51.224998, -51.224998, 0.000000]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
