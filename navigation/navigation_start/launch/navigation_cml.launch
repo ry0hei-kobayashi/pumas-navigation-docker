@@ -3,7 +3,6 @@
   <!--include file="$(find hma_pcl_reconst)/launch/pcl_reconst.launch"/-->
 
   <remap from="/get_distance_map" to="/get_cartographer_map"/>
-  <!--remap from="/static_distance_map_ref" to="/get_cartographer_map"/-->
   <remap from="/static_obstacle_map_ref" to="/get_cartographer_map"/>
   
   <remap from="/laser_2d_pose" to= "/global_pose"/>
@@ -12,8 +11,6 @@
   
   <node name="killer_node" pkg="killer_node" type="killer_node.py" output="screen"/>
   <node name="fake_global_pose" pkg="killer_node" type="fake_global_pose.py" output="screen"/>
-  <!--node name="sensor_scan_fix" pkg="sensor_scan_fix" type="sensor_scan_fix.py" output="screen"/-->
-
   
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find navigation_start)/rviz/config.rviz"/>
   
@@ -51,13 +48,21 @@
   <!--height-->
   <arg name="min_z" default="0.03"/>
   <arg name="max_z" default="2.0"/>
+  <!--set same param max_x-->
   <!--arg name="max_z" default="1.5"/-->
 
-  <!--set same param max_x-->
+  <!--backward behavior-->
+  <arg name="forcing_backward" default="True"/>
+  <arg name="backward_distance" default="-0.25"/>
+  <arg name="disable_backward_threshold" default="1.0"/>
+
+
+  <arg name="memory_all_obstacles" default="True"/>
+
 
   <!--obstacle reaction-->
   <arg name="pot_fields_d0" default="0.5"/>
-  <arg name="pot_fields_k_rej" default="1.5"/>
+  <arg name="pot_fields_k_rej" default="2.0"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
    
@@ -69,12 +74,14 @@
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
       <!--rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam-->
       <rosparam param="arm_goal_pose">[-0.45, 2.54, -1.57, -0.00]</rosparam>
+    <!--rosparam param="arm_goal_pose">[-0.26, -1.57, -1.57, -0.0]</rosparam-->
     </node>
 
   </group>
   
   <node name="map_server_bypass" pkg="map_server_bypass" type="map_server_bypass_node" output="screen">
-    <param name="occupied_threshold" value="50"/>
+    <!--param name="occupied_threshold" value="50"/-->
+    <param name="occupied_threshold" value="70"/>
     <!--param name="occupied_threshold" value="10"/-->
   </node>
   
@@ -84,8 +91,9 @@
   
   <node name="simple_move"  pkg="simple_move"  type="simple_move_node"  output="screen">
     <!--param name="max_linear_speed" value="0.8"/-->
-    <param name="max_linear_speed" value="0.8"/>
-    <param name="max_angular_speed" value="1.5"/>
+    <!--param name="max_angular_speed" value="1.5"/-->
+    <param name="max_linear_speed" value="0.6"/>
+    <param name="max_angular_speed" value="0.8"/>
     <param name="control_alpha" value="0.4"/>
     <param name="control_beta" value="0.15"/>
     <param name="use_pot_fields" value="$(arg use_pot_fields)"/>
@@ -137,6 +145,7 @@
     <param name="use_point_cloud2" value="$(arg use_point_cloud2)"/>
     
     <param name="use_online" value="True"/>
+    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
@@ -171,6 +180,9 @@
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
+    <param name="forcing_backward" value="$(arg forcing_backward)"/>
+    <param name="backward_distance" value="$(arg backward_distance)"/>
+    <param name="disable_backward_threshold" value="$(arg disable_backward_threshold)"/>
   </node>
 
   <!--call twice-->

@@ -119,9 +119,12 @@ class NavModule:
         #arm&wrist
         if rospy.has_param('/hardware/arm/arm_goal_pose'):
             arm_goal_param = rospy.get_param('/hardware/arm/arm_goal_pose')
-            if isinstance(arm_goal_param, list):
+            if isinstance(arm_goal_param, list) and len(arm_goal_param) == 4:
                 arm_goal_pose = [float(x) for x in arm_goal_param]
-                rospy.loginfo(f"Loaded arm_goal_pose: {arm_goal_pose}")
+                default_arm_pose['arm_flex_joint'] = arm_goal_pose[0]
+                default_arm_pose['arm_roll_joint'] = arm_goal_pose[1]
+                default_arm_pose['wrist_flex_joint'] = arm_goal_pose[2]
+                default_arm_pose['wrist_roll_joint'] = arm_goal_pose[3]
             else:
                 rospy.logwarn("arm_goal_pose is not a list, using defaults.")
         else:
@@ -130,6 +133,7 @@ class NavModule:
         #head
         default_arm_pose['head_pan_joint'] = 0.0
         default_arm_pose['head_tilt_joint'] = 0.0
+        rospy.loginfo(f"Loaded arm_goal_pose: {default_arm_pose}")
 
     def callback_global_goal_reached(self, msg):
 
