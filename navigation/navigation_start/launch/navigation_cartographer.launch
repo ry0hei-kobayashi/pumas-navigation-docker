@@ -173,7 +173,7 @@
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
-    <param name="proximity_criterion" value="0.2"/>
+    <param name="proximity_criterion" value="0.7"/>
     <param name="forcing_backward" value="$(arg forcing_backward)"/>
     <param name="backward_distance" value="$(arg backward_distance)"/>
     <param name="disable_backward_threshold" value="$(arg disable_backward_threshold)"/>
