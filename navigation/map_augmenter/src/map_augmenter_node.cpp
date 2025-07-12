@@ -63,6 +63,15 @@ void add_memory_obstacle(const Eigen::Vector3d& point)
     memory_cells.insert(idx);
 }
 
+bool callback_clear_memory_all_obstacles(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& resp)
+{
+    memory_cells.clear();
+    resp.success = true;
+    resp.message = "Memory obstacles have been cleared.";
+    std::cout << "MapAugmenter.->Memory All Obstacles cleared." << std::endl;
+    return true;
+}
+
 Eigen::Affine3d get_robot_position()
 {
     tf::StampedTransform tf;
@@ -543,8 +552,6 @@ int main(int argc, char** argv)
         ros::param::get("~use_point_cloud2", use_cloud2);
     if(ros::param::has("~use_online"))
         ros::param::get("~use_online", use_online);
-    if(ros::param::has("~memory_all_obstacles"))
-        ros::param::get("~memory_all_obstacles", memory_all_obstacles);
     if(ros::param::has("~min_x"))
         ros::param::get("~min_x", minX);
     if(ros::param::has("~max_x"))
@@ -659,6 +666,9 @@ int main(int argc, char** argv)
     ros::ServiceServer srvAugmentedCostMap  = n.advertiseService("/map_augmenter/get_augmented_cost_map", callback_augmented_cost_map);
     ros::ServiceServer srvAreThereObstacles = n.advertiseService("/map_augmenter/are_there_obstacles"   , callback_are_there_obstacles);
     ros::ServiceServer srvIsInsideObstacles = n.advertiseService("/map_augmenter/is_inside_obstacles"   , callback_is_inside_obstacles);
+
+    ros::ServiceServer srvClearMemoryObstacles = n.advertiseService("/map_augmenter/clear_memory_all_obstacles", callback_clear_memory_all_obstacles);
+
     
     int counter = 0;
     while(ros::ok())
