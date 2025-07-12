@@ -61,7 +61,7 @@
 
 
   <!--obstacle reaction-->
-  <arg name="pot_fields_d0" default="0.5"/>
+  <arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/>
   <!--arg name="pot_fields_d0" default="0.35"/>
   <arg name="pot_fields_k_rej" default="2.0"/-->
@@ -73,7 +73,9 @@
       <rosparam param="torso_goal_pose">0.26</rosparam> <!--arm_lift, meter-->
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
       <!--rosparam param="arm_goal_pose">[-0.17, 2.27, -1.57, 0.0]</rosparam-->
-      <rosparam param="arm_goal_pose">[-0.45, 2.54, -1.57, -0.00]</rosparam>
+
+      <!--rosparam param="arm_goal_pose">[-0.45, 2.54, -1.57, -0.00]</rosparam-->
+
     <!--rosparam param="arm_goal_pose">[-0.26, -1.57, -1.57, -0.0]</rosparam-->
     </node>
 
