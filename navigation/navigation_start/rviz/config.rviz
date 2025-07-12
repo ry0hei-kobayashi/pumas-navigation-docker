@@ -7,7 +7,9 @@ Panels:
         - /Global Options1
         - /Status1
         - /TF1/Frames1
+        - /Map1
         - /PoseWithCovariance1/Covariance1
+        - /Marker5
       Splitter Ratio: 0.3583333194255829
     Tree Height: 598
   - Class: rviz/Selection
@@ -76,8 +78,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        a white bottle_1:
-          Value: true
         arm_flex_link:
           Value: false
         arm_lift_link:
@@ -116,10 +116,6 @@ Visualization Manager:
           Value: false
         base_roll_link:
           Value: false
-        grasp:
-          Value: true
-        grasp_pre:
-          Value: true
         hand_camera_frame:
           Value: false
         hand_camera_gazebo_frame:
@@ -178,8 +174,6 @@ Visualization Manager:
           Value: false
         odom:
           Value: false
-        task:
-          Value: true
         torso_lift_link:
           Value: false
         wrist_flex_link:
@@ -258,10 +252,7 @@ Visualization Manager:
                       head_l_stereo_camera_link:
                         head_l_stereo_camera_frame:
                           head_rgbd_sensor_rgb_frame:
-                            a white bottle_1:
-                              {}
-                            task:
-                              {}
+                            {}
                         head_l_stereo_camera_gazebo_frame:
                           {}
                       head_r_stereo_camera_link:
@@ -270,10 +261,6 @@ Visualization Manager:
                       head_rgbd_sensor_link:
                         head_rgbd_sensor_gazebo_frame:
                           {}
-              grasp:
-                {}
-              grasp_pre:
-                {}
             base_footprint_wheel:
               {}
       Update Interval: 0
@@ -764,7 +751,7 @@ Visualization Manager:
       Marker Topic: /collision_environment_marker_array
       Name: MarkerArray
       Namespaces:
-        object_markers: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -883,7 +870,15 @@ Visualization Manager:
       Marker Topic: /nav_goal_marker
       Name: Marker
       Namespaces:
-        goal_markers: true
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /manage_env_node/area
+      Name: Marker
+      Namespaces:
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -930,9 +925,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5497969388961792
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
-      Yaw: 3.206728935241699
+      Yaw: 3.1617283821105957
     Saved: ~
 Window Geometry:
   Displays:
