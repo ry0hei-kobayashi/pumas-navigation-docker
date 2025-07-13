@@ -41,7 +41,7 @@
   <!--障害物を検出する範囲を指定するパラメータ-->
   <!--depth-->
   <arg name="min_x" default="0.17"/>
-  <arg name="max_x" default="0.7"/>
+  <arg name="max_x" default="0.6"/>
   <!--width, min_y is rightside-->
   <arg name="min_y" default="-0.25"/>
   <arg name="max_y" default="0.25"/>
@@ -53,7 +53,7 @@
   <!--backward behavior-->
   <arg name="forcing_backward" default="True"/>
   <arg name="backward_distance" default="-0.25"/>
-  <arg name="disable_backward_threshold" default="1.0"/>
+  <arg name="disable_backward_threshold" default="3.0"/>
 
 
   <arg name="memory_all_obstacles" default="True"/>
@@ -148,8 +148,10 @@
     
     <param name="cloud_downsampling" value="$(arg cloud_downsampling)"/>
     
-    <param name="inflation_radius" value="0.2"/>
-    <param name="cost_radius" value="0.28"/>
+    <!--param name="inflation_radius" value="0.2"/-->
+    <!--param name="cost_radius" value="0.28"/-->
+    <param name="inflation_radius" value="0.15"/>
+    <param name="cost_radius" value="0.22"/>
     
     
     <param name="max_x" value="$(arg max_x)"/>
@@ -173,10 +175,11 @@
   <node name="mvn_pln"  pkg="mvn_pln"  type="mvn_pln_node"  output="screen">
     <remap from="/nav_control/goal" to="/move_base_simple/goal"/>
     <param name="patience" value="True"/>
-    <param name="proximity_criterion" value="0.7"/>
+    <param name="proximity_criterion" value="1.5"/>
     <param name="forcing_backward" value="$(arg forcing_backward)"/>
     <param name="backward_distance" value="$(arg backward_distance)"/>
     <param name="disable_backward_threshold" value="$(arg disable_backward_threshold)"/>
+    <param name="memory_all_obstacles" value="$(arg memory_all_obstacles)"/>
   </node>
 
   <!--call twice-->
