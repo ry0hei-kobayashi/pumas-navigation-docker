@@ -10,6 +10,9 @@
 float goalTilt;
 float goalPan;
 
+float pan_min, pan_max;
+float tilt_min, tilt_max;
+
 bool isNewData;
 
 std_msgs::Float32MultiArray msg_hd_cp;
@@ -20,17 +23,24 @@ void headGoalPoseCallback(const std_msgs::Float32MultiArray::ConstPtr& msg)
         goalPan = msg->data[0];
         goalTilt = msg->data[1];
 
-        if(goalPan > 1.74 )
-                goalPan = 1.74;
+        if (goalPan > pan_max) goalPan = pan_max;
+        if (goalPan < pan_min) goalPan = pan_min;
 
-        if(goalPan < -3.141592 )
-                goalPan = -3.141592;
+        if (goalTilt > tilt_max) goalTilt = tilt_max;
+        if (goalTilt < tilt_min) goalTilt = tilt_min;
 
-        if(goalTilt > 0.47)
-                goalTilt = 0.47;
 
-        if(goalTilt < -0.9)
-                goalTilt = -0.9;
+        //if(goalPan > 1.74 )
+        //        goalPan = 1.74;
+
+        //if(goalPan < -3.141592 )
+        //        goalPan = -3.141592;
+
+        //if(goalTilt > 0.47)
+        //        goalTilt = 0.47;
+
+        //if(goalTilt < -0.9)
+        //        goalTilt = -0.9;
 }
 
 void headCurrentPoseCallback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg)
@@ -55,7 +65,7 @@ void nav_msg_Callback(const actionlib_msgs::GoalStatus::ConstPtr& msg)
 
 int main(int argc, char **argv)
 {
-        std::cout << std::endl << "--------------------->" << std::endl;
+        std::cout << std::endl << "--------------------->" <<  std::endl;
         std::cout << "INITIALIZING HEAD_BRIDGE_NODE BY EDD-II" << std::endl;
         ros::init(argc, argv, "head_bridge_node");
 
@@ -63,7 +73,7 @@ int main(int argc, char **argv)
         controller_manager_msgs::ListControllers list_controllers;
 
         // initalize ROS publisher
-        ros::NodeHandle n;
+        ros::NodeHandle n("~");
         ros::Publisher pub_pumas_head_cp;
         ros::Publisher pub_hsr_head_gp;
         ros::Subscriber sub_pumas_head_gp;
@@ -72,6 +82,16 @@ int main(int argc, char **argv)
 
         ros::ServiceClient client;
         ros::Rate loop(30);
+
+        n.param("head_pan_min", pan_min, -3.141592f);  // default: -pi
+        n.param("head_pan_max", pan_max, 1.74f);       // default: 1.74
+        
+        n.param("head_tilt_min", tilt_min, -0.9f);     // default: -0.9
+        n.param("head_tilt_max", tilt_max, 0.47f);     // default: 0.47
+                                                       //
+        std::cout << "pan min" << pan_min << std::endl;
+        std::cout << "pan max" << pan_max << std::endl;
+        
 
         pub_hsr_head_gp = n.advertise<trajectory_msgs::JointTrajectory>("/hsrb/head_trajectory_controller/command", 10);
         pub_pumas_head_cp = n.advertise<std_msgs::Float32MultiArray>("/hardware/head/current_pose", 10);

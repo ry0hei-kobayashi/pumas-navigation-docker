@@ -33,7 +33,7 @@
   <arg name="cloud_downsampling" default="9"/>
   <arg name="lidar_downsampling" default="2"/>
   <!--arg name="cloud_points_threshold" default="100"/-->
-  <arg name="cloud_points_threshold" default="50"/>
+  <arg name="cloud_points_threshold" default="100"/>
   <arg name="lidar_points_threshold" default="20"/>
   
 
@@ -42,15 +42,15 @@
   <!--arg name="min_x" default="-0.35"/>
   <arg name="max_x" default="0.7"/-->
   <!--arg name="min_x" default="-0.25"/-->
-  <arg name="min_x" default="-0.25"/>
-  <arg name="max_x" default="0.7"/>
+  <arg name="min_x" default="0.5"/>
+  <arg name="max_x" default="2.0"/>
 
   <!--width, min_y is rightside-->
   <arg name="min_y" default="-0.35"/>
   <arg name="max_y" default="0.35"/>
 
   <!--height-->
-  <arg name="min_z" default="0.03"/>
+  <arg name="min_z" default="0.04"/>
   <arg name="max_z" default="1.5"/>
   <!--set same param max_x-->
   <!--arg name="max_z" default="1.5"/-->
@@ -59,6 +59,7 @@
   <arg name="forcing_backward" default="True"/>
   <arg name="backward_distance" default="-0.15"/>
   <arg name="disable_backward_threshold" default="1.0"/>
+
 
   <arg name="memory_all_obstacles" default="True"/>
 
@@ -70,17 +71,8 @@
   <arg name="pot_fields_k_rej" default="2.0"/>
    
   <group ns="hardware">
+    <node name="head" pkg="head" type="head_node" output="screen"/>
     <node name="led" pkg="head" type="led_node" output="screen"/>
-    <node name="head" pkg="head" type="head_node" output="screen">
-      <param name="head_pan_min" value="-1.92" />
-      <param name="head_pan_max" value="0.52" />
-      <!--param name="head_pan_min" value="-3.14" /-->
-      <!--param name="head_pan_max" value="1.74" /-->
-      <!--param name="head_tilt_min" value="-0.9" /-->
-      <!--param name="head_tilt_max" value="0.47" /-->
-      <param name="head_tilt_min" value="-0.9" />
-      <param name="head_tilt_max" value="0.47" />
-    </node>
     <node name="arm" pkg="arm" type="arm_node" output="screen">
       <rosparam param="torso_goal_pose">0.26</rosparam> <!--arm_lift, meter-->
       <!--[arm_flex, arm_roll, wrist_flex, wrist_roll], radian-->
