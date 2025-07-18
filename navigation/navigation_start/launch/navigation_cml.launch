@@ -132,7 +132,7 @@
     <param name="cloud_points_threshold" value="$(arg cloud_points_threshold)"/>
     <param name="lidar_points_threshold" value="$(arg lidar_points_threshold)"/>
     
-    <param name="debug" value="True"/>
+    <param name="debug" value="False"/>
     
     <!--param name="pot_fields_d0" value="0.35"/-->
     <!--param name="pot_fields_k_rej" value="2.0"/-->
