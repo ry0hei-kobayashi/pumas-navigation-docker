@@ -43,7 +43,8 @@
   <arg name="max_x" default="0.7"/-->
   <!--arg name="min_x" default="-0.25"/-->
   <arg name="min_x" default="-0.25"/>
-  <arg name="max_x" default="0.7"/>
+  <arg name="max_x" default="0.9"/>
+  <!--arg name="max_x" default="0.7"/-->
 
   <!--width, min_y is rightside-->
   <arg name="min_y" default="-0.35"/>
@@ -131,7 +132,7 @@
     <param name="cloud_points_threshold" value="$(arg cloud_points_threshold)"/>
     <param name="lidar_points_threshold" value="$(arg lidar_points_threshold)"/>
     
-    <param name="debug" value="False"/>
+    <param name="debug" value="True"/>
     
     <!--param name="pot_fields_d0" value="0.35"/-->
     <!--param name="pot_fields_k_rej" value="2.0"/-->
