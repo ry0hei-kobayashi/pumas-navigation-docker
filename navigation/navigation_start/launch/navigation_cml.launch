@@ -43,7 +43,7 @@
   <arg name="max_x" default="0.7"/-->
   <!--arg name="min_x" default="-0.25"/-->
   <arg name="min_x" default="-0.25"/>
-  <arg name="max_x" default="0.9"/>
+  <arg name="max_x" default="1.0"/>
   <!--arg name="max_x" default="0.7"/-->
 
   <!--width, min_y is rightside-->
@@ -79,7 +79,7 @@
       <!--param name="head_pan_max" value="1.74" /-->
       <!--param name="head_tilt_min" value="-0.9" /-->
       <!--param name="head_tilt_max" value="0.47" /-->
-      <param name="head_tilt_min" value="-0.9" />
+      <param name="head_tilt_min" value="-0.7" />
       <param name="head_tilt_max" value="0.47" />
     </node>
     <node name="arm" pkg="arm" type="arm_node" output="screen">
