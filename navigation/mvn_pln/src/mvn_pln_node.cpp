@@ -201,14 +201,30 @@ void updateViaPoints(const geometry_msgs::Pose& robot, double pass_via_threshold
 
 void get_robot_position(tf::TransformListener& listener, float& robot_x, float& robot_y, float& robot_a){
     tf::StampedTransform tf;
-    listener.lookupTransform("map", base_link_name, ros::Time(0), tf);
-    robot_x = tf.getOrigin().x();
-    robot_y = tf.getOrigin().y();
+    ros::Time now = ros::Time::now();
 
-    tf::Quaternion q = tf.getRotation();
-    double roll, pitch, yaw;
-    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    robot_a = yaw;
+    if (listener.canTransform("map", base_link_name, now)){
+
+        try{
+            listener.lookupTransform("map", base_link_name, now, tf);
+        }
+        catch (tf::TransformException &ex) {
+            ROS_WARN("MvnPln.->TF Exception while transforming from map to %s: %s", base_link_name.c_str(), ex.what());
+            return;
+        }
+
+        robot_x = tf.getOrigin().x();
+        robot_y = tf.getOrigin().y();
+
+        tf::Quaternion q = tf.getRotation();
+        double roll, pitch, yaw;
+        tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+        robot_a = yaw;
+    }
+    else {
+        ROS_WARN("MvnPln.->Cannot transform from map to %s, get_robot_position", base_link_name.c_str());
+        return;
+    }
 }
 
 int publish_status(int status, int id, std::string text, ros::Publisher& pub)
