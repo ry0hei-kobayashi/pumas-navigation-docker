@@ -66,7 +66,7 @@ class FollowPerson(smach.State, Logger):
                 self.hsrif.tts.say('Sorry, Please walk more slowly.', language='en', sync=True, queue=False)
                 self.say_count += 1
                 if self.say_count % 2 == 0:
-                    self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=False)
+                    self.hsrif.tts.say('If you want me to stop following you, touch my hand softly.', language='en', sync=True, queue=False)
                 self.distance_flag = True
         else:
             self.distance_flag = False
@@ -79,7 +79,7 @@ class FollowPerson(smach.State, Logger):
                 self.hsrif.tts.say('I found you! Now, I will follow you.', language='en', sync=True, queue=True)
                 
                 if (self.fisrt):
-                    self.hsrif.tts.say('If you want me to stop following you, touch my hand.', language='en', sync=True, queue=True)
+                    self.hsrif.tts.say('If you want me to stop following you, touch my hand softly.', language='en', sync=True, queue=True)
                     self.fisrt = False
                 
                 rospy.loginfo('Legs found')
@@ -183,7 +183,9 @@ class FollowPerson(smach.State, Logger):
                     self.hsrif.tts.cancel_all()
                     break
 
-            self.hsrif.tts.say("Touch my hand to start following you.", 'en', sync=True)
+            self.hsrif.whole_body.move_to_go()
+
+            self.hsrif.tts.say("Touch my hand softly to start following you.", 'en', sync=True)
 
             while not utils.is_arm_touched():
                 rate.sleep()

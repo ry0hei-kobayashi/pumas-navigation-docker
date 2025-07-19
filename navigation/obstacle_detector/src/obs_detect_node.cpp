@@ -75,6 +75,7 @@ void get_robot_pose(float& robot_x, float& robot_y, float& robot_t)
     robot_t = atan2((float)q.z(), (float)q.w()) * 2;
 }
 
+
 float get_search_distance()
 {
     ros::param::get("~max_x", maxX);
