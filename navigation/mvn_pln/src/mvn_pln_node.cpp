@@ -198,20 +198,17 @@ void updateViaPoints(const geometry_msgs::Pose& robot, double pass_via_threshold
     }
 }
 
-
 void get_robot_position(tf::TransformListener& listener, float& robot_x, float& robot_y, float& robot_a){
     tf::StampedTransform tf;
     ros::Time now = ros::Time::now();
 
-    if (listener.canTransform("map", base_link_name, now)){
+    if (!listener.waitForTransform("map", base_link_name, now, ros::Duration(0.5))) {
+        ROS_WARN("MvnPln.->Timeout waiting for transform from map to %s (within 0.5s)", base_link_name.c_str());
+        return;
+    }
 
-        try{
-            listener.lookupTransform("map", base_link_name, now, tf);
-        }
-        catch (tf::TransformException &ex) {
-            ROS_WARN("MvnPln.->TF Exception while transforming from map to %s: %s", base_link_name.c_str(), ex.what());
-            return;
-        }
+    try {
+        listener.lookupTransform("map", base_link_name, now, tf);
 
         robot_x = tf.getOrigin().x();
         robot_y = tf.getOrigin().y();
@@ -221,11 +218,40 @@ void get_robot_position(tf::TransformListener& listener, float& robot_x, float& 
         tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
         robot_a = yaw;
     }
-    else {
-        ROS_WARN("MvnPln.->Cannot transform from map to %s, get_robot_position", base_link_name.c_str());
+    catch (tf::TransformException &ex) {
+        ROS_WARN("MvnPln.->TF Exception while transforming from map to %s: %s", base_link_name.c_str(), ex.what());
         return;
     }
 }
+
+
+//void get_robot_position(tf::TransformListener& listener, float& robot_x, float& robot_y, float& robot_a){
+//    tf::StampedTransform tf;
+//    ros::Time now = ros::Time::now();
+//
+//    if (listener.canTransform("map", base_link_name, now)){
+//
+//        try{
+//            listener.lookupTransform("map", base_link_name, now, tf);
+//        }
+//        catch (tf::TransformException &ex) {
+//            ROS_WARN("MvnPln.->TF Exception while transforming from map to %s: %s", base_link_name.c_str(), ex.what());
+//            return;
+//        }
+//
+//        robot_x = tf.getOrigin().x();
+//        robot_y = tf.getOrigin().y();
+//
+//        tf::Quaternion q = tf.getRotation();
+//        double roll, pitch, yaw;
+//        tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+//        robot_a = yaw;
+//    }
+//    else {
+//        ROS_WARN("MvnPln.->Cannot transform from map to %s, get_robot_position", base_link_name.c_str());
+//        return;
+//    }
+//}
 
 int publish_status(int status, int id, std::string text, ros::Publisher& pub)
 {
